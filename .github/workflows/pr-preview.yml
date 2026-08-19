@@ -1,0 +1,90 @@
+name: PR preview
+
+# Opt-in per PR: nothing deploys until someone adds the `deploy-environment`
+# label. Once labeled, every later push to that PR refreshes the preview.
+# (Cloudflare Workers Builds can't gate on labels — it only watches branch
+# pushes — so label-gated previews live here instead.)
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+# One preview per PR; a new push cancels an in-flight build for the same PR.
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: contains(github.event.pull_request.labels.*.name, 'deploy-environment')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write # to post the preview URL back on the PR
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Same gate as production: a red suite never reaches a preview URL.
+      - name: Unit and integration tests
+        run: pnpm test
+
+      # Creates (or updates) an isolated Convex backend named for this PR, then
+      # builds the Worker with that preview deployment's URL injected — so the
+      # preview never reads or writes production data.
+      - name: Convex preview deploy + build
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+        run: |
+          npx convex deploy \
+            --preview-name "pr-${{ github.event.pull_request.number }}" \
+            --cmd 'pnpm exec opennextjs-cloudflare build' \
+            --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
+
+      # Uploads a new Worker version WITHOUT shifting production traffic.
+      - name: Upload preview version
+        id: upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm exec wrangler versions upload 2>&1 | tee upload.log
+          URL=$(grep -oE 'https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev' upload.log | head -1)
+          echo "preview_url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment the preview URL
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const url = process.env.PREVIEW_URL;
+            const body = url
+              ? [
+                  `**Preview ready:** ${url}`,
+                  '',
+                  `Backend: isolated Convex deployment \`pr-${process.env.PR_NUMBER}\` (empty database, expires in 5 days).`,
+                  'Production data and email are untouched. Preview hosts are `Disallow: /` in robots.txt.',
+                ].join('\n')
+              : 'Preview version uploaded, but no preview URL was found in the wrangler output.';
+            const { owner, repo } = context.repo;
+            const issue_number = Number(process.env.PR_NUMBER);
+            const marker = '<!-- tsws-preview -->';
+            const existing = (
+              await github.rest.issues.listComments({ owner, repo, issue_number })
+            ).data.find((c) => c.body?.includes(marker));
+            const payload = `${marker}\n${body}`;
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: payload });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: payload });
+            }

@@ -4,7 +4,9 @@
   "main": ".open-next/worker.js",
   // SEO P0-1: no indexable duplicate hosts — the only public host is the apex custom domain.
   "workers_dev": false,
-  "preview_urls": false,
+  // PR previews (labeled deploy-environment) need version preview URLs.
+  // robots.ts blanket-disallows *.workers.dev so they never get indexed.
+  "preview_urls": true,
   // Mirrors the dashboard's Observability settings so deploys stay consistent.
   "observability": {
     "enabled": false,
