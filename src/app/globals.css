@@ -1,26 +1,547 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ======================================================================
+   TSWS design system — ported verbatim from
+   design-source/_ds/tsws-design-system-c3373061/tokens + components.
+   Tailwind v4 stays for layout utilities; brand styling lives here.
+   ====================================================================== */
+
+/* ---- tokens/colors.css ---------------------------------------------- */
+:root{
+/* ---- base: ink & steel ---------------------------------------------- */
+--black-950:#050505;--black-900:#080808;--black-850:#0d0e0f;--black-800:#121415;
+--steel-900:#171a1c;--steel-800:#1e2225;--steel-700:#282d31;--steel-600:#363c41;
+--steel-500:#4b5359;--steel-400:#6b747b;--steel-300:#8f989e;--steel-200:#b6bec3;
+--steel-100:#d8dde0;--steel-050:#eef0f1;--white:#ffffff;
+/* ---- base: brand red (sampled from the badge, #c90314) -------------- */
+--red-800:#6d020c;--red-700:#8f0210;--red-600:#a80212;--red-500:#c90314;
+--red-400:#e01625;--red-300:#ff4a55;--red-100:#ffd7d9;
+/* ---- base: arc (used only as light, never as fill) ------------------ */
+--arc-amber:#ffb020;--arc-white:#fff4d6;--arc-blue:#7fd4ff;
+/* ---- semantic: surfaces -------------------------------------------- */
+--bg-page:var(--black-900);--bg-page-alt:var(--steel-900);
+--surface-card:var(--black-850);--surface-raised:var(--steel-800);
+--surface-inset:var(--black-950);--surface-plate:var(--steel-700);
+--surface-light:var(--steel-050);--surface-light-alt:var(--white);
+/* ---- semantic: text ------------------------------------------------ */
+--text-primary:var(--white);--text-body:var(--steel-200);--text-secondary:var(--steel-300);
+--text-muted:#7b848b;--text-accent:var(--red-400);--text-inverse:var(--black-900);
+--text-on-accent:var(--white);
+/* ---- semantic: line & edge ----------------------------------------- */
+--border-hairline:rgba(255,255,255,.08);--border-subtle:rgba(255,255,255,.14);
+--border-control:rgba(255,255,255,.40);
+--border-strong:var(--steel-600);--border-accent:var(--red-500);
+--border-light:rgba(8,8,8,.12);
+/* ---- semantic: action ---------------------------------------------- */
+--accent:var(--red-500);--accent-hover:var(--red-400);--accent-press:var(--red-600);
+--accent-quiet:rgba(201,3,20,.14);--focus-ring:var(--arc-blue);
+/* ---- semantic: status ---------------------------------------------- */
+--status-ok:#3fa34d;--status-warn:var(--arc-amber);--status-danger:var(--red-400);
+--status-info:var(--arc-blue);--status-idle:var(--steel-500);
+/* ---- semantic: hazard / safety striping ---------------------------- */
+--hazard-a:var(--arc-amber);--hazard-b:var(--black-900);
+--hazard-red-a:var(--red-500);--hazard-red-b:var(--black-900);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ---- tokens/typography.css ------------------------------------------ */
+:root{
+/* families */
+--font-display:"Saira Condensed","Saira",Impact,sans-serif;
+--font-body:"Archivo","Helvetica Neue",Helvetica,sans-serif;
+--font-mono:"IBM Plex Mono",ui-monospace,monospace;
+/* the raked italic of the wordmark — synthesised, never a real italic cut */
+--display-rake:oblique 10deg;
+/* size scale (1.25 ratio, 16px base) */
+--text-3xs:11px;--text-2xs:12px;--text-xs:13px;--text-sm:15px;--text-base:17px;
+--text-lg:20px;--text-xl:24px;--text-2xl:30px;--text-3xl:38px;--text-4xl:52px;
+--text-5xl:68px;--text-6xl:92px;--text-7xl:124px;
+/* weights */
+--weight-regular:400;--weight-medium:500;--weight-semibold:600;--weight-bold:700;--weight-black:900;
+/* line heights */
+--leading-flush:.86;--leading-tight:1.02;--leading-snug:1.2;--leading-body:1.55;--leading-loose:1.7;
+/* tracking */
+--tracking-tight:-.02em;--tracking-normal:0;--tracking-wide:.04em;--tracking-wider:.12em;--tracking-widest:.22em;
+/* semantic roles */
+--type-hero-size:var(--text-6xl);--type-hero-family:var(--font-display);
+--type-display-size:var(--text-4xl);--type-heading-size:var(--text-2xl);
+--type-title-size:var(--text-lg);--type-body-size:var(--text-base);
+--type-small-size:var(--text-sm);
+--type-eyebrow-size:var(--text-2xs);--type-eyebrow-tracking:var(--tracking-widest);
+--type-spec-size:var(--text-xs);--type-spec-family:var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---- next/font wiring ------------------------------------------------
+   The three family tokens are redefined against the next/font/google
+   variables set on <html> in src/app/layout.tsx. Fallback stacks kept. */
+:root{
+--font-display:var(--font-saira),"Saira Condensed","Saira",Impact,sans-serif;
+--font-body:var(--font-archivo),"Archivo","Helvetica Neue",Helvetica,sans-serif;
+--font-mono:var(--font-plex-mono),"IBM Plex Mono",ui-monospace,monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---- tokens/spacing.css --------------------------------------------- */
+:root{
+--space-0:0px;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;
+--space-6:24px;--space-7:32px;--space-8:40px;--space-9:48px;--space-10:64px;
+--space-11:80px;--space-12:96px;--space-13:120px;--space-14:160px;
+/* vertical rhythm */
+--section-pad-y:var(--space-13);--section-pad-y-tight:var(--space-11);
+--block-gap:var(--space-7);--stack-gap:var(--space-4);--inline-gap:var(--space-3);
+/* shell */
+--container-max:1280px;--container-narrow:760px;--gutter:var(--space-7);
+--control-h-sm:34px;--control-h-md:44px;--control-h-lg:56px;
+--hazard-bar-h:10px;--rule-w:1px;--accent-bar-w:4px;
+}
+
+/* ---- tokens/radius.css ---------------------------------------------- */
+:root{
+/* The badge is chamfered, not rounded. Radii stay near zero; corners get cut. */
+--radius-none:0px;--radius-xs:2px;--radius-sm:3px;--radius-pill:999px;
+--chamfer-sm:6px;--chamfer-md:12px;--chamfer-lg:20px;--chamfer-xl:34px;
+--clip-chamfer-sm:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+--clip-chamfer-md:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+--clip-chamfer-lg:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);
+--clip-chamfer-all:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px),0 14px);
+--clip-blade:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);
+--border-w-hair:1px;--border-w-plate:2px;--border-w-heavy:3px;
+}
+
+/* ---- tokens/elevation.css ------------------------------------------- */
+:root{
+/* Shadows read as machined metal: hard contact shadow + 1px top bevel. */
+--shadow-flat:0 1px 0 rgba(255,255,255,.06) inset;
+--shadow-plate:0 1px 0 rgba(255,255,255,.07) inset,0 2px 0 rgba(0,0,0,.6),0 10px 24px -12px rgba(0,0,0,.9);
+--shadow-lifted:0 1px 0 rgba(255,255,255,.09) inset,0 4px 0 rgba(0,0,0,.65),0 26px 48px -20px rgba(0,0,0,.95);
+--shadow-overlay:0 40px 90px -30px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.08);
+--shadow-pressed:0 2px 6px rgba(0,0,0,.5) inset;
+--bevel-top:inset 0 1px 0 rgba(255,255,255,.14);
+--bevel-bottom:inset 0 -1px 0 rgba(0,0,0,.55);
+/* arc light: the only glow in the system */
+--glow-arc:0 0 0 1px rgba(201,3,20,.5),0 0 28px -4px rgba(224,22,37,.55);
+--glow-arc-soft:0 0 32px -8px rgba(255,176,32,.45);
+--focus-shadow:0 0 0 2px var(--black-900),0 0 0 4px var(--arc-blue);
+}
+
+/* ---- tokens/motion.css ---------------------------------------------- */
+:root{
+/* Machinery moves fast, stops hard, and never bounces. */
+--dur-1:90ms;
+--dur-2:150ms;
+--dur-3:240ms;
+--dur-4:420ms;
+--dur-5:700ms;
+--dur-6:1200ms;
+--ease-mech:cubic-bezier(.2,.85,.2,1);
+--ease-strike:cubic-bezier(.7,0,.2,1);
+--ease-out-soft:cubic-bezier(.16,1,.3,1);
+--ease-linear:linear;
+--stagger:60ms;
+--transition-control:background-color var(--dur-2) var(--ease-mech),color var(--dur-2) var(--ease-mech),border-color var(--dur-2) var(--ease-mech),box-shadow var(--dur-2) var(--ease-mech),transform var(--dur-1) var(--ease-mech);
+}
+@media (prefers-reduced-motion:reduce){:root{
+--dur-1:0ms;
+--dur-2:0ms;
+--dur-3:0ms;
+--dur-4:0ms;
+--dur-5:0ms;
+--dur-6:0ms;
+}}
+
+/* ---- tokens/effects.css --------------------------------------------- */
+:root{
+/* hazard striping — safety-tape diagonal, the brand's repeating pattern */
+--pattern-hazard:repeating-linear-gradient(115deg,var(--hazard-a) 0 14px,var(--hazard-b) 14px 28px);
+--pattern-hazard-red:repeating-linear-gradient(115deg,var(--hazard-red-a) 0 12px,var(--hazard-red-b) 12px 24px);
+--pattern-hatch:repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 1px,transparent 1px 7px);
+--pattern-grid:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/100% 32px,linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px) 0 0/32px 100%;
+/* brushed / rolled steel */
+--gradient-steel:linear-gradient(180deg,#5a6167 0%,#2b3034 14%,#3f464b 50%,#202528 86%,#4a5157 100%);
+--gradient-steel-soft:linear-gradient(180deg,var(--steel-700),var(--steel-900));
+--gradient-plate:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0) 42%,rgba(0,0,0,.35));
+/* the only red gradient in the system: heat, top-lit */
+--gradient-heat:linear-gradient(180deg,var(--red-400),var(--red-600));
+--gradient-scorch:linear-gradient(180deg,transparent,rgba(201,3,20,.22));
+/* readability scrims over photography */
+--scrim-photo:linear-gradient(180deg,rgba(5,5,5,.15) 0%,rgba(5,5,5,.55) 55%,rgba(5,5,5,.94) 100%);
+--scrim-side:linear-gradient(90deg,rgba(5,5,5,.95) 0%,rgba(5,5,5,.7) 45%,rgba(5,5,5,.1) 100%);
+--photo-filter:grayscale(.55) contrast(1.12) brightness(.82);
+--photo-filter-hover:grayscale(.15) contrast(1.06) brightness(.95);
+}
+@keyframes tsws-spark-sweep{0%{transform:translateX(-120%) skewX(-18deg)}100%{transform:translateX(320%) skewX(-18deg)}}
+@keyframes tsws-arc-flicker{0%,100%{opacity:.85}42%{opacity:.35}46%{opacity:1}62%{opacity:.6}}
+@keyframes tsws-seam-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes tsws-strike-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes tsws-plate-slide{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes tsws-tape-scroll{to{background-position:280px 0}}
+@keyframes tsws-ember-rise{0%{opacity:0;transform:translateY(0) scale(1)}12%{opacity:1}100%{opacity:0;transform:translateY(-140px) scale(.4)}}
+
+/* ---- tokens/base.css -------------------------------------------------
+   Placed in the base layer AFTER Tailwind preflight so these win. */
+@layer base{
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg-page)}
+body{margin:0;background:var(--bg-page);color:var(--text-body);font-family:var(--font-body);font-size:var(--type-body-size);line-height:var(--leading-body);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+h1,h2,h3,h4{font-family:var(--font-display);color:var(--text-primary);text-transform:uppercase;line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);font-weight:var(--weight-black);margin:0}
+p{margin:0}
+a{color:var(--text-primary);text-decoration:none;border-bottom:1px solid var(--border-accent);transition:color var(--dur-2) var(--ease-mech),border-color var(--dur-2) var(--ease-mech)}
+/* dc pages override the token hover to white (helmet style block). */
+a:hover{color:#ffffff;border-color:var(--red-300)}
+a:active{color:var(--red-400)}
+::selection{background:var(--red-500);color:var(--white)}
+:focus-visible{outline:none;box-shadow:var(--focus-shadow)}
+code,kbd,samp{font-family:var(--font-mono);font-size:var(--type-spec-size)}
+img{display:block;max-width:100%}
+button{font-family:inherit}
+}
+
+@layer components{
+/* Display faces have no true italic cut; the wordmark's forward rake is geometric. */
+.tsws-rake{display:inline-block;transform:skewX(-8deg);transform-origin:left bottom}
+
+/* ================= components/core/core.css ========================== */
+/* ---- Button ---------------------------------------------------------- */
+.tsws-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);
+font-family:var(--font-body);font-weight:var(--weight-bold);text-transform:uppercase;letter-spacing:var(--tracking-wide);
+border:0;cursor:pointer;overflow:hidden;isolation:isolate;text-decoration:none;white-space:nowrap;
+clip-path:var(--clip-chamfer-md);transition:var(--transition-control)}
+a.tsws-btn{border-bottom:0}
+.tsws-btn>*{position:relative;z-index:2}
+.tsws-btn::after{content:"";position:absolute;z-index:1;inset:-40% -60%;width:38px;pointer-events:none;
+background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);opacity:0;transform:translateX(-120%) skewX(-18deg)}
+.tsws-btn:hover::after{opacity:.9;animation:tsws-spark-sweep var(--dur-5) var(--ease-mech)}
+.tsws-btn:active{transform:translateY(1px)}
+.tsws-btn:disabled,.tsws-btn[aria-disabled="true"]{opacity:.38;cursor:not-allowed}
+.tsws-btn:disabled::after{display:none}
+.tsws-btn--sm{min-height:var(--control-h-sm);padding:0 var(--space-4);font-size:var(--text-2xs)}
+.tsws-btn--md{min-height:var(--control-h-md);padding:0 var(--space-6);font-size:var(--text-xs)}
+.tsws-btn--lg{min-height:var(--control-h-lg);padding:0 var(--space-8);font-size:var(--text-sm);letter-spacing:var(--tracking-wider)}
+.tsws-btn--block{width:100%}
+.tsws-btn--primary{background:var(--gradient-heat);color:var(--text-on-accent);box-shadow:var(--bevel-top),0 2px 0 var(--red-800)}
+.tsws-btn--primary:hover{background:linear-gradient(180deg,var(--red-300),var(--red-500));box-shadow:var(--bevel-top),0 2px 0 var(--red-800),var(--glow-arc)}
+.tsws-btn--primary:active{background:var(--red-600);box-shadow:var(--shadow-pressed)}
+.tsws-btn--secondary{background:var(--gradient-steel-soft);color:var(--text-primary);box-shadow:var(--bevel-top),0 2px 0 rgba(0,0,0,.7)}
+.tsws-btn--secondary:hover{background:linear-gradient(180deg,var(--steel-600),var(--steel-800));color:var(--white)}
+.tsws-btn--secondary:active{box-shadow:var(--shadow-pressed)}
+.tsws-btn--ghost{background:transparent;color:var(--text-primary);box-shadow:inset 0 0 0 1px var(--border-subtle)}
+.tsws-btn--ghost:hover{background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--red-500);color:var(--white)}
+.tsws-btn--quiet{background:transparent;color:var(--red-300);clip-path:none;padding:0;height:auto}
+.tsws-btn--quiet::after{display:none}
+.tsws-btn--quiet:hover{color:var(--red-100)}
+.tsws-btn--quiet .tsws-btn__label{box-shadow:0 1px 0 currentColor}
+/* ---- IconButton ------------------------------------------------------ */
+.tsws-iconbtn{display:inline-grid;place-items:center;border:0;cursor:pointer;color:var(--text-primary);
+background:var(--gradient-steel-soft);box-shadow:var(--bevel-top),0 2px 0 rgba(0,0,0,.7);
+clip-path:var(--clip-chamfer-sm);transition:var(--transition-control)}
+.tsws-iconbtn:hover{background:linear-gradient(180deg,var(--steel-600),var(--steel-800));color:var(--white)}
+.tsws-iconbtn:active{transform:translateY(1px);box-shadow:var(--shadow-pressed)}
+.tsws-iconbtn--accent{background:var(--gradient-heat);color:var(--white);box-shadow:var(--bevel-top),0 2px 0 var(--red-800)}
+.tsws-iconbtn--accent:hover{background:linear-gradient(180deg,var(--red-300),var(--red-500));box-shadow:var(--glow-arc)}
+.tsws-iconbtn--ghost{background:transparent;box-shadow:inset 0 0 0 1px var(--border-subtle);color:var(--text-secondary)}
+.tsws-iconbtn--ghost:hover{color:var(--white);box-shadow:inset 0 0 0 1px var(--red-500);background:rgba(255,255,255,.04)}
+.tsws-iconbtn--sm{width:var(--control-h-sm);height:var(--control-h-sm)}
+.tsws-iconbtn--md{width:var(--control-h-md);height:var(--control-h-md)}
+.tsws-iconbtn--lg{width:var(--control-h-lg);height:var(--control-h-lg)}
+.tsws-iconbtn:disabled{opacity:.38;cursor:not-allowed}
+/* ---- Icon ------------------------------------------------------------ */
+.tsws-icon{display:inline-grid;place-items:center;flex:none}
+.tsws-icon>svg{display:block;width:100%;height:100%}
+/* ---- Badge ----------------------------------------------------------- */
+.tsws-badge{display:inline-flex;align-items:center;gap:var(--space-2);font-family:var(--font-mono);
+font-size:var(--text-3xs);font-weight:var(--weight-semibold);text-transform:uppercase;letter-spacing:var(--tracking-wider);
+padding:4px var(--space-3);clip-path:var(--clip-chamfer-sm);background:var(--steel-800);color:var(--text-body);
+box-shadow:inset 0 0 0 1px var(--border-hairline)}
+.tsws-badge__dot{width:6px;height:6px;background:currentColor;flex:none}
+.tsws-badge--accent{background:var(--accent-quiet);color:var(--red-300);box-shadow:inset 0 0 0 1px rgba(201,3,20,.45)}
+.tsws-badge--solid{background:var(--red-500);color:var(--white);box-shadow:none}
+.tsws-badge--ok{color:var(--status-ok);box-shadow:inset 0 0 0 1px rgba(63,163,77,.4)}
+.tsws-badge--warn{color:var(--status-warn);box-shadow:inset 0 0 0 1px rgba(255,176,32,.4)}
+.tsws-badge--danger{color:var(--red-300);box-shadow:inset 0 0 0 1px rgba(224,22,37,.45)}
+.tsws-badge--idle{color:var(--steel-400)}
+.tsws-badge--live .tsws-badge__dot{animation:tsws-arc-flicker var(--dur-6) var(--ease-linear) infinite}
+/* ---- Tag ------------------------------------------------------------- */
+.tsws-tag{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-2xs);
+font-weight:var(--weight-semibold);text-transform:uppercase;letter-spacing:var(--tracking-wide);
+padding:6px var(--space-3);background:transparent;color:var(--text-secondary);border:0;cursor:default;
+box-shadow:inset 0 0 0 1px var(--border-subtle);clip-path:var(--clip-chamfer-sm);transition:var(--transition-control)}
+.tsws-tag--selectable{cursor:pointer}
+.tsws-tag--selectable:hover{color:var(--white);box-shadow:inset 0 0 0 1px var(--steel-400)}
+.tsws-tag--selected{background:var(--red-500);color:var(--white);box-shadow:none}
+.tsws-tag__remove{display:grid;place-items:center;width:24px;height:24px;background:none;border:0;padding:5px;margin:-5px;
+color:inherit;cursor:pointer;opacity:.65;font-size:13px;line-height:1}
+.tsws-tag__remove:hover{opacity:1}
+/* ---- Card ------------------------------------------------------------ */
+.tsws-card{position:relative;display:flex;flex-direction:column;background:var(--surface-card);
+box-shadow:var(--shadow-plate);clip-path:var(--clip-chamfer-md);transition:transform var(--dur-3) var(--ease-mech),box-shadow var(--dur-3) var(--ease-mech)}
+.tsws-card__rule{height:3px;background:var(--red-500);transform-origin:left;flex:none}
+.tsws-card__body{padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-3);flex:1}
+.tsws-card__eyebrow{font-family:var(--font-mono);font-size:var(--text-3xs);letter-spacing:var(--tracking-widest);
+text-transform:uppercase;color:var(--text-muted)}
+.tsws-card__title{font-family:var(--font-display);font-weight:var(--weight-black);text-transform:uppercase;
+font-size:var(--text-xl);line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);color:var(--text-primary)}
+.tsws-card__text{font-size:var(--text-sm);color:var(--text-secondary);line-height:var(--leading-body)}
+.tsws-card__media{flex:none;overflow:hidden}
+.tsws-card__footer{padding:var(--space-4) var(--space-6);border-top:1px solid var(--border-hairline);
+display:flex;align-items:center;gap:var(--space-3)}
+.tsws-card--interactive{cursor:pointer}
+.tsws-card--interactive:hover{transform:translateY(-3px);box-shadow:var(--shadow-lifted)}
+.tsws-card--interactive:hover .tsws-card__rule{animation:tsws-seam-draw var(--dur-4) var(--ease-strike)}
+.tsws-card--interactive:hover .tsws-card__title{color:var(--white)}
+.tsws-card--plate{background:var(--gradient-steel-soft)}
+.tsws-card--light{background:var(--surface-light);box-shadow:0 2px 0 rgba(8,8,8,.18),0 18px 40px -24px rgba(8,8,8,.5)}
+.tsws-card--light .tsws-card__title{color:var(--text-inverse)}
+.tsws-card--light .tsws-card__text{color:#3a4045}
+.tsws-card--light .tsws-card__eyebrow{color:var(--red-600)}
+/* ---- HazardBar ------------------------------------------------------- */
+.tsws-hazard{width:100%;height:var(--hazard-bar-h);background:var(--pattern-hazard);background-size:280px 100%;flex:none}
+.tsws-hazard--red{background:var(--pattern-hazard-red);background-size:280px 100%}
+.tsws-hazard--steel{background:repeating-linear-gradient(115deg,var(--steel-500) 0 14px,var(--black-900) 14px 28px);background-size:280px 100%}
+.tsws-hazard--animated{animation:tsws-tape-scroll 6s var(--ease-linear) infinite}
+@media (prefers-reduced-motion:reduce){.tsws-hazard--animated{animation:none}}
+/* ---- MediaFrame ------------------------------------------------------ */
+.tsws-media{position:relative;overflow:hidden;background:var(--black-950);clip-path:var(--clip-chamfer-md)}
+.tsws-media__img{width:100%;height:100%;object-fit:cover;filter:var(--photo-filter);transition:filter var(--dur-4) var(--ease-mech),transform var(--dur-5) var(--ease-mech)}
+.tsws-media:hover .tsws-media__img{filter:var(--photo-filter-hover);transform:scale(1.03)}
+.tsws-media__ph{position:absolute;inset:0;display:grid;place-content:center;gap:var(--space-2);justify-items:center;
+background:var(--black-950);background-image:var(--pattern-hatch);text-align:center;padding:var(--space-5)}
+.tsws-media__ph::before,.tsws-media__ph::after{content:"";position:absolute;width:18px;height:18px;border:2px solid var(--steel-600)}
+.tsws-media__ph::before{top:10px;left:10px;border-right:0;border-bottom:0}
+.tsws-media__ph::after{bottom:10px;right:10px;border-left:0;border-top:0}
+.tsws-media__ph-kicker{font-family:var(--font-mono);font-size:var(--text-3xs);letter-spacing:var(--tracking-widest);
+text-transform:uppercase;color:var(--red-300)}
+.tsws-media__ph-label{font-family:var(--font-body);font-size:var(--text-2xs);color:var(--text-muted);max-width:34ch}
+.tsws-media__scrim{position:absolute;inset:0;background:var(--scrim-photo);pointer-events:none}
+
+/* ================= components/forms/forms.css ======================== */
+.tsws-field{display:flex;flex-direction:column;gap:var(--space-2)}
+.tsws-field__label{font-family:var(--font-body);font-size:var(--text-2xs);font-weight:var(--weight-bold);
+text-transform:uppercase;letter-spacing:var(--tracking-wider);color:var(--text-secondary)}
+.tsws-field__req{color:var(--red-300);margin-left:4px}
+.tsws-field__hint{font-family:var(--font-mono);font-size:var(--text-3xs);color:var(--text-muted)}
+.tsws-field__error{font-family:var(--font-mono);font-size:var(--text-3xs);color:var(--red-300);
+display:flex;align-items:center;gap:6px}
+/* input / textarea / select share the plate */
+.tsws-control{position:relative;display:flex;align-items:center;background:var(--surface-inset);
+box-shadow:inset 0 0 0 1px var(--border-control),var(--shadow-flat);clip-path:var(--clip-chamfer-sm);
+transition:box-shadow var(--dur-2) var(--ease-mech),background-color var(--dur-2) var(--ease-mech)}
+.tsws-control:hover{box-shadow:inset 0 0 0 1px var(--steel-500)}
+.tsws-control__input{flex:1;width:100%;min-width:0;background:transparent;border:0;outline:none;color:var(--text-primary);
+font-family:var(--font-body);font-size:var(--text-sm);height:var(--control-h-md);padding:0 var(--space-4)}
+.tsws-control__input::placeholder{color:#757e85}
+.tsws-control__input:focus{outline:none;box-shadow:none}
+textarea.tsws-control__input{height:auto;padding:var(--space-3) var(--space-4);resize:vertical;line-height:var(--leading-body)}
+.tsws-control__adorn{display:grid;place-items:center;padding-left:var(--space-4);color:var(--steel-400);flex:none}
+.tsws-control__seam{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--red-500);
+transform:scaleX(0);transform-origin:left;transition:transform var(--dur-3) var(--ease-strike)}
+.tsws-control--focused .tsws-control__seam{transform:scaleX(1)}
+.tsws-control--focused{background:var(--black-900);box-shadow:inset 0 0 0 1px var(--steel-400)}
+.tsws-control--focused .tsws-control__adorn{color:var(--red-400)}
+.tsws-control--error{box-shadow:inset 0 0 0 1px var(--status-danger)}
+.tsws-control--disabled{opacity:.42}
+.tsws-control--sm .tsws-control__input{height:var(--control-h-sm);font-size:var(--text-2xs)}
+.tsws-control--lg .tsws-control__input{height:var(--control-h-lg);font-size:var(--text-base)}
+/* select */
+.tsws-select{appearance:none;cursor:pointer;padding-right:var(--space-9)}
+.tsws-select__chev{position:absolute;right:var(--space-4);pointer-events:none;color:var(--steel-300);
+display:grid;place-items:center;transition:transform var(--dur-2) var(--ease-mech)}
+.tsws-control:hover .tsws-select__chev{color:var(--white)}
+/* checkbox + radio */
+.tsws-check{display:inline-flex;align-items:flex-start;gap:var(--space-3);cursor:pointer;
+font-size:var(--text-sm);color:var(--text-body)}
+.tsws-check__box{position:relative;width:20px;height:20px;flex:none;background:var(--surface-inset);
+box-shadow:inset 0 0 0 1px var(--border-control);clip-path:var(--clip-chamfer-sm);
+transition:var(--transition-control);display:grid;place-items:center}
+.tsws-check:hover .tsws-check__box{box-shadow:inset 0 0 0 1px var(--steel-400)}
+.tsws-check input{position:absolute;opacity:0;width:0;height:0}
+.tsws-check__tick{width:11px;height:11px;color:var(--white);opacity:0;transform:scale(.4);
+transition:opacity var(--dur-1) var(--ease-mech),transform var(--dur-2) var(--ease-strike)}
+.tsws-check--checked .tsws-check__box{background:var(--gradient-heat);box-shadow:var(--bevel-top),0 0 0 1px var(--red-600)}
+.tsws-check--checked .tsws-check__tick{opacity:1;transform:none}
+.tsws-check--disabled{opacity:.42;cursor:not-allowed}
+.tsws-check__label{padding-top:1px}
+.tsws-radio__box{border-radius:var(--radius-pill);clip-path:none}
+.tsws-radio__dot{width:8px;height:8px;border-radius:var(--radius-pill);background:var(--white);
+opacity:0;transform:scale(.4);transition:opacity var(--dur-1),transform var(--dur-2) var(--ease-strike)}
+.tsws-check--checked .tsws-radio__dot{opacity:1;transform:none}
+/* switch — a knife switch, not a pill */
+.tsws-switch{display:inline-flex;align-items:center;gap:var(--space-3);cursor:pointer;font-size:var(--text-sm);color:var(--text-body)}
+.tsws-switch input{position:absolute;opacity:0;width:0;height:0}
+.tsws-switch__track{position:relative;width:52px;height:26px;flex:none;background:var(--surface-inset);
+box-shadow:inset 0 0 0 1px var(--border-control);clip-path:var(--clip-chamfer-sm);transition:var(--transition-control)}
+.tsws-switch__knob{position:absolute;top:3px;left:3px;width:22px;height:20px;background:var(--gradient-steel-soft);
+box-shadow:var(--bevel-top),0 2px 0 rgba(0,0,0,.6);transition:transform var(--dur-2) var(--ease-strike),background var(--dur-2)}
+.tsws-switch__knob::after{content:"";position:absolute;inset:6px 9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 1px,transparent 1px 3px)}
+.tsws-switch--on .tsws-switch__track{background:rgba(201,3,20,.28);box-shadow:inset 0 0 0 1px var(--red-600)}
+.tsws-switch--on .tsws-switch__knob{transform:translateX(24px);background:var(--gradient-heat)}
+.tsws-switch--disabled{opacity:.42;cursor:not-allowed}
+.tsws-switch__state{font-family:var(--font-mono);font-size:var(--text-3xs);letter-spacing:var(--tracking-wider);
+text-transform:uppercase;color:var(--text-muted);min-width:26px}
+.tsws-switch--on .tsws-switch__state{color:var(--red-300)}
+
+/* ================= components/navigation/navigation.css ============== */
+.tsws-tabs{display:flex;flex-direction:column;gap:var(--space-5)}
+.tsws-tabs__list{position:relative;display:flex;gap:var(--space-7);border-bottom:1px solid var(--border-hairline)}
+.tsws-tabs__tab{position:relative;background:none;border:0;padding:0 0 var(--space-3);cursor:pointer;
+font-family:var(--font-body);font-size:var(--text-2xs);font-weight:var(--weight-bold);text-transform:uppercase;
+letter-spacing:var(--tracking-wider);color:var(--text-muted);transition:color var(--dur-2) var(--ease-mech)}
+.tsws-tabs__tab:hover{color:var(--text-primary)}
+.tsws-tabs__tab--active{color:var(--white)}
+.tsws-tabs__tab-count{font-family:var(--font-mono);color:var(--steel-500);margin-left:6px}
+.tsws-tabs__seam{position:absolute;bottom:-1px;height:3px;background:var(--red-500);
+transition:left var(--dur-3) var(--ease-mech),width var(--dur-3) var(--ease-mech)}
+.tsws-tabs__panel{animation:tsws-strike-in var(--dur-3) var(--ease-mech)}
+.tsws-tabs--vertical .tsws-tabs__list{flex-direction:column;gap:var(--space-4);border-bottom:0;border-left:1px solid var(--border-hairline);padding-left:var(--space-5)}
+
+/* ================= components/feedback/feedback.css =================== */
+/* ---- Dialog ---------------------------------------------------------- */
+.tsws-dialog__scrim{position:fixed;inset:0;background:rgba(5,5,5,.78);backdrop-filter:blur(6px);
+display:grid;place-items:center;padding:var(--space-6);z-index:60;animation:tsws-strike-in var(--dur-2) var(--ease-mech)}
+.tsws-dialog{position:relative;width:min(560px,100%);background:var(--surface-card);box-shadow:var(--shadow-overlay);
+clip-path:var(--clip-chamfer-lg);animation:tsws-strike-in var(--dur-3) var(--ease-strike)}
+.tsws-dialog__head{display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-6) var(--space-6) var(--space-3)}
+.tsws-dialog__title{flex:1;font-family:var(--font-display);font-weight:var(--weight-black);text-transform:uppercase;
+font-size:var(--text-2xl);line-height:var(--leading-tight);letter-spacing:var(--tracking-tight);color:var(--text-primary)}
+.tsws-dialog__body{padding:0 var(--space-6) var(--space-6);color:var(--text-secondary);font-size:var(--text-sm)}
+.tsws-dialog__foot{display:flex;justify-content:flex-end;gap:var(--space-3);padding:var(--space-4) var(--space-6);
+border-top:1px solid var(--border-hairline);background:rgba(255,255,255,.02)}
+/* ---- Toast ----------------------------------------------------------- */
+.tsws-toast{display:flex;align-items:flex-start;gap:var(--space-3);min-width:300px;max-width:440px;
+background:var(--steel-800);box-shadow:var(--shadow-lifted);clip-path:var(--clip-chamfer-sm);
+padding:var(--space-4) var(--space-5);animation:tsws-strike-in var(--dur-3) var(--ease-strike);position:relative;overflow:hidden}
+.tsws-toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--accent-bar-w);background:var(--status-info)}
+.tsws-toast--ok::before{background:var(--status-ok)}
+.tsws-toast--warn::before{background:var(--status-warn)}
+.tsws-toast--danger::before{background:var(--status-danger)}
+.tsws-toast__icon{flex:none;margin-top:1px;color:var(--text-primary)}
+.tsws-toast__copy{flex:1;display:flex;flex-direction:column;gap:2px}
+.tsws-toast__title{font-family:var(--font-body);font-weight:var(--weight-bold);font-size:var(--text-2xs);
+text-transform:uppercase;letter-spacing:var(--tracking-wide);color:var(--text-primary)}
+.tsws-toast__text{font-size:var(--text-xs);color:var(--text-secondary)}
+.tsws-toast__close{background:none;border:0;color:var(--steel-400);cursor:pointer;font-size:16px;line-height:1;padding:5px;margin:-5px}
+.tsws-toast__close:hover{color:var(--white)}
+.tsws-toast__timer{position:absolute;left:var(--accent-bar-w);right:0;bottom:0;height:2px;background:var(--steel-600);
+transform-origin:left;animation:tsws-seam-draw var(--dur-6) var(--ease-linear) reverse forwards}
+/* ---- Tooltip --------------------------------------------------------- */
+.tsws-tip{position:relative;display:inline-flex}
+.tsws-tip__bubble{position:absolute;z-index:40;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);
+background:var(--black-950);color:var(--text-primary);box-shadow:0 0 0 1px var(--border-subtle),var(--shadow-plate);
+clip-path:var(--clip-chamfer-sm);padding:var(--space-2) var(--space-3);white-space:nowrap;
+font-family:var(--font-mono);font-size:var(--text-3xs);letter-spacing:var(--tracking-wide);text-transform:uppercase;
+opacity:0;pointer-events:none;transition:opacity var(--dur-2) var(--ease-mech),transform var(--dur-2) var(--ease-mech)}
+.tsws-tip--open .tsws-tip__bubble{opacity:1;transform:translate(-50%,0)}
+.tsws-tip__bubble--bottom{bottom:auto;top:calc(100% + 8px)}
+
+/* ---- Focus (a11y) ----------------------------------------------------
+   clip-path chamfers clip outset shadows/outlines, so clipped controls
+   get an INSET two-tone ring instead of the global --focus-shadow.
+   Validated: arc-blue vs #080808 = 12.2:1; black separator vs the red
+   gradient face #e01625 = 3.95:1. Declared after all variant :hover
+   rules so the ring wins the source-order tie while focused. */
+.tsws-btn:focus-visible,.tsws-iconbtn:focus-visible,.tsws-badge:focus-visible,.tsws-tag:focus-visible{
+box-shadow:inset 0 0 0 2px var(--black-900),inset 0 0 0 4px var(--arc-blue)}
+
+/* ======================================================================
+   App shell — SiteHeader / SiteFooter (from SiteHeader.dc.html and
+   SiteFooter.dc.html; responsive behavior per the build brief)
+   ====================================================================== */
+.site-header{position:sticky;top:0;z-index:60;background:rgba(8,8,8,.86);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.1)}
+.site-header__inner{max-width:1280px;margin:0 auto;padding:0 32px;min-height:78px;display:flex;align-items:center;gap:28px}
+.site-header__brand{display:flex;align-items:center;gap:12px;text-decoration:none;flex-shrink:0;border-bottom:none}
+.site-header__brand:hover{border-bottom:none}
+.site-header__logo{height:46px;width:auto;display:block}
+.site-header__wordmark{font-family:var(--font-display);font-weight:900;font-style:oblique 10deg;font-size:19px;letter-spacing:-0.02em;color:#ffffff;text-transform:uppercase;line-height:0.9}
+.site-nav{display:flex;gap:24px;margin-left:12px}
+.site-nav__link{position:relative;font-family:var(--font-mono);font-size:12px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:8px 0;color:rgba(255,255,255,.62);border-bottom:none;transition:color var(--dur-2) var(--ease-mech)}
+.site-nav__link:hover{color:#ffffff;border-bottom:none}
+.site-nav__link--active{color:#ffffff}
+.site-nav__seam{position:absolute;left:0;bottom:0;height:2px;background:#c90314;width:0}
+.site-nav__link--active .site-nav__seam{width:100%}
+.site-header__end{margin-left:auto;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.site-header__phone{font-family:var(--font-mono);font-size:13px;letter-spacing:0.12em;color:#ffffff;text-decoration:none;border-bottom:none;transition:color var(--dur-2) var(--ease-mech)}
+.site-header__phone:hover{color:#7fd4ff;border-bottom:none}
+.site-header__toggle{display:none}
+/* mobile sheet — chamfered full-width panel; scrolls on short viewports
+   (landscape phones) so the phone + quote CTA stay reachable */
+.site-sheet{display:none;position:absolute;left:0;right:0;top:100%;padding:10px 16px 24px;background:transparent;max-height:calc(100dvh - 90px);overflow-y:auto;overscroll-behavior:contain}
+.site-sheet__panel{background:var(--surface-card);box-shadow:var(--shadow-overlay);clip-path:var(--clip-chamfer-md);border:1px solid var(--border-hairline);padding:12px 24px 24px;display:flex;flex-direction:column}
+.site-sheet__link{position:relative;font-family:var(--font-mono);font-size:13px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;color:rgba(255,255,255,.72);border-bottom:1px solid var(--border-hairline);padding:15px 2px}
+.site-sheet__link:hover{color:#ffffff;border-bottom-color:var(--border-hairline)}
+.site-sheet__link--active{color:#ffffff}
+.site-sheet__link--active::after{content:"";position:absolute;left:2px;bottom:-1px;width:56px;height:2px;background:#c90314}
+.site-sheet__cta{display:flex;flex-direction:column;gap:12px;padding-top:20px}
+.site-sheet__phone{font-family:var(--font-mono);font-size:15px;letter-spacing:0.12em;color:#ffffff;text-decoration:none;border-bottom:none;display:inline-flex;align-items:center;gap:10px}
+.site-sheet__phone:hover{color:#7fd4ff;border-bottom:none}
+@media (max-width:1279px){
+  .site-header__badge{display:none}
+}
+@media (max-width:1023px){
+  .site-nav{display:none}
+  .site-header__toggle{display:inline-grid}
+  .site-header--open .site-sheet{display:block}
+  .site-header__inner{gap:16px}
+}
+/* Brand + phone + quote button need ~660px; drop the button first. */
+@media (max-width:679px){
+  .site-header__quote{display:none}
+}
+@media (max-width:639px){
+  .site-header__inner{padding:0 20px;min-height:66px}
+  .site-header__logo{height:38px}
+  .site-header__phone{font-size:12px}
+  .site-header__wordmark{font-size:16px}
+}
+/* Below 480px the badge carries the brand; the wordmark text would push the
+   menu toggle past the viewport edge. */
+@media (max-width:479px){
+  .site-header__wordmark{display:none}
+}
+/* footer */
+.site-footer{background:#050505;border-top:1px solid rgba(255,255,255,.1)}
+.site-footer__grid{max-width:1280px;margin:0 auto;padding:64px 32px 40px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px}
+/* The footer column is a flex column: Safari stretches replaced elements to
+   the cross axis (full column width) while height stays 64px, distorting the
+   badge. align-self:flex-start opts out of the stretch; object-fit guards the
+   aspect if anything else ever forces a size. Never width:max-content. */
+.site-footer__logo{height:64px;width:auto;max-width:100%;aspect-ratio:560/288;object-fit:contain;align-self:flex-start;display:block}
+.site-footer__blurb{font-family:var(--font-body);font-size:15px;line-height:1.55;color:rgba(255,255,255,.72);margin:0;max-width:34ch}
+.site-footer__legal{font-family:var(--font-mono);font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+.site-footer__col{display:flex;flex-direction:column;gap:10px}
+.site-footer__heading{font-family:var(--font-mono);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#f2313f;margin-bottom:6px}
+.site-footer__link{font-family:var(--font-body);font-size:14px;text-decoration:none;color:rgba(255,255,255,.72);border-bottom:none;transition:color var(--dur-2) var(--ease-mech)}
+.site-footer__link:hover{color:#ffffff;border-bottom:none}
+.site-footer__mono{font-family:var(--font-mono);font-size:13px;letter-spacing:0.1em;text-decoration:none;color:#ffffff;border-bottom:none;transition:color var(--dur-2) var(--ease-mech)}
+.site-footer__mono:hover{color:#7fd4ff;border-bottom:none}
+.site-footer__towns{font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,.72);line-height:1.55}
+.site-footer__oncall{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#ffb020}
+.site-footer__chips{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap}
+.site-footer__chip{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;text-decoration:none;color:#eef0f1;border:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16);padding:6px 10px;transition:border-color var(--dur-2) var(--ease-mech)}
+.site-footer__chip:hover{border-color:rgba(201,3,20,.7);color:#eef0f1}
+.site-footer__bottom{border-top:1px solid rgba(255,255,255,.08)}
+/* Right padding clears the fixed "Ask the shop" pill (~190px wide at right:24px). */
+.site-footer__bottom-inner{max-width:1280px;margin:0 auto;padding:16px 220px 16px 32px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.site-footer__bottom-line{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.site-footer__credit{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,.55);text-decoration:none;border-bottom:none;transition:color var(--dur-2) var(--ease-mech)}
+.site-footer__credit img{display:block;opacity:.55;transition:opacity var(--dur-2) var(--ease-mech)}
+.site-footer__credit:hover{color:rgba(255,255,255,.85)}
+.site-footer__credit:hover img{opacity:1}
+@media (max-width:1023px){
+  .site-footer__grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:639px){
+  .site-footer__grid{grid-template-columns:1fr;padding:48px 20px 40px;gap:40px}
+  .site-footer__col{gap:12px}
+  .site-footer__heading{margin-bottom:8px}
+  .site-footer__link{font-size:15px;padding:4px 0}
+  .site-footer__mono{padding:4px 0}
+  .site-footer__towns,.site-footer__oncall{padding:2px 0}
+  .site-footer__addr{display:none}
+  .site-footer__chips{gap:12px;margin-top:8px}
+  .site-footer__chip{padding:10px 14px;font-size:12px}
+  /* gap 0 + one line-height everywhere: a wrapped line and the next item get
+     identical spacing, so the block reads as one even mono column. */
+  .site-footer__bottom-inner{padding:20px 20px 84px;flex-direction:column;gap:0}
+  .site-footer__bottom-line{line-height:1.9}
+  .site-footer__credit{line-height:1.9;margin-top:2px}
+  .site-footer__credit{font-size:13px;gap:8px;margin-top:6px}
+  .site-footer__credit img{width:20px;height:20px}
+}
 }
