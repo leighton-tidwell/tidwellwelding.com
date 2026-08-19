@@ -12,9 +12,10 @@
     "test:e2e": "playwright test",
     "test:all": "vitest run && playwright test",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy && node scripts/indexnow-ping.mjs",
+    "deploy": "pnpm run build:cf && opennextjs-cloudflare deploy && node scripts/indexnow-ping.mjs",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "build:cf": "npx convex deploy -y --cmd 'pnpm exec opennextjs-cloudflare build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.39",
