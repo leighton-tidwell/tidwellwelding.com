@@ -18,8 +18,10 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: [
       {
-        url: "/media/heavy-wall-8in-stainless.jpg",
-        alt: "Heavy wall stainless piece with flanges, purged TIG roots and caps",
+        url: "/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "Tidwell Specialty Welding Services",
       },
     ],
   },
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/media/heavy-wall-8in-stainless.jpg"],
+    images: ["/og-card.png"],
   },
 };
 

@@ -19,8 +19,10 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: [
       {
-        url: "/media/bulldozer-reinforcement-plate.jpg",
-        alt: "Reinforcement plate welded onto a bulldozer bucket in the field, Stephenville TX area",
+        url: "/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "Tidwell Specialty Welding Services",
       },
     ],
   },
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/media/bulldozer-reinforcement-plate.jpg"],
+    images: ["/og-card.png"],
   },
 };
 

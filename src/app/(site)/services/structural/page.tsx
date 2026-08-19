@@ -19,8 +19,10 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     images: [
       {
-        url: "/media/custom-handrail.jpg",
-        alt: "Installed interior steel handrail with cable infill",
+        url: "/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "Tidwell Specialty Welding Services",
       },
     ],
   },
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/media/custom-handrail.jpg"],
+    images: ["/og-card.png"],
   },
 };
 

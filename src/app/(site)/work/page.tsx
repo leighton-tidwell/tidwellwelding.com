@@ -19,8 +19,10 @@ export const metadata: Metadata = {
     url: "/work",
     images: [
       {
-        url: "/media/welding-rig-at-work.jpg",
-        alt: "TSWS welding rig parked on a job site, Granbury TX",
+        url: "/og-card.png",
+        width: 1200,
+        height: 630,
+        alt: "Tidwell Specialty Welding Services",
       },
     ],
   },
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: ["/media/welding-rig-at-work.jpg"],
+    images: ["/og-card.png"],
   },
 };
 
