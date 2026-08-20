@@ -502,7 +502,7 @@ export default function HomePage() {
 
       {/* ---- Reviews ----------------------------------------------------- */}
       <section className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8 lg:py-26">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-6">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <h2 className="text-[40px] lg:text-[56px]" style={displayHead}>
             What the area says.
           </h2>
@@ -519,19 +519,6 @@ export default function HomePage() {
               5.0 · GOOGLE
             </span>
           </div>
-        </div>
-        <div
-          className="mb-8"
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,.55)",
-          }}
-        >
-          Sample reviews. Wire to the live Google Business Profile feed at
-          launch.
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
           {REVIEWS.map((r) => (
