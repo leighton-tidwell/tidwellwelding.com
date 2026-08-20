@@ -54,3 +54,6 @@ next-env.d.ts
 
 # CI credentials to paste into dashboards — never committed
 .ci-secrets.env
+
+# generated per-PR preview config
+wrangler.preview.jsonc

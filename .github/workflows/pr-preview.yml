@@ -49,14 +49,17 @@ jobs:
             --cmd 'pnpm exec opennextjs-cloudflare build' \
             --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
 
-      # Uploads a new Worker version WITHOUT shifting production traffic.
-      - name: Upload preview version
+      # Each preview is its OWN Worker (tidwellwelding-pr-N) so the teardown
+      # workflow can delete it outright when the PR closes. The generated
+      # config strips the production routes — see scripts/preview-config.mjs.
+      - name: Deploy preview Worker
         id: upload
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          pnpm exec wrangler versions upload 2>&1 | tee upload.log
+          node scripts/preview-config.mjs "${{ github.event.pull_request.number }}"
+          pnpm exec wrangler deploy --config wrangler.preview.jsonc 2>&1 | tee upload.log
           URL=$(grep -oE 'https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev' upload.log | head -1)
           echo "preview_url=${URL}" >> "$GITHUB_OUTPUT"
 
@@ -72,8 +75,9 @@ jobs:
               ? [
                   `**Preview ready:** ${url}`,
                   '',
-                  `Backend: isolated Convex deployment \`pr-${process.env.PR_NUMBER}\` (empty database, expires in 5 days).`,
+                  `Worker: \`tidwellwelding-pr-${process.env.PR_NUMBER}\` · Backend: isolated Convex deployment \`pr-${process.env.PR_NUMBER}\` (empty database).`,
                   'Production data and email are untouched. Preview hosts are `Disallow: /` in robots.txt.',
+                  'Closing or merging this PR deletes the preview Worker automatically.',
                 ].join('\n')
               : 'Preview version uploaded, but no preview URL was found in the wrangler output.';
             const { owner, repo } = context.repo;
