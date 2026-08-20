@@ -51,13 +51,12 @@ const CONTENT: ServicePageContent = {
       heading: "Staircase packages, built around your floor.",
       paragraphs: [
         <>
-          A recent package ran three welders and 150 man-hours for a
-          distribution facility in the{" "}
-          <Link href="/welder/fort-worth-tx">Fort Worth</Link> area. The crew
+          A recent package ran 150 man-hours for a distribution facility in
+          the <Link href="/welder/fort-worth-tx">Fort Worth</Link> area. Eric
           built it over two weekends so the floor stayed open. Plumb, square,
           ready for inspection.
         </>,
-        "Bigger structural jobs run with a crew of two to three welders. Each runs his own shop and works under TSWS on the package. Eric inspects every weld the way he inspects his own.",
+        "Bigger structural packages are scheduled around the floor, not crammed into one shift. One welder, one standard, every weld inspected before it leaves.",
       ],
     },
     {

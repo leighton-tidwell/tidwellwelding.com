@@ -214,7 +214,7 @@ export default function ServicesPage() {
         </h1>
         <p className={styles.heroLede}>
           Six service lines, one standard. Nothing leaves the shop unless the
-          welds pass Eric&apos;s eye. That covers crew work too.
+          welds pass Eric&apos;s eye. Every job, start to finish.
         </p>
       </section>
 

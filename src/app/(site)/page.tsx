@@ -108,7 +108,7 @@ const STEPS = [
   {
     n: "02",
     title: "Get working numbers",
-    body: "The estimator drafts tasks, crew size, hours and a dollar range.",
+    body: "The estimator drafts the task list, hours and a dollar range.",
   },
   {
     n: "03",
@@ -618,7 +618,7 @@ export default function HomePage() {
               }}
             >
               Describe the job and attach photos. The estimator drafts the task
-              list, crew size and hours while you watch. Eric checks the
+              list and the hours while you watch. Eric checks the
               numbers and calls you back. Quotes are free. Got one from another
               shop? Send it and we&apos;ll beat it.
             </p>
