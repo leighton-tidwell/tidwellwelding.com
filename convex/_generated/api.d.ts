@@ -16,6 +16,7 @@ import type * as market from "../market.js";
 import type * as quotes from "../quotes.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as sessions from "../sessions.js";
+import type * as settings from "../settings.js";
 import type * as turnstile from "../turnstile.js";
 
 import type {
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   quotes: typeof quotes;
   rateLimits: typeof rateLimits;
   sessions: typeof sessions;
+  settings: typeof settings;
   turnstile: typeof turnstile;
 }>;
 

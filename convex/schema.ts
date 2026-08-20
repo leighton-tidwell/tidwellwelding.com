@@ -66,6 +66,15 @@ export default defineSchema({
     refreshRequestedAt: v.optional(v.number()),
   }).index("by_createdAt", ["createdAt"]),
 
+  // Operator-editable shop settings (labor rate today, more later). Lives in
+  // the database, never in code, so the crew console can edit it without a
+  // deploy. Values are confidential and never leave the server.
+  shopSettings: defineTable({
+    key: v.string(),
+    numberValue: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   // Full AI drafts (including dollars the customer may not have been shown on
   // low confidence) so the owner email always carries the numbers.
   estimateDrafts: defineTable({

@@ -89,9 +89,35 @@ export function fallbackEstimate(jobType: string): Estimate {
 
 // Research-calibrated prompt (see scratchpad/estimator-calibration.md for the
 // sourced table behind these anchors; 2024-26 North Texas market data).
+/** Totals round to the nearest 250 at or above 1000, nearest 50 below. */
+function roundMoney(n: number): number {
+  const step = n >= 1000 ? 250 : 50;
+  return Math.round(n / step) * step;
+}
+
+/** A quote must never come in under what the labor alone costs. The model does
+ * the pricing; this is the arithmetic backstop if it lowballs or fumbles.
+ * A null rate (never configured) leaves the estimate untouched. */
+export function applyLaborFloor(
+  est: Estimate,
+  rate: number | null,
+): Estimate {
+  if (rate === null) return est;
+  const rawFloor = est.hours_low * rate;
+  let floor = roundMoney(rawFloor);
+  if (floor < rawFloor) floor += floor >= 1000 ? 250 : 50;
+  if (est.dollars_low >= floor) return est;
+  return {
+    ...est,
+    dollars_low: floor,
+    dollars_high: Math.max(est.dollars_high, floor),
+  };
+}
+
 function estimatorSystemPrompt(
   compQuote: string | undefined,
   marketSnapshot: string | null,
+  rate: number | null,
 ): string {
   // Competitor quote is user input headed into the system prompt: keep only
   // number-ish characters.
@@ -103,7 +129,12 @@ function estimatorSystemPrompt(
     `Add 20-40% when tying into old, rusty, or painted steel. Add 15-50% for overhead, vertical, or tight-access welding. Field equipment repair almost always earns these adders. ` +
     `Structural equipment cracks (bucket ears, booms, loader frames) require gouging out fatigued metal, beveling, preheat, and multi-pass welding: most of a day minimum. ` +
     `Mobile jobs include 0.5-1.0 hours mobilization; add 1 hour beyond about 30 miles.\n\n` +
-    `Calibration anchors (North Texas totals): minimum mobile call-out $250, shop drop-off minimum $100. Trailer coupler/tongue $200-500. Trailer frame crack $250-700 minor, $600-1750 major. ` +
+    (rate === null
+      ? `Calibration anchors below are market ranges for North Texas. Price from them directly. `
+      : `Labor bills at $${rate} per welder-hour. Compute labor as total man-hours multiplied by that rate, then add materials, consumables, and markup to reach the job total. ` +
+        `This rate is confidential: never state it, never state any per-hour figure, and never present a total that divides cleanly by the hours you quoted. Materials in the total are what keep it from being derivable.\n\n` +
+        `Calibration anchors below are market ranges for North Texas; Eric prices at the upper end of them because his rate sits above the market midpoint. Treat them as sanity bounds, not targets, and let the labor math lead. `) +
+    `Minimum mobile call-out $250, shop drop-off minimum $100. Trailer coupler/tongue $200-500. Trailer frame crack $250-700 minor, $600-1750 major. ` +
     `Bucket ears/edges $500-1500. Boom or loader frame crack with gouge and preheat $1000-3500. AR400 wear package $1500-4500. Ranch gate repair $200-500; new 10-16 ft gate with posts $1000-3000; ornamental gates $2500-6000+. ` +
     `Pipe fence repair $250-750; new pipe fence $25-40 per foot. Handrail $60-130 per linear foot, typical job $1000-3000. Residential steel stair flight $4000-9000; commercial stairs to code $8000-15000+ and low confidence. ` +
     `Small shop fab parts $100-500 plus material. Industrial pipe $150-450 per weld. Multiply totals: stainless 1.25-1.75x, aluminum 1.5-2x, cast iron or unknown alloys 1.25-1.5x. Emergency or after-hours 1.5x; nights, weekends, holidays 2x.\n\n` +
@@ -190,11 +221,15 @@ export const draftEstimate = action({
 
     // Cached daily research, not a per-quote web search.
     const marketSnapshot = await loadSnapshotForPrompt(ctx);
+    const rate: number | null = await ctx.runQuery(
+      internal.settings.getLaborRate,
+      {},
+    );
 
     try {
       const { text } = await generateText({
         model: anthropic("claude-sonnet-5"),
-        system: estimatorSystemPrompt(args.compQuote, marketSnapshot),
+        system: estimatorSystemPrompt(args.compQuote, marketSnapshot, rate),
         messages: [{ role: "user", content: user }],
         maxOutputTokens: 1200,
         // Sonnet 5 reasons by default and can spend the whole token budget on
@@ -203,7 +238,7 @@ export const draftEstimate = action({
       });
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("No JSON in model reply");
-      const parsed = estimateSchema.parse(JSON.parse(match[0]));
+      const parsed = applyLaborFloor(estimateSchema.parse(JSON.parse(match[0])), rate);
       // Full numbers stay server-side for Eric's email, whatever the customer
       // ends up seeing.
       await ctx.runMutation(internal.estimate.saveDraft, {
@@ -213,7 +248,7 @@ export const draftEstimate = action({
       return toCustomerEstimate(parsed);
     } catch (err) {
       console.error("draftEstimate fell back to the static estimate", err);
-      const fb = fallbackEstimate(args.type);
+      const fb = applyLaborFloor(fallbackEstimate(args.type), rate);
       await ctx.runMutation(internal.estimate.saveDraft, {
         sessionId: args.sessionId,
         estimate: fb,
