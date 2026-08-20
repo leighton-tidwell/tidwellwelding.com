@@ -23,6 +23,8 @@ Marketing and quote-intake site for a mobile welding and fabrication business in
 
 ## Development
 
+<!-- preview pipeline smoke test -->
+
 ```bash
 pnpm install
 npx convex dev        # backend, hot reload
