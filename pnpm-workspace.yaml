@@ -1,3 +1,6 @@
+# pnpm 11 blocks dependency build scripts unless approved. It warns locally but
+# fails hard in CI, so every package that needs one is listed here explicitly.
 allowBuilds:
   esbuild: true
   workerd: true
+  unrs-resolver: true # native resolver used by eslint-plugin-import
