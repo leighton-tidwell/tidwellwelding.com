@@ -310,7 +310,7 @@ export default function ContactPage() {
 
       {/* Reviews */}
       <section className="mx-auto w-full max-w-[1280px] px-5 py-16 sm:px-8 md:py-[88px]">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4 md:gap-6">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-4 md:gap-6">
           <h2
             style={{
               fontStyle: "oblique 10deg",
@@ -334,6 +334,18 @@ export default function ContactPage() {
               5.0 · GOOGLE
             </span>
           </div>
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,.55)",
+            marginBottom: 32,
+          }}
+        >
+          A few of the jobs the truck has rolled out for.
         </div>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {REVIEWS.map((r) => (
