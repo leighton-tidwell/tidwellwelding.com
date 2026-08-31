@@ -98,6 +98,9 @@ export const create = mutation({
       customerId: args.customerId,
       jobPo: args.jobPo,
       issuedAt,
+      // Terms are due-on-receipt, so today is the useful default. Eric can
+      // move it before generating the PDF.
+      dueAt: issuedAt,
       terms: DEFAULT_TERMS,
       lineItems: [],
       discountCents: 0,

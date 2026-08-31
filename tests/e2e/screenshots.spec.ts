@@ -44,6 +44,7 @@ test("capture the console", async ({ page }) => {
   const name = `Bishop Fabrication ${Date.now().toString().slice(-5)}`;
   await page.getByLabel("Name").fill(name);
   await page.getByLabel("Company").fill("Bishop Fabrication LLC");
+  await page.getByLabel("Contact").fill("Dale Bishop");
   await page.getByLabel("Phone").fill("(972) 999-7505");
   await page.getByLabel("Address").fill("4100 County Road 1004, Joshua TX 76058");
   await page.getByRole("button", { name: "Save customer" }).click();
@@ -57,6 +58,9 @@ test("capture the console", async ({ page }) => {
   await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-/, {
     timeout: 15_000,
   });
+
+  // Job / PO # is Eric's own reference for the job, as on his paper form.
+  await page.getByLabel("Job / PO #").fill("Dual Swing Gate");
 
   const lines: [string, string, string, string][] = [
     ["1", "ea", "LiftMaster LA400UL, dual-swing operator with solar panel", "2999.00"],

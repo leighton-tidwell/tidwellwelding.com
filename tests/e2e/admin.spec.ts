@@ -192,6 +192,56 @@ test.describe("invoicing, end to end", () => {
     await expect(page.getByText("$725.40")).toBeVisible();
   });
 
+  test("job/po and due date default sensibly and survive a reload", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    const name = uniqueName("JobPo");
+    await page.getByRole("button", { name: "Customers" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByRole("button", { name: "Save customer" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Invoices" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create invoice" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-/, {
+      timeout: 15_000,
+    });
+
+    // A new invoice is due today, since the terms are due-on-receipt.
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Chicago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    await expect(page.getByLabel("Due date")).toHaveValue(today);
+
+    // Eric fills the job reference and can move the due date out.
+    await page.getByLabel("Job / PO #").fill("Dual Swing Gate");
+    await page.getByLabel("Due date").fill("2026-09-30");
+
+    const row = page.getByRole("group", { name: "Line item 1" });
+    await row.getByLabel("Qty").fill("1");
+    await row.getByLabel("Description of work / materials").fill("Gate work");
+    await row.getByLabel("Rate").fill("100.00");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    // Both survive a round trip through the database. A reload returns to the
+    // invoice list, so reopen the invoice before checking the fields.
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Invoices" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await page.getByRole("button", { name: /TSWS-/ }).first().click();
+    await expect(page.getByLabel("Job / PO #")).toHaveValue("Dual Swing Gate", {
+      timeout: 20_000,
+    });
+    await expect(page.getByLabel("Due date")).toHaveValue("2026-09-30");
+  });
+
   test("downloading produces a real PDF and blocks repeat clicks", async ({
     page,
   }) => {

@@ -204,6 +204,36 @@ describe("invoices", () => {
     expect(invoice?.terms).toBe("Due upon receipt");
   });
 
+  test("a new invoice defaults its due date to the day it was issued", async () => {
+    // Eric's terms are due-on-receipt, so the useful default is today. He can
+    // still move the date before generating the PDF.
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+
+    const issuedAt = Date.UTC(2026, 7, 31, 15);
+    const id = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
+    const invoice = await t.query(api.invoices.get, { token, id });
+
+    expect(invoice?.dueAt).toBe(issuedAt);
+  });
+
+  test("the due date can be moved without touching the issue date", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+
+    const issuedAt = Date.UTC(2026, 7, 31, 15);
+    const id = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
+
+    const dueAt = Date.UTC(2026, 8, 30, 15);
+    await t.mutation(api.invoices.update, { token, id, dueAt });
+
+    const invoice = await t.query(api.invoices.get, { token, id });
+    expect(invoice?.dueAt).toBe(dueAt);
+    expect(invoice?.issuedAt).toBe(issuedAt);
+  });
+
   test("reading an invoice returns server-computed totals, not client numbers", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);

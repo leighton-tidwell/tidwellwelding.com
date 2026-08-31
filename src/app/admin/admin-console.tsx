@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { Badge, Button, HazardBar, Icon, Input, Select } from "@/components/ds";
+import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, {
@@ -475,6 +476,17 @@ function InvoiceEditor({
 
   const [lines, setLines] = useState<EditorLine[] | null>(null);
   const [saved, setSaved] = useState(true);
+  const [jobPoEdit, setJobPoEdit] = useState<string | null>(null);
+  const [dueDateEdit, setDueDateEdit] = useState<string | null>(null);
+
+  // Seeded from the server until Eric types, same as the line items.
+  const jobPo = jobPoEdit ?? invoice?.jobPo ?? "";
+  const dueDate =
+    dueDateEdit ??
+    (invoice?.dueAt === undefined ? "" : toDateInputValue(invoice.dueAt));
+
+  const setJobPo = setJobPoEdit;
+  const setDueDate = setDueDateEdit;
 
   // Seed the editor from the server exactly once, then it is the local source
   // of truth until saved — otherwise every keystroke would fight the query.
@@ -506,9 +518,17 @@ function InvoiceEditor({
         rateCents: parseMoneyToCents(line.rate) ?? 0,
         taxable: line.taxable,
       }));
-    await update({ token, id, lineItems: payload });
+    await update({
+      token,
+      id,
+      lineItems: payload,
+      jobPo: jobPo.trim(),
+      ...(fromDateInputValue(dueDate) === null
+        ? {}
+        : { dueAt: fromDateInputValue(dueDate) as number }),
+    });
     setSaved(true);
-  }, [editorLines, update, token, id]);
+  }, [editorLines, update, token, id, jobPo, dueDate]);
 
   const download = useCallback(async () => {
     // Save first so the PDF can never disagree with what is on screen.
@@ -544,6 +564,29 @@ function InvoiceEditor({
             })
           }
         />
+      </div>
+
+      <div className="admin-card">
+        <h2 className="admin-card__title">Job details</h2>
+        <div className="admin-grid-2">
+          <Input
+            label="Job / PO #"
+            value={jobPo}
+            onChange={(value) => {
+              setJobPo(value);
+              setSaved(false);
+            }}
+          />
+          <Input
+            label="Due date"
+            type="date"
+            value={dueDate}
+            onChange={(value) => {
+              setDueDate(value);
+              setSaved(false);
+            }}
+          />
+        </div>
       </div>
 
       <div className="admin-card">

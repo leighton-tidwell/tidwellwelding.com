@@ -312,7 +312,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
 
   const leftFields: Array<[string, string]> = [
     ["BILL TO", customer.company ?? customer.name],
-    ["CONTACT", customer.contact ?? customer.name],
+    // Blank rather than echoing the company: this row names a person, and
+    // repeating the business name reads as a data-entry mistake.
+    ["CONTACT", customer.contact ?? ""],
     ["PHONE / EMAIL", contactLine],
     ["JOB / PO #", input.jobPo ?? ""],
   ];
