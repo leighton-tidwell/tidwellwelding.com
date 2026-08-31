@@ -1,3 +1,5 @@
+"use node";
+
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
@@ -9,9 +11,8 @@ import { renderInvoicePdf } from "./invoicePdf";
  * URL the browser can download. Actions cannot touch the database, so the read
  * and the write live in invoicePdfData.ts and are called through the runtime.
  *
- * Deliberately NOT "use node": pdf-lib is pure JS. Verified by rendering with
- * Buffer and process deleted from globalThis, so the default runtime is enough
- * and this avoids the Node runtime's cold start.
+ * Runs on the Node runtime: the renderer is built on @react-pdf/renderer, whose
+ * pdfkit dependency needs node:fs, node:stream and node:zlib.
  */
 export const generate = action({
   args: { token: v.string(), id: v.id("invoices") },

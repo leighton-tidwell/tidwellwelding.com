@@ -21,6 +21,7 @@ import type * as invoicePdfAction from "../invoicePdfAction.js";
 import type * as invoicePdfData from "../invoicePdfData.js";
 import type * as invoices from "../invoices.js";
 import type * as market from "../market.js";
+import type * as pdfText from "../pdfText.js";
 import type * as quotes from "../quotes.js";
 import type * as rateLimits from "../rateLimits.js";
 import type * as sessions from "../sessions.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   invoicePdfData: typeof invoicePdfData;
   invoices: typeof invoices;
   market: typeof market;
+  pdfText: typeof pdfText;
   quotes: typeof quotes;
   rateLimits: typeof rateLimits;
   sessions: typeof sessions;

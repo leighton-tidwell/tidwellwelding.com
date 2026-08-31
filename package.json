@@ -24,6 +24,7 @@
     "@convex-dev/rate-limiter": "^0.3.2",
     "@convex-dev/resend": "^0.2.6",
     "@marsidev/react-turnstile": "^1.6.0",
+    "@react-pdf/renderer": "^4.9.0",
     "ai": "^7.0.66",
     "convex": "^1.44.0",
     "lucide-react": "^1.31.0",
