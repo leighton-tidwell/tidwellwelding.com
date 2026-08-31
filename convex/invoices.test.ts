@@ -1,3 +1,4 @@
+import rateLimiterComponent from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
@@ -11,6 +12,14 @@ const modules = import.meta.glob([
   "!./**/*.d.ts",
 ]);
 
+/** auth.login is rate limited, so the component must be registered or every
+ * sign-in in these tests throws before it reaches the credential check. */
+function convexTestWithLimiter() {
+  const t = convexTest(schema, modules);
+  rateLimiterComponent.register(t);
+  return t;
+}
+
 const PASSWORD = "a-long-enough-password";
 
 /** A signed-in owner. Every admin call needs one of these. */
@@ -23,12 +32,13 @@ async function signedIn(t: ReturnType<typeof convexTest>) {
     token: setupToken,
     password: PASSWORD,
   });
-  return await t.mutation(api.auth.login, {
+  const result = await t.mutation(api.auth.login, {
     email: "eric@tidwellwelding.com",
     password: PASSWORD,
   });
+  if (!result.ok || !result.token) throw new Error("login failed in test setup");
+  return result.token;
 }
-
 const LINE = {
   qty: 1,
   unit: "ea" as const,
@@ -39,7 +49,7 @@ const LINE = {
 
 describe("customers", () => {
   test("a saved customer comes back with its details intact", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
 
     const id = await t.mutation(api.customers.create, {
@@ -56,7 +66,7 @@ describe("customers", () => {
   });
 
   test("customers list alphabetically so the picker is predictable", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
 
     for (const name of ["Whitfield Ops", "Boyd Equipment", "McAllen Ranch"]) {
@@ -72,7 +82,7 @@ describe("customers", () => {
   });
 
   test("a customer requires a name", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     await expect(
       t.mutation(api.customers.create, { token, name: "   " }),
@@ -80,7 +90,7 @@ describe("customers", () => {
   });
 
   test("updating a customer changes only what was passed", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const id = await t.mutation(api.customers.create, {
       token,
@@ -98,7 +108,7 @@ describe("customers", () => {
 
 describe("customers — access control", () => {
   test("every customer function refuses an unauthenticated caller", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const bad = "not-a-real-session-token";
 
     await expect(
@@ -108,7 +118,7 @@ describe("customers — access control", () => {
   });
 
   test("a customer cannot be read with an expired session", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const id = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -127,7 +137,7 @@ describe("customers — access control", () => {
 
 describe("invoice numbering", () => {
   test("the first invoice of the day uses the bare date, matching his format", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -142,7 +152,7 @@ describe("invoice numbering", () => {
   });
 
   test("a second invoice the same day gets a -2 suffix, not a collision", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const issuedAt = Date.UTC(2026, 7, 26, 17, 0, 0);
@@ -160,7 +170,7 @@ describe("invoice numbering", () => {
   });
 
   test("a different day starts numbering over", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -182,7 +192,7 @@ describe("invoice numbering", () => {
 
 describe("invoices", () => {
   test("a new invoice starts as a draft with sane defaults", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -196,7 +206,7 @@ describe("invoices", () => {
   });
 
   test("reading an invoice returns server-computed totals, not client numbers", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -217,7 +227,7 @@ describe("invoices", () => {
   });
 
   test("the invoice carries its customer so the editor needs one read", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, {
       token,
@@ -232,7 +242,7 @@ describe("invoices", () => {
   });
 
   test("status moves through the lifecycle the owner drives by hand", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -245,7 +255,7 @@ describe("invoices", () => {
   });
 
   test("a line item with a negative rate is refused before it can be saved", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -262,7 +272,7 @@ describe("invoices", () => {
   });
 
   test("a fractional cent rate is refused rather than silently rounded", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -279,7 +289,7 @@ describe("invoices", () => {
   });
 
   test("invoices for a customer come back newest first", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -299,7 +309,7 @@ describe("invoices", () => {
   });
 
   test("the customer view totals only what was actually billed, ignoring voids", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
 
@@ -318,7 +328,7 @@ describe("invoices", () => {
   });
 
   test("deleting an invoice removes it from the list", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -331,7 +341,7 @@ describe("invoices", () => {
 
 describe("invoices — access control", () => {
   test("every invoice function refuses an unauthenticated caller", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     const id = await t.mutation(api.invoices.create, { token, customerId });
@@ -354,7 +364,7 @@ describe("invoices — access control", () => {
   });
 
   test("an invoice cannot reference a customer that does not exist", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
     const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
     await t.mutation(api.customers.remove, { token, id: customerId });
@@ -367,7 +377,7 @@ describe("invoices — access control", () => {
 
 describe("shop settings", () => {
   test("the labor rate round-trips so the editor can prefill hourly lines", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     const token = await signedIn(t);
 
     await t.mutation(api.settings.setLaborRateAdmin, { token, rate: 175 });
@@ -375,7 +385,7 @@ describe("shop settings", () => {
   });
 
   test("the labor rate is not readable without a session", async () => {
-    const t = convexTest(schema, modules);
+    const t = convexTestWithLimiter();
     await expect(
       t.query(api.settings.getLaborRateAdmin, { token: "nope" }),
     ).rejects.toThrow();

@@ -162,6 +162,9 @@ export default defineSchema({
     taxRateBasisPoints: v.number(),
     paymentsCents: v.number(),
     notes: v.optional(v.string()),
+    /** Last generated PDF. Replaced on every regeneration so downloads never
+     * serve a stale file and old blobs do not accumulate. */
+    pdfStorageId: v.optional(v.id("_storage")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

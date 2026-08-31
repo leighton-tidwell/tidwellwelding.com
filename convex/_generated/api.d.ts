@@ -8,11 +8,17 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as customers from "../customers.js";
 import type * as emailTemplates from "../emailTemplates.js";
 import type * as estimate from "../estimate.js";
 import type * as ics from "../ics.js";
 import type * as invoiceMath from "../invoiceMath.js";
+import type * as invoicePdf from "../invoicePdf.js";
+import type * as invoicePdfAction from "../invoicePdfAction.js";
+import type * as invoicePdfData from "../invoicePdfData.js";
+import type * as invoices from "../invoices.js";
 import type * as market from "../market.js";
 import type * as quotes from "../quotes.js";
 import type * as rateLimits from "../rateLimits.js";
@@ -27,11 +33,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   chat: typeof chat;
+  customers: typeof customers;
   emailTemplates: typeof emailTemplates;
   estimate: typeof estimate;
   ics: typeof ics;
   invoiceMath: typeof invoiceMath;
+  invoicePdf: typeof invoicePdf;
+  invoicePdfAction: typeof invoicePdfAction;
+  invoicePdfData: typeof invoicePdfData;
+  invoices: typeof invoices;
   market: typeof market;
   quotes: typeof quotes;
   rateLimits: typeof rateLimits;
