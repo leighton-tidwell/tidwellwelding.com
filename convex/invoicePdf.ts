@@ -45,6 +45,10 @@ export const RED: RGB = { r: 0xc9 / 255, g: 0x03 / 255, b: 0x14 / 255 };
 export const BLACK: RGB = { r: 0, g: 0, b: 0 };
 export const WHITE: RGB = { r: 1, g: 1, b: 1 };
 export const GREY: RGB = { r: 0.42, g: 0.42, b: 0.42 };
+/** Label-cell fill on the meta grid and alternating totals rows. */
+export const SHADE: RGB = { r: 0.937, g: 0.937, b: 0.937 };
+/** Table and grid rules. */
+export const HAIRLINE: RGB = { r: 0.78, g: 0.78, b: 0.78 };
 
 export type Align = "left" | "center" | "right";
 
@@ -59,6 +63,19 @@ export type DrawText = {
   bold?: boolean;
   align?: Align;
 };
+
+/** Shorten to fit a width, using the same 0.5em-per-char estimate as wrapText.
+ * Cheap and slightly conservative, which is the right way to be wrong here. */
+export function truncateToWidth(
+  text: string,
+  maxWidth: number,
+  size: number,
+): string {
+  const perChar = size * 0.5;
+  const maxChars = Math.floor(maxWidth / perChar);
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(1, maxChars - 1)).trimEnd()}…`;
+}
 
 export type DrawRect = {
   x: number;
@@ -209,51 +226,88 @@ export function buildInvoiceLayout(input: InvoicePdfInput): InvoiceLayout {
   });
 
   // Bill-to / invoice-meta --------------------------------------------------
+  // Drawn as a bordered grid with shaded label cells, matching the paper form
+  // the owner already sends: label column on the left of each pair, value in a
+  // wider cell beside it, hairline rules between every row.
   const { customer } = input;
   const contactLine = [customer.phone, customer.email]
     .filter(Boolean)
     .join(" \u00b7 ");
 
-  const leftFields: Array<[string, string | undefined]> = [
+  const leftFields: Array<[string, string]> = [
     ["BILL TO", customer.company ?? customer.name],
-    ["CONTACT", customer.contact],
-    ["", customer.address],
-    ["", contactLine || undefined],
-    ["JOB / PO #", input.jobPo],
+    ["ADDRESS", customer.address ?? ""],
+    ["CONTACT", customer.contact ?? customer.name],
+    ["PHONE / EMAIL", contactLine],
+    ["JOB / PO #", input.jobPo ?? ""],
   ];
-  const rightFields: Array<[string, string | undefined]> = [
+  const rightFields: Array<[string, string]> = [
     ["INVOICE #", input.number],
     ["DATE", formatDate(input.issuedAt)],
-    ["DUE DATE", input.dueAt === undefined ? undefined : formatDate(input.dueAt)],
+    ["DUE DATE", input.dueAt === undefined ? input.terms : formatDate(input.dueAt)],
     ["TERMS", input.terms],
   ];
 
-  const metaTop = PAGE_HEIGHT - 200;
-  let metaBottom = metaTop;
+  const metaTop = PAGE_HEIGHT - 190;
+  const metaRowHeight = 21;
+  const halfWidth = (RIGHT - MARGIN) / 2;
+  const labelWidth = 78;
+  const metaRows = Math.max(leftFields.length, rightFields.length);
 
-  for (const [column, fields] of [
+  for (const [colX, fields] of [
     [MARGIN, leftFields],
-    [MARGIN + 300, rightFields],
+    [MARGIN + halfWidth + 8, rightFields],
   ] as const) {
-    let y = metaTop;
-    for (const [label, value] of fields) {
-      if (value === undefined) continue;
-      if (label) {
+    fields.forEach(([label, value], i) => {
+      const rowY = metaTop - i * metaRowHeight;
+      // Shaded label cell.
+      rects.push({
+        x: colX,
+        y: rowY - 6,
+        width: labelWidth,
+        height: metaRowHeight,
+        color: SHADE,
+      });
+      // Hairline under the whole row.
+      rects.push({
+        x: colX,
+        y: rowY - 6,
+        width: halfWidth - 8,
+        height: 0.6,
+        color: HAIRLINE,
+      });
+      texts.push({
+        text: label,
+        x: colX + 7,
+        y: rowY + 1,
+        size: 7,
+        color: GREY,
+        bold: true,
+      });
+      if (value) {
+        // Values must not spill past their cell — a long address would run
+        // straight into the right-hand column's labels.
+        const cellWidth = halfWidth - 8 - labelWidth - 14;
         texts.push({
-          text: label,
-          x: column,
-          y,
-          size: 7.5,
-          color: RED,
-          bold: true,
+          text: truncateToWidth(value, cellWidth, 9),
+          x: colX + labelWidth + 9,
+          y: rowY + 1,
+          size: 9,
+          color: BLACK,
         });
-        y -= 11;
       }
-      texts.push({ text: value, x: column, y, size: 9.5, color: BLACK });
-      y -= 15;
-    }
-    metaBottom = Math.min(metaBottom, y);
+    });
+    // Close the bottom of the column.
+    rects.push({
+      x: colX,
+      y: metaTop - metaRows * metaRowHeight + 15,
+      width: halfWidth - 8,
+      height: 0.6,
+      color: HAIRLINE,
+    });
   }
+
+  const metaBottom = metaTop - metaRows * metaRowHeight;
 
   // Line item table ---------------------------------------------------------
   const totals = computeInvoiceTotals({
@@ -347,7 +401,29 @@ export function buildInvoiceLayout(input: InvoicePdfInput): InvoiceLayout {
     });
 
     y -= Math.max(wrapped.length * 11, 11) + 8;
+
+    // Rule under the row, as on the paper form.
+    page.rects.push({
+      x: MARGIN,
+      y: y + 6,
+      width: RIGHT - MARGIN,
+      height: 0.6,
+      color: HAIRLINE,
+    });
   });
+
+  // Empty ruled rows down to the totals block, so the table reads as a form
+  // rather than stopping wherever the work happened to end.
+  while (y - 20 > TABLE_FLOOR) {
+    y -= 20;
+    page.rects.push({
+      x: MARGIN,
+      y: y + 6,
+      width: RIGHT - MARGIN,
+      height: 0.6,
+      color: HAIRLINE,
+    });
+  }
 
   pages.push(page);
 
@@ -356,32 +432,50 @@ export function buildInvoiceLayout(input: InvoicePdfInput): InvoiceLayout {
   const totalsLabelX = RIGHT - 150;
   let ty = 250;
 
+  // Every row is always shown, including zeros. His paper invoice lists
+  // DISCOUNT and PAYMENTS at $0.00 rather than hiding them, so the customer can
+  // see nothing was quietly left out. Zeros print as $0.00, never -$0.00.
+  const signed = (cents: number) =>
+    cents > 0 ? `-${formatMoney(cents)}` : formatMoney(0);
+
   const rows: Array<[string, string]> = [
     ["SUBTOTAL", formatMoney(totals.subtotalCents)],
+    ["DISCOUNT", signed(totals.discountCents)],
+    ["TAX RATE", formatPercent(input.taxRateBasisPoints)],
+    ["SALES TAX", formatMoney(totals.taxCents)],
+    ["PAYMENTS", signed(input.paymentsCents)],
   ];
-  // A zero discount or payment prints as "-$0.00", which reads like an error on
-  // a document someone pays from. Show these rows only when they say something.
-  if (totals.discountCents > 0) {
-    rows.push(["DISCOUNT", `-${formatMoney(totals.discountCents)}`]);
-  }
-  rows.push(["TAX RATE", formatPercent(input.taxRateBasisPoints)]);
-  rows.push(["SALES TAX", formatMoney(totals.taxCents)]);
-  if (input.paymentsCents > 0) {
-    rows.push(["PAYMENTS", `-${formatMoney(input.paymentsCents)}`]);
-  }
 
-  for (const [label, value] of rows) {
-    page.texts.push({ text: label, x: totalsLabelX, y: ty, size: 8.5, color: GREY, bold: true });
+  rows.forEach(([label, value], i) => {
+    // Alternating shaded bands, as on the paper form.
+    if (i % 2 === 0) {
+      page.rects.push({
+        x: totalsLabelX - 14,
+        y: ty - 5,
+        width: totalsRight - totalsLabelX + 14,
+        height: 16,
+        color: SHADE,
+      });
+    }
+    page.texts.push({
+      text: label,
+      x: totalsRight - 92,
+      y: ty,
+      size: 8,
+      color: GREY,
+      bold: true,
+      align: "right",
+    });
     page.texts.push({
       text: value,
-      x: totalsRight,
+      x: totalsRight - 6,
       y: ty,
-      size: 9.5,
+      size: 9,
       color: BLACK,
       align: "right",
     });
     ty -= 16;
-  }
+  });
 
   // Balance due bar.
   const barY = ty - 12;
@@ -410,26 +504,48 @@ export function buildInvoiceLayout(input: InvoicePdfInput): InvoiceLayout {
     align: "right",
   });
 
-  // Notes box.
-  if (input.notes) {
-    const noteWidth = 250;
-    page.texts.push({
-      text: "NOTES / WORK PERFORMED",
+  // Notes box — always drawn, with ruled writing lines like the paper form so
+  // the owner can add a note by hand on a printed copy.
+  const noteWidth = 150;
+  const noteLines = 7;
+  const noteLineGap = 13;
+  const noteTop = 250;
+
+  page.rects.push({
+    x: MARGIN,
+    y: noteTop - 4,
+    width: noteWidth,
+    height: 17,
+    color: SHADE,
+  });
+  page.texts.push({
+    text: "NOTES / WORK PERFORMED",
+    x: MARGIN + 6,
+    y: noteTop + 1,
+    size: 7,
+    color: RED,
+    bold: true,
+  });
+
+  const written = input.notes ? wrapText(input.notes, noteWidth - 8, 8) : [];
+  for (let i = 0; i < noteLines; i += 1) {
+    const lineY = noteTop - 10 - (i + 1) * noteLineGap;
+    page.rects.push({
       x: MARGIN,
-      y: 250,
-      size: 7.5,
-      color: RED,
-      bold: true,
+      y: lineY,
+      width: noteWidth,
+      height: 0.6,
+      color: HAIRLINE,
     });
-    wrapText(input.notes, noteWidth, 8.5).forEach((segment, i) => {
+    if (written[i]) {
       page.texts.push({
-        text: segment,
-        x: MARGIN,
-        y: 235 - i * 11,
-        size: 8.5,
+        text: written[i],
+        x: MARGIN + 4,
+        y: lineY + 4,
+        size: 8,
         color: BLACK,
       });
-    });
+    }
   }
 
   // Footer.

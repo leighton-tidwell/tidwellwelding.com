@@ -398,22 +398,7 @@ describe("renderInvoicePdf", () => {
       .map((t) => t.text);
 
     expect(texts).not.toContain("-$0.00");
-  });
-
-  it("omits the discount and payment rows entirely when they are zero", () => {
-    const texts = buildInvoiceLayout({
-      ...REFERENCE,
-      discountCents: 0,
-      paymentsCents: 0,
-    })
-      .pages.flatMap((p) => p.texts)
-      .map((t) => t.text);
-
-    expect(texts).not.toContain("DISCOUNT");
-    expect(texts).not.toContain("PAYMENTS");
-    // The rows that always matter stay.
-    expect(texts).toContain("SUBTOTAL");
-    expect(texts).toContain("SALES TAX");
+    expect(texts).toContain("$0.00");
   });
 
   it("shows the discount and payment rows when they carry a value", () => {
@@ -429,5 +414,87 @@ describe("renderInvoicePdf", () => {
     expect(texts).toContain("-$50.00");
     expect(texts).toContain("PAYMENTS");
     expect(texts).toContain("-$250.00");
+  });
+
+  it("always lists every totals row, matching the owner's paper invoice", () => {
+    // His invoice shows DISCOUNT and PAYMENTS at $0.00 rather than hiding them,
+    // so the reader can see nothing was quietly left out.
+    const texts = buildInvoiceLayout({
+      ...REFERENCE,
+      discountCents: 0,
+      paymentsCents: 0,
+    })
+      .pages.flatMap((p) => p.texts)
+      .map((t) => t.text);
+
+    expect(texts).toContain("SUBTOTAL");
+    expect(texts).toContain("DISCOUNT");
+    expect(texts).toContain("TAX RATE");
+    expect(texts).toContain("SALES TAX");
+    expect(texts).toContain("PAYMENTS");
+    expect(texts).toContain("BALANCE DUE");
+    // But never as a negative zero.
+    expect(texts).not.toContain("-$0.00");
+  });
+
+  it("draws the meta grid as bordered cells with shaded label columns", () => {
+    const [page] = buildInvoiceLayout(REFERENCE).pages;
+
+    // Shaded label cells behind BILL TO / INVOICE # etc.
+    const shaded = page.rects.filter(
+      (r) => r.color.r > 0.85 && r.color.r < 0.98 && r.color.r === r.color.g,
+    );
+    expect(shaded.length).toBeGreaterThanOrEqual(6);
+
+    // Hairline rules forming the grid.
+    const hairlines = page.rects.filter((r) => r.height <= 1 && r.width > 100);
+    expect(hairlines.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("draws ruled table rows including empty filler rows", () => {
+    const [page] = buildInvoiceLayout(REFERENCE).pages;
+    // Seven line items plus filler rows to the table floor, each with a rule.
+    const rowRules = page.rects.filter((r) => r.height <= 1 && r.width > 400);
+    expect(rowRules.length).toBeGreaterThanOrEqual(REFERENCE.lineItems.length + 2);
+  });
+
+  it("shades alternating totals rows and boxes the notes area", () => {
+    const [page] = buildInvoiceLayout({
+      ...REFERENCE,
+      notes: "Welded new hinge plates.",
+    }).pages;
+
+    const texts = page.texts.map((t) => t.text);
+    expect(texts).toContain("NOTES / WORK PERFORMED");
+
+    // The notes box is drawn with ruled writing lines like the paper form.
+    const noteRules = page.rects.filter(
+      (r) => r.height <= 1 && r.width > 80 && r.width < 200,
+    );
+    expect(noteRules.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("truncates a long field value so it cannot run into the next column", () => {
+    const [page] = buildInvoiceLayout({
+      ...REFERENCE,
+      customer: {
+        ...REFERENCE.customer,
+        address:
+          "4100 County Road 1004 Suite 12B, Joshua, Texas 76058-1234, United States",
+      },
+    }).pages;
+
+    const addressLabel = page.texts.find((t) => t.text === "ADDRESS");
+    expect(addressLabel).toBeDefined();
+
+    // The value drawn next to ADDRESS must fit inside the left half of the
+    // grid; the right column's labels start at the midpoint.
+    const value = page.texts.find(
+      (t) => t.y === addressLabel!.y && t.x > addressLabel!.x + 50,
+    );
+    expect(value).toBeDefined();
+    // Helvetica averages ~0.5em per char at 9pt; the cell is ~160pt wide.
+    expect(value!.text.length).toBeLessThanOrEqual(40);
+    expect(value!.text.endsWith("…") || value!.text.length < 40).toBe(true);
   });
 });
