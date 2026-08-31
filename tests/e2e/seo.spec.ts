@@ -34,7 +34,6 @@ const TITLES: Record<string, string> = {
   "/welder/stephenville-tx":
     "Welder in Stephenville, TX | Free Quotes, We Beat Any Bid | Tidwell Specialty Welding",
   "/search": "Search | Tidwell Specialty Welding",
-  "/crew": "Crew console | TSWS",
 };
 
 /** Every URL the sitemap must list — apex-absolute, in the P0-7 map's order. */
@@ -131,8 +130,8 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   expect(urls.sort()).toEqual([...SITEMAP_URLS].sort());
 
-  // /crew is private and /search is noindexed — neither may ever appear.
-  expect(urls.some((u) => u.includes("/crew"))).toBe(false);
+  // /admin is private and /search is noindexed — neither may ever appear.
+  expect(urls.some((u) => u.includes("/admin"))).toBe(false);
   expect(urls.some((u) => u.includes("/search"))).toBe(false);
 
   // P0-7: every URL carries a literal ISO-date lastmod; priority/changefreq
@@ -149,7 +148,7 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   expect(xml).not.toContain("<changefreq>");
 });
 
-test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /crew", async ({
+test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /admin", async ({
   request,
 }) => {
   const res = await request.get("/robots.txt");
@@ -163,10 +162,10 @@ test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallo
 
   const wildcard = groups.find((g) => /user-agent:\s*\*/i.test(g));
   expect(wildcard, "wildcard group missing").toBeTruthy();
-  expect(wildcard!).toMatch(/Disallow:\s*\/crew/i);
+  expect(wildcard!).toMatch(/Disallow:\s*\/admin/i);
 
   // P1-2: a bot matching a specific group IGNORES the wildcard group, so the
-  // explicit AI group must re-state the /crew disallow itself.
+  // explicit AI group must re-state the /admin disallow itself.
   const AI_BOTS = [
     "OAI-SearchBot",
     "ChatGPT-User",
@@ -183,23 +182,14 @@ test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallo
       new RegExp(`user-agent:\\s*${bot}\\s*$`, "im").test(g),
     );
     expect(group, `no explicit group for ${bot}`).toBeTruthy();
-    expect(group!, `${bot} group must disallow /crew`).toMatch(
-      /Disallow:\s*\/crew/i,
+    expect(group!, `${bot} group must disallow /admin`).toMatch(
+      /Disallow:\s*\/admin/i,
     );
   }
 
   expect(body).toMatch(
     /Sitemap:\s*https:\/\/tidwellwelding\.com\/sitemap\.xml/i,
   );
-});
-
-test("/crew carries a noindex robots meta", async ({ page }) => {
-  await page.goto("/crew", { timeout: 60_000 });
-  const content = await page
-    .locator("meta[name='robots']")
-    .first()
-    .getAttribute("content");
-  expect(content).toContain("noindex");
 });
 
 test("/search carries a noindex robots meta and a self-canonical", async ({

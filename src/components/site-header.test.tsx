@@ -137,11 +137,11 @@ describe("SiteHeader", () => {
     ).toBeInTheDocument();
   });
 
-  test("crew console is not linked from the public header", () => {
+  test("admin console is not linked from the public header", () => {
     const { container } = render(<SiteHeader />);
     // Check the sheet too (its links exist in the DOM even when closed).
     const crewHrefs = Array.from(container.querySelectorAll("a")).filter((a) =>
-      (a.getAttribute("href") ?? "").startsWith("/crew"),
+      (a.getAttribute("href") ?? "").startsWith("/admin"),
     );
     expect(crewHrefs).toHaveLength(0);
   });

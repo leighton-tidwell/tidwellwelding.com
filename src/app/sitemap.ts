@@ -8,7 +8,7 @@ const BASE = "https://tidwellwelding.com";
 // build date. priority/changefreq are deliberately absent (Google ignores
 // both).
 //
-// All public routes. /crew is private (robots-disallowed) and /search ships
+// All public routes. /admin is private (robots-disallowed) and /search ships
 // noindexed — both deliberately excluded.
 const ROUTE_LASTMOD: Record<string, string> = {
   "/": "2026-08-19",

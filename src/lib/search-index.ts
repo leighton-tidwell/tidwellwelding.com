@@ -2,7 +2,7 @@
  * Hand-written client-side search index for /search.
  * One entry per public route, plus the /services section anchors.
  * Keep this file in sync when a public page ships or changes.
- * /crew is private — never list it here.
+ * /admin is private — never list it here.
  */
 
 export type SearchEntry = {

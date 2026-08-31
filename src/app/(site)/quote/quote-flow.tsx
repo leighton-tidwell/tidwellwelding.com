@@ -423,7 +423,7 @@ export default function QuoteFlow() {
       }
     } catch {
       // Backend unreachable or unverified: keep the provisional id so the
-      // request still lands in the crew console demo.
+      // request still lands in local history for the owner.
     }
     try {
       const key = "tsws_quotes";

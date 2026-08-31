@@ -67,7 +67,7 @@ export default defineSchema({
   }).index("by_createdAt", ["createdAt"]),
 
   // Operator-editable shop settings (labor rate today, more later). Lives in
-  // the database, never in code, so the crew console can edit it without a
+  // the database, never in code, so the admin console can edit it without a
   // deploy. Values are confidential and never leave the server.
   shopSettings: defineTable({
     key: v.string(),

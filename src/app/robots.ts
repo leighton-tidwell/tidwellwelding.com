@@ -10,7 +10,7 @@ function isPreviewHost(host: string): boolean {
 }
 
 // SEO P1-2: explicit AI-crawler allow groups. A bot matching a specific group
-// IGNORES the wildcard group entirely, so every group must re-state the /crew
+// IGNORES the wildcard group entirely, so every group must re-state the /admin
 // disallow. Never disallow Googlebot/Bingbot; never block Google-Extended (it
 // gates Gemini grounding visibility, not Search ranking).
 export default async function robots(): Promise<MetadataRoute.Robots> {
@@ -25,7 +25,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       {
         userAgent: "*",
         allow: "/",
-        disallow: "/crew",
+        disallow: "/admin",
       },
       {
         userAgent: [
@@ -40,7 +40,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           "Google-Extended",
         ],
         allow: "/",
-        disallow: "/crew",
+        disallow: "/admin",
       },
     ],
     sitemap: "https://tidwellwelding.com/sitemap.xml",

@@ -105,12 +105,12 @@ describe("FaqBot", () => {
     await waitFor(() => expect(pill).toHaveFocus());
   });
 
-  test("hides itself on /quote and /crew", () => {
+  test("hides itself on /quote and /admin", () => {
     state.pathname = "/quote";
     const { container, unmount } = render(<FaqBot />);
     expect(container.querySelector(".faqbot-pill")).toBeNull();
     unmount();
-    state.pathname = "/crew";
+    state.pathname = "/admin";
     const { container: c2 } = render(<FaqBot />);
     expect(c2.querySelector(".faqbot-pill")).toBeNull();
   });

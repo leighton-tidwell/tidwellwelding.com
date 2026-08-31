@@ -65,11 +65,11 @@ describe("SiteFooter", () => {
     ).toBeInTheDocument();
   });
 
-  test("crew console is not linked from the public footer", () => {
+  test("admin console is not linked from the public footer", () => {
     const { container } = render(<SiteFooter />);
-    expect(screen.queryByRole("link", { name: /crew/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /admin/i })).toBeNull();
     const crewHrefs = Array.from(container.querySelectorAll("a")).filter((a) =>
-      (a.getAttribute("href") ?? "").startsWith("/crew"),
+      (a.getAttribute("href") ?? "").startsWith("/admin"),
     );
     expect(crewHrefs).toHaveLength(0);
   });

@@ -285,7 +285,7 @@ describe("QuoteFlow", () => {
       ),
     ).toBeInTheDocument();
 
-    // Confirmation links: back home and to the work log — never to /crew.
+    // Confirmation links: back home and to the work log — never to /admin.
     expect(screen.getByRole("link", { name: "Back to the site" })).toHaveAttribute(
       "href",
       "/",
@@ -296,7 +296,7 @@ describe("QuoteFlow", () => {
     );
     expect(
       Array.from(document.querySelectorAll("a")).filter((a) =>
-        (a.getAttribute("href") ?? "").startsWith("/crew"),
+        (a.getAttribute("href") ?? "").startsWith("/admin"),
       ),
     ).toHaveLength(0);
 
@@ -315,7 +315,7 @@ describe("QuoteFlow", () => {
     expect(String(submitArgs.requestId)).toMatch(/^Q-\d{4}-\d{3}$/);
     expect(String(submitArgs.slot)).toMatch(/· Morning$/);
 
-    // The request also lands in mocked localStorage for the crew console.
+    // The request also lands in mocked localStorage for local history.
     const saved = JSON.parse(store.get("tsws_quotes") ?? "[]");
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ id: "Q-2026-777", status: "New" });

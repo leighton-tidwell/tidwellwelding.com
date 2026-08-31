@@ -125,12 +125,11 @@ test.describe("desktop header", () => {
     });
   });
 
-  // Spec change (2026-08-18): the crew console must not be publicly linked.
-  // The footer's "Crew login" link was removed; /crew is direct-URL only.
-  test("public chrome contains no link to /crew", async ({ page }) => {
+  // The admin console must not be publicly linked; /admin is direct-URL only.
+  test("public chrome contains no link to /admin", async ({ page }) => {
     for (const path of ["/", "/contact"]) {
       await page.goto(path, { timeout: 60_000 });
-      await expect(page.locator("a[href^='/crew']")).toHaveCount(0);
+      await expect(page.locator("a[href^='/admin']")).toHaveCount(0);
       await expect(page.locator("body")).not.toContainText("Crew login");
     }
   });
