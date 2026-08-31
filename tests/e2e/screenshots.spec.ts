@@ -98,7 +98,6 @@ test("capture the console", async ({ page }) => {
 });
 
 test("capture the phone view", async ({ page }) => {
-  test.use;
   const { email, password } = credentials();
   await page.setViewportSize({ width: 390, height: 844 });
 

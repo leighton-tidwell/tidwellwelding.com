@@ -478,20 +478,23 @@ function InvoiceEditor({
 
   // Seed the editor from the server exactly once, then it is the local source
   // of truth until saved — otherwise every keystroke would fight the query.
-  const editorLines: EditorLine[] =
-    lines ??
-    (invoice
-      ? invoice.lineItems.length > 0
-        ? invoice.lineItems.map((line, i) => ({
-            key: `seed-${i}`,
-            qty: String(line.qty),
-            unit: line.unit,
-            description: line.description,
-            rate: (line.rateCents / 100).toFixed(2),
-            taxable: line.taxable,
-          }))
-        : [emptyLine("seed-0")]
-      : []);
+  const editorLines: EditorLine[] = useMemo(
+    () =>
+      lines ??
+      (invoice
+        ? invoice.lineItems.length > 0
+          ? invoice.lineItems.map((line, i) => ({
+              key: `seed-${i}`,
+              qty: String(line.qty),
+              unit: line.unit,
+              description: line.description,
+              rate: (line.rateCents / 100).toFixed(2),
+              taxable: line.taxable,
+            }))
+          : [emptyLine("seed-0")]
+        : []),
+    [lines, invoice],
+  );
 
   const save = useCallback(async () => {
     const payload = editorLines
