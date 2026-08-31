@@ -144,4 +144,31 @@ describe("Button", () => {
     expect(screen.getByTestId("right")).toBeInTheDocument();
     expect(screen.getByText("Mid")).toHaveClass("tsws-btn__label");
   });
+
+  test("ariaBusy marks a button whose action is still running", () => {
+    render(
+      <Button ariaBusy>
+        Building
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "Building" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+  });
+
+  test("a button that is not busy says so rather than omitting the state", () => {
+    render(<Button ariaBusy={false}>Idle</Button>);
+    expect(screen.getByRole("button", { name: "Idle" })).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
+  test("aria-busy is absent entirely when the caller does not manage it", () => {
+    render(<Button>Plain</Button>);
+    expect(
+      screen.getByRole("button", { name: "Plain" }),
+    ).not.toHaveAttribute("aria-busy");
+  });
 });

@@ -1,8 +1,14 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
+import { requireAdmin } from "./auth";
 
 /** Settings the shop owner controls. Stored in the database rather than code
- * so the crew console can edit them later without a deploy, and so the values
+ * so the admin console can edit them without a deploy, and so the values
  * never sit in the repo. */
 export const LABOR_RATE_KEY = "laborRateHourly";
 
@@ -24,7 +30,7 @@ export const getLaborRate = internalQuery({
 
 /** Seed or update the rate. Run it with the value at the command line:
  *   npx convex run --prod settings:setLaborRate '{"rate": 000}'
- * The crew console will call a gated public wrapper once real auth exists. */
+ * The admin console uses the gated wrappers below. */
 export const setLaborRate = internalMutation({
   args: { rate: v.number() },
   returns: v.null(),
@@ -41,6 +47,50 @@ export const setLaborRate = internalMutation({
         numberValue: rate,
         updatedAt: Date.now(),
       });
+    } else {
+      await ctx.db.insert("shopSettings", {
+        key: LABOR_RATE_KEY,
+        numberValue: rate,
+        updatedAt: Date.now(),
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Session-gated wrappers for the admin console. The rate stays invisible to the
+ * public site — only a signed-in owner can read or change it, and it is used to
+ * prefill hourly invoice lines.
+ */
+export const getLaborRateAdmin = query({
+  args: { token: v.string() },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, { token }) => {
+    await requireAdmin(ctx, token);
+    const row = await ctx.db
+      .query("shopSettings")
+      .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
+      .unique();
+    const value = row?.numberValue;
+    return typeof value === "number" && value > 0 ? value : null;
+  },
+});
+
+export const setLaborRateAdmin = mutation({
+  args: { token: v.string(), rate: v.number() },
+  returns: v.null(),
+  handler: async (ctx, { token, rate }) => {
+    await requireAdmin(ctx, token);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error("Rate must be a positive number.");
+    }
+    const existing = await ctx.db
+      .query("shopSettings")
+      .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { numberValue: rate, updatedAt: Date.now() });
     } else {
       await ctx.db.insert("shopSettings", {
         key: LABOR_RATE_KEY,
