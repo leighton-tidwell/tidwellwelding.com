@@ -13,9 +13,17 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
   },
   projects: [
+    // Provisions a disposable admin account (and exercises the real one-time
+    // setup link) before the admin specs run.
+    {
+      name: "admin-setup",
+      testMatch: /admin\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["admin-setup"],
     },
   ],
   webServer: {

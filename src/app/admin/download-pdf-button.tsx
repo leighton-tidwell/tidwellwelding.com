@@ -35,15 +35,24 @@ export default function DownloadPdfButton({
     try {
       const url = await generate();
 
-      // Anchor-with-download rather than window.open: it keeps the filename and
-      // does not trip popup blockers.
+      // The storage URL is cross-origin, and a cross-origin href makes the
+      // browser IGNORE the download attribute — the file lands as a UUID.
+      // Fetching the bytes and handing over a same-origin blob URL keeps the
+      // invoice number as the filename.
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Fetching the PDF failed: ${response.status}`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+
       const anchor = document.createElement("a");
-      anchor.href = url;
+      anchor.href = blobUrl;
       anchor.download = filename;
       anchor.rel = "noopener";
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
+
+      // Release the object URL once the download has been handed off.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
 
       setPhase("ready");
     } catch {

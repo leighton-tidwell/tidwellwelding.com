@@ -365,11 +365,69 @@ describe("renderInvoicePdf", () => {
     expect(doc.getPageCount()).toBe(1);
   });
 
+  it("embeds a JPEG logo too, since the real badge is a JPEG", async () => {
+    // The shipped badge artwork is JPEG; embedPng would throw on it.
+    const { LOGO_BYTES } = await import("./invoiceLogo");
+    const plain = await renderInvoicePdf(REFERENCE);
+    const withLogo = await renderInvoicePdf({
+      ...REFERENCE,
+      logoPngBytes: LOGO_BYTES,
+    });
+
+    expect(withLogo.byteLength).toBeGreaterThan(plain.byteLength + 1000);
+    const doc = await PDFDocument.load(withLogo);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
   it("renders US Letter pages", async () => {
     const doc = await PDFDocument.load(await renderInvoicePdf(REFERENCE));
     const { width, height } = doc.getPage(0).getSize();
 
     expect(Math.round(width)).toBe(612);
     expect(Math.round(height)).toBe(792);
+  });
+
+  it("never prints a negative zero for an unused discount or payment", () => {
+    // "-$0.00" reads like a mistake on a document a customer pays from.
+    const texts = buildInvoiceLayout({
+      ...REFERENCE,
+      discountCents: 0,
+      paymentsCents: 0,
+    })
+      .pages.flatMap((p) => p.texts)
+      .map((t) => t.text);
+
+    expect(texts).not.toContain("-$0.00");
+  });
+
+  it("omits the discount and payment rows entirely when they are zero", () => {
+    const texts = buildInvoiceLayout({
+      ...REFERENCE,
+      discountCents: 0,
+      paymentsCents: 0,
+    })
+      .pages.flatMap((p) => p.texts)
+      .map((t) => t.text);
+
+    expect(texts).not.toContain("DISCOUNT");
+    expect(texts).not.toContain("PAYMENTS");
+    // The rows that always matter stay.
+    expect(texts).toContain("SUBTOTAL");
+    expect(texts).toContain("SALES TAX");
+  });
+
+  it("shows the discount and payment rows when they carry a value", () => {
+    const texts = buildInvoiceLayout({
+      ...REFERENCE,
+      discountCents: 5000,
+      paymentsCents: 25000,
+    })
+      .pages.flatMap((p) => p.texts)
+      .map((t) => t.text);
+
+    expect(texts).toContain("DISCOUNT");
+    expect(texts).toContain("-$50.00");
+    expect(texts).toContain("PAYMENTS");
+    expect(texts).toContain("-$250.00");
   });
 });

@@ -88,6 +88,17 @@ const RIGHT = PAGE_WIDTH - MARGIN;
 /** Lowest y a table row may occupy; below this sit the totals and footer. */
 const TABLE_FLOOR = 300;
 
+/** PNG files start with the 8-byte signature; JPEG with FF D8 FF. */
+async function embedLogo(doc: PDFDocument, bytes: Uint8Array) {
+  const isPng =
+    bytes.length > 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47;
+  return isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+}
+
 export async function renderInvoicePdf(
   input: InvoicePdfInput,
 ): Promise<Uint8Array> {
@@ -96,8 +107,10 @@ export async function renderInvoicePdf(
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
+  // The badge artwork ships as JPEG, but a PNG must keep working. Sniff the
+  // magic bytes rather than trusting the field name.
   const logo = input.logoPngBytes
-    ? await doc.embedPng(input.logoPngBytes)
+    ? await embedLogo(doc, input.logoPngBytes)
     : undefined;
 
   for (const [index, spec] of layout.pages.entries()) {
@@ -345,11 +358,17 @@ export function buildInvoiceLayout(input: InvoicePdfInput): InvoiceLayout {
 
   const rows: Array<[string, string]> = [
     ["SUBTOTAL", formatMoney(totals.subtotalCents)],
-    ["DISCOUNT", `-${formatMoney(totals.discountCents)}`],
-    ["TAX RATE", formatPercent(input.taxRateBasisPoints)],
-    ["SALES TAX", formatMoney(totals.taxCents)],
-    ["PAYMENTS", `-${formatMoney(input.paymentsCents)}`],
   ];
+  // A zero discount or payment prints as "-$0.00", which reads like an error on
+  // a document someone pays from. Show these rows only when they say something.
+  if (totals.discountCents > 0) {
+    rows.push(["DISCOUNT", `-${formatMoney(totals.discountCents)}`]);
+  }
+  rows.push(["TAX RATE", formatPercent(input.taxRateBasisPoints)]);
+  rows.push(["SALES TAX", formatMoney(totals.taxCents)]);
+  if (input.paymentsCents > 0) {
+    rows.push(["PAYMENTS", `-${formatMoney(input.paymentsCents)}`]);
+  }
 
   for (const [label, value] of rows) {
     page.texts.push({ text: label, x: totalsLabelX, y: ty, size: 8.5, color: GREY, bold: true });

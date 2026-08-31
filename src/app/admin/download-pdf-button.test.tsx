@@ -1,9 +1,26 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import DownloadPdfButton from "./download-pdf-button";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+/** The component fetches the generated file and hands the browser a blob URL,
+ * because a cross-origin href makes the download attribute be ignored. */
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, blob: async () => new Blob(["%PDF-1.7"]) })),
+  );
+  vi.stubGlobal("URL", {
+    ...URL,
+    createObjectURL: vi.fn(() => "blob:generated-url"),
+    revokeObjectURL: vi.fn(),
+  });
+});
 
 /** A generate call that resolves only when we let it, so the in-flight state
  * can be observed rather than raced. */

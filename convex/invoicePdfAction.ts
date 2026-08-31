@@ -1,8 +1,7 @@
-"use node";
-
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
+import { LOGO_BYTES } from "./invoiceLogo";
 import { renderInvoicePdf } from "./invoicePdf";
 
 /**
@@ -10,8 +9,9 @@ import { renderInvoicePdf } from "./invoicePdf";
  * URL the browser can download. Actions cannot touch the database, so the read
  * and the write live in invoicePdfData.ts and are called through the runtime.
  *
- * pdf-lib itself is pure JS and does not require Node, but this file is marked
- * "use node" so PDF work never competes with the default runtime's limits.
+ * Deliberately NOT "use node": pdf-lib is pure JS. Verified by rendering with
+ * Buffer and process deleted from globalThis, so the default runtime is enough
+ * and this avoids the Node runtime's cold start.
  */
 export const generate = action({
   args: { token: v.string(), id: v.id("invoices") },
@@ -24,7 +24,10 @@ export const generate = action({
       id,
     });
 
-    const bytes = await renderInvoicePdf(data.input);
+    const bytes = await renderInvoicePdf({
+      ...data.input,
+      logoPngBytes: LOGO_BYTES,
+    });
 
     const storageId = await ctx.storage.store(
       new Blob([bytes as BlobPart], { type: "application/pdf" }),
