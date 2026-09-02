@@ -46,6 +46,8 @@ function zoneOffsetMinutes(ms: number): number {
   const local = new Date(
     new Date(ms).toLocaleString("en-US", { timeZone: SHOP_TIME_ZONE }),
   );
-  const utc = new Date(new Date(ms).toLocaleString("en-US", { timeZone: "UTC" }));
+  const utc = new Date(
+    new Date(ms).toLocaleString("en-US", { timeZone: "UTC" }),
+  );
   return Math.round((utc.getTime() - local.getTime()) / 60_000);
 }

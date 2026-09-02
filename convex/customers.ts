@@ -63,8 +63,16 @@ export const update = mutation({
 
     // Only fields actually supplied are touched; omitting a field leaves it be.
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.name !== undefined) patch.name = requireText(args.name, "customer name");
-    for (const key of ["company", "contact", "email", "phone", "address", "notes"] as const) {
+    if (args.name !== undefined)
+      patch.name = requireText(args.name, "customer name");
+    for (const key of [
+      "company",
+      "contact",
+      "email",
+      "phone",
+      "address",
+      "notes",
+    ] as const) {
       if (args[key] !== undefined) patch[key] = optionalText(args[key]);
     }
     await ctx.db.patch(args.id, patch);

@@ -1,12 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Checkbox from "@/components/ds/checkbox";
 import Radio from "@/components/ds/radio";
 import Switch from "@/components/ds/switch";
@@ -64,7 +58,9 @@ describe("Radio", () => {
   test("clicking selects and onChange receives this radio's value", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<Radio label="Shop" name="where" value="shop" onChange={onChange} />);
+    render(
+      <Radio label="Shop" name="where" value="shop" onChange={onChange} />,
+    );
     const radio = screen.getByRole("radio", { name: "Shop" });
     await user.click(radio);
     expect(radio).toBeChecked();

@@ -90,7 +90,10 @@ export const setLaborRateAdmin = mutation({
       .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
       .unique();
     if (existing) {
-      await ctx.db.patch(existing._id, { numberValue: rate, updatedAt: Date.now() });
+      await ctx.db.patch(existing._id, {
+        numberValue: rate,
+        updatedAt: Date.now(),
+      });
     } else {
       await ctx.db.insert("shopSettings", {
         key: LABOR_RATE_KEY,

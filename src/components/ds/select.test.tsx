@@ -1,12 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Select from "@/components/ds/select";
 
 afterEach(cleanup);
@@ -33,7 +27,9 @@ describe("Select", () => {
   });
 
   test("placeholder renders as a disabled empty first option and is preselected", () => {
-    render(<Select label="Material" options={OPTIONS} placeholder="Pick one" />);
+    render(
+      <Select label="Material" options={OPTIONS} placeholder="Pick one" />,
+    );
     const placeholder = screen.getByRole("option", { name: "Pick one" });
     expect(placeholder).toBeDisabled();
     expect(placeholder).toHaveValue("");

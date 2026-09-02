@@ -1,10 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-} from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import { Badge } from "@/components/ds";
 
 afterEach(cleanup);

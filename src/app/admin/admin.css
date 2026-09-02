@@ -195,7 +195,9 @@
   cursor: pointer;
   /* Touch target: never below 44px on a phone. */
   min-height: 56px;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
 }
 
 .admin-row:hover,
@@ -244,10 +246,18 @@
   border: 1px solid currentColor;
 }
 
-.admin-status--draft { color: var(--steel-300); }
-.admin-status--sent { color: var(--arc-blue); }
-.admin-status--paid { color: var(--status-ok); }
-.admin-status--void { color: var(--steel-300); }
+.admin-status--draft {
+  color: var(--steel-300);
+}
+.admin-status--sent {
+  color: var(--arc-blue);
+}
+.admin-status--paid {
+  color: var(--status-ok);
+}
+.admin-status--void {
+  color: var(--steel-300);
+}
 
 /* --- Line items ---------------------------------------------------------- */
 

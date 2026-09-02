@@ -1,10 +1,5 @@
 import { cleanup, render } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-} from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import HazardBar from "@/components/ds/hazard-bar";
 
 afterEach(cleanup);

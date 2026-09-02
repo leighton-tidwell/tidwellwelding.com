@@ -234,7 +234,10 @@ export const listForCustomer = query({
       .withIndex("by_customer", (q) => q.eq("customerId", args.customerId))
       .order("desc")
       .collect();
-    return invoices.map((invoice) => ({ ...invoice, totals: totalsFor(invoice) }));
+    return invoices.map((invoice) => ({
+      ...invoice,
+      totals: totalsFor(invoice),
+    }));
   },
 });
 

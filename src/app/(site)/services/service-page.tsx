@@ -262,7 +262,6 @@ export default function ServicePage({
           <div className="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
             {content.media.map((m, index) =>
               m.kind === "image" ? (
-
                 <img
                   key={m.src}
                   src={m.src}

@@ -19,7 +19,11 @@ export function formatMoney(cents: number): string {
   return cents < 0 ? `-${formatted}` : formatted;
 }
 
-const PRINTED_UNITS: ReadonlySet<LineUnit> = new Set<LineUnit>(["hr", "ft", "lb"]);
+const PRINTED_UNITS: ReadonlySet<LineUnit> = new Set<LineUnit>([
+  "hr",
+  "ft",
+  "lb",
+]);
 
 export function formatRate(rateCents: number, unit: LineUnit): string {
   const money = formatMoney(rateCents);

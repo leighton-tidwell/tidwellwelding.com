@@ -41,8 +41,9 @@ test("icons are vertically centred against their button label", async ({
   expect(offsets.length).toBeGreaterThan(0);
   for (const entry of offsets as Array<{ text: string; delta: number }>) {
     // Sub-pixel rounding is fine; a visible few-pixel lift is not.
-    expect(Math.abs(entry.delta), `"${entry.text}" icon off-centre`).toBeLessThan(
-      1,
-    );
+    expect(
+      Math.abs(entry.delta),
+      `"${entry.text}" icon off-centre`,
+    ).toBeLessThan(1);
   }
 });

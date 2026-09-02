@@ -26,7 +26,9 @@ async function signedIn(t: ReturnType<typeof convexTest>) {
   const userId = await t.mutation(internal.auth.createAdminUser, {
     email: "eric@tidwellwelding.com",
   });
-  const setupToken = await t.mutation(internal.auth.issueSetupToken, { userId });
+  const setupToken = await t.mutation(internal.auth.issueSetupToken, {
+    userId,
+  });
   await t.mutation(api.auth.setPassword, {
     token: setupToken,
     password: PASSWORD,
@@ -35,7 +37,8 @@ async function signedIn(t: ReturnType<typeof convexTest>) {
     email: "eric@tidwellwelding.com",
     password: PASSWORD,
   });
-  if (!result.ok || !result.token) throw new Error("login failed in test setup");
+  if (!result.ok || !result.token)
+    throw new Error("login failed in test setup");
   return result.token;
 }
 const LINE = {
@@ -97,7 +100,11 @@ describe("customers", () => {
       phone: "(817) 555-0100",
     });
 
-    await t.mutation(api.customers.update, { token, id, phone: "(254) 555-0199" });
+    await t.mutation(api.customers.update, {
+      token,
+      id,
+      phone: "(254) 555-0199",
+    });
 
     const customer = await t.query(api.customers.get, { token, id });
     expect(customer?.phone).toBe("(254) 555-0199");
@@ -127,7 +134,8 @@ describe("customers — access control", () => {
         .query("adminSessions")
         .withIndex("by_token", (q) => q.eq("token", token))
         .unique();
-      if (session) await ctx.db.patch(session._id, { expiresAt: Date.now() - 1 });
+      if (session)
+        await ctx.db.patch(session._id, { expiresAt: Date.now() - 1 });
     });
 
     await expect(t.query(api.customers.get, { token, id })).rejects.toThrow();
@@ -138,7 +146,10 @@ describe("invoice numbering", () => {
   test("the first invoice of the day uses the bare date, matching his format", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const id = await t.mutation(api.invoices.create, {
       token,
@@ -153,16 +164,31 @@ describe("invoice numbering", () => {
   test("a second invoice the same day gets a -2 suffix, not a collision", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const issuedAt = Date.UTC(2026, 7, 26, 17, 0, 0);
 
-    const first = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
-    const second = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
-    const third = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
+    const first = await t.mutation(api.invoices.create, {
+      token,
+      customerId,
+      issuedAt,
+    });
+    const second = await t.mutation(api.invoices.create, {
+      token,
+      customerId,
+      issuedAt,
+    });
+    const third = await t.mutation(api.invoices.create, {
+      token,
+      customerId,
+      issuedAt,
+    });
 
     const numbers = await Promise.all(
-      [first, second, third].map(async (id) =>
-        (await t.query(api.invoices.get, { token, id }))?.number,
+      [first, second, third].map(
+        async (id) => (await t.query(api.invoices.get, { token, id }))?.number,
       ),
     );
     expect(numbers).toEqual(["TSWS-082626", "TSWS-082626-2", "TSWS-082626-3"]);
@@ -171,7 +197,10 @@ describe("invoice numbering", () => {
   test("a different day starts numbering over", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     await t.mutation(api.invoices.create, {
       token,
@@ -193,7 +222,10 @@ describe("invoices", () => {
   test("a new invoice starts as a draft with sane defaults", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const id = await t.mutation(api.invoices.create, { token, customerId });
     const invoice = await t.query(api.invoices.get, { token, id });
@@ -209,10 +241,17 @@ describe("invoices", () => {
     // still move the date before generating the PDF.
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const issuedAt = Date.UTC(2026, 7, 31, 15);
-    const id = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
+    const id = await t.mutation(api.invoices.create, {
+      token,
+      customerId,
+      issuedAt,
+    });
     const invoice = await t.query(api.invoices.get, { token, id });
 
     expect(invoice?.dueAt).toBe(issuedAt);
@@ -221,10 +260,17 @@ describe("invoices", () => {
   test("the due date can be moved without touching the issue date", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const issuedAt = Date.UTC(2026, 7, 31, 15);
-    const id = await t.mutation(api.invoices.create, { token, customerId, issuedAt });
+    const id = await t.mutation(api.invoices.create, {
+      token,
+      customerId,
+      issuedAt,
+    });
 
     const dueAt = Date.UTC(2026, 8, 30, 15);
     await t.mutation(api.invoices.update, { token, id, dueAt });
@@ -237,15 +283,30 @@ describe("invoices", () => {
   test("reading an invoice returns server-computed totals, not client numbers", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     await t.mutation(api.invoices.update, {
       token,
       id,
       lineItems: [
-        { qty: 25, unit: "hr", description: "Labor", rateCents: 17500, taxable: true },
-        { qty: 1, unit: "lot", description: "Fuel", rateCents: 4408, taxable: true },
+        {
+          qty: 25,
+          unit: "hr",
+          description: "Labor",
+          rateCents: 17500,
+          taxable: true,
+        },
+        {
+          qty: 1,
+          unit: "lot",
+          description: "Fuel",
+          rateCents: 4408,
+          taxable: true,
+        },
       ],
     });
 
@@ -273,20 +334,30 @@ describe("invoices", () => {
   test("status moves through the lifecycle the owner drives by hand", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     await t.mutation(api.invoices.setStatus, { token, id, status: "sent" });
-    expect((await t.query(api.invoices.get, { token, id }))?.status).toBe("sent");
+    expect((await t.query(api.invoices.get, { token, id }))?.status).toBe(
+      "sent",
+    );
 
     await t.mutation(api.invoices.setStatus, { token, id, status: "paid" });
-    expect((await t.query(api.invoices.get, { token, id }))?.status).toBe("paid");
+    expect((await t.query(api.invoices.get, { token, id }))?.status).toBe(
+      "paid",
+    );
   });
 
   test("a line item with a negative rate is refused before it can be saved", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     await expect(
@@ -294,7 +365,13 @@ describe("invoices", () => {
         token,
         id,
         lineItems: [
-          { qty: 1, unit: "ea", description: "Bad", rateCents: -500, taxable: true },
+          {
+            qty: 1,
+            unit: "ea",
+            description: "Bad",
+            rateCents: -500,
+            taxable: true,
+          },
         ],
       }),
     ).rejects.toThrow();
@@ -303,7 +380,10 @@ describe("invoices", () => {
   test("a fractional cent rate is refused rather than silently rounded", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     await expect(
@@ -311,7 +391,13 @@ describe("invoices", () => {
         token,
         id,
         lineItems: [
-          { qty: 1, unit: "ea", description: "Bad", rateCents: 10.5, taxable: true },
+          {
+            qty: 1,
+            unit: "ea",
+            description: "Bad",
+            rateCents: 10.5,
+            taxable: true,
+          },
         ],
       }),
     ).rejects.toThrow();
@@ -320,7 +406,10 @@ describe("invoices", () => {
   test("invoices for a customer come back newest first", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const older = await t.mutation(api.invoices.create, {
       token,
@@ -333,24 +422,49 @@ describe("invoices", () => {
       issuedAt: Date.UTC(2026, 7, 26, 17, 0, 0),
     });
 
-    const list = await t.query(api.invoices.listForCustomer, { token, customerId });
+    const list = await t.query(api.invoices.listForCustomer, {
+      token,
+      customerId,
+    });
     expect(list.map((i) => i._id)).toEqual([newer, older]);
   });
 
   test("the customer view totals only what was actually billed, ignoring voids", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
 
     const paid = await t.mutation(api.invoices.create, { token, customerId });
-    await t.mutation(api.invoices.update, { token, id: paid, lineItems: [LINE] });
-    await t.mutation(api.invoices.setStatus, { token, id: paid, status: "paid" });
+    await t.mutation(api.invoices.update, {
+      token,
+      id: paid,
+      lineItems: [LINE],
+    });
+    await t.mutation(api.invoices.setStatus, {
+      token,
+      id: paid,
+      status: "paid",
+    });
 
     const voided = await t.mutation(api.invoices.create, { token, customerId });
-    await t.mutation(api.invoices.update, { token, id: voided, lineItems: [LINE] });
-    await t.mutation(api.invoices.setStatus, { token, id: voided, status: "void" });
+    await t.mutation(api.invoices.update, {
+      token,
+      id: voided,
+      lineItems: [LINE],
+    });
+    await t.mutation(api.invoices.setStatus, {
+      token,
+      id: voided,
+      status: "void",
+    });
 
-    const summary = await t.query(api.customers.summary, { token, id: customerId });
+    const summary = await t.query(api.customers.summary, {
+      token,
+      id: customerId,
+    });
     // One $1,000 invoice + 8.25% tax. The voided one must not count.
     expect(summary.billedCents).toBe(108250);
     expect(summary.invoiceCount).toBe(2);
@@ -359,7 +473,10 @@ describe("invoices", () => {
   test("deleting an invoice removes it from the list", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     await t.mutation(api.invoices.remove, { token, id });
@@ -372,12 +489,17 @@ describe("invoices — access control", () => {
   test("every invoice function refuses an unauthenticated caller", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
 
     const bad = "not-a-real-session-token";
     await expect(t.query(api.invoices.list, { token: bad })).rejects.toThrow();
-    await expect(t.query(api.invoices.get, { token: bad, id })).rejects.toThrow();
+    await expect(
+      t.query(api.invoices.get, { token: bad, id }),
+    ).rejects.toThrow();
     await expect(
       t.mutation(api.invoices.create, { token: bad, customerId }),
     ).rejects.toThrow();
@@ -395,7 +517,10 @@ describe("invoices — access control", () => {
   test("an invoice cannot reference a customer that does not exist", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "Boyd" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
     await t.mutation(api.customers.remove, { token, id: customerId });
 
     await expect(

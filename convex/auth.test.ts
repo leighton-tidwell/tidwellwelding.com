@@ -117,7 +117,9 @@ describe("createAdminUser", () => {
       t.mutation(internal.auth.createAdminUser, { email: EMAIL }),
       "exists",
     );
-    const rows = await t.run(async (ctx) => ctx.db.query("adminUsers").collect());
+    const rows = await t.run(async (ctx) =>
+      ctx.db.query("adminUsers").collect(),
+    );
     expect(rows).toHaveLength(1);
   });
 });

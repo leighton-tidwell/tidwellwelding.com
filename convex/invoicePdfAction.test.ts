@@ -25,13 +25,19 @@ async function signedIn(t: ReturnType<typeof convexTest>) {
   const userId = await t.mutation(internal.auth.createAdminUser, {
     email: "eric@tidwellwelding.com",
   });
-  const setupToken = await t.mutation(internal.auth.issueSetupToken, { userId });
-  await t.mutation(api.auth.setPassword, { token: setupToken, password: PASSWORD });
+  const setupToken = await t.mutation(internal.auth.issueSetupToken, {
+    userId,
+  });
+  await t.mutation(api.auth.setPassword, {
+    token: setupToken,
+    password: PASSWORD,
+  });
   const result = await t.mutation(api.auth.login, {
     email: "eric@tidwellwelding.com",
     password: PASSWORD,
   });
-  if (!result.ok || !result.token) throw new Error("login failed in test setup");
+  if (!result.ok || !result.token)
+    throw new Error("login failed in test setup");
   return result.token;
 }
 
@@ -90,7 +96,13 @@ async function seedReferenceInvoice(
         rateCents: 15000,
         taxable: true,
       },
-      { qty: 1, unit: "ea", description: "Concrete", rateCents: 5000, taxable: true },
+      {
+        qty: 1,
+        unit: "ea",
+        description: "Concrete",
+        rateCents: 5000,
+        taxable: true,
+      },
       {
         qty: 1,
         unit: "ea",
@@ -151,10 +163,14 @@ describe("invoice PDF generation", () => {
     const id = await seedReferenceInvoice(t, token);
 
     await t.action(api.invoicePdfAction.generate, { token, id });
-    const first = await t.run(async (ctx) => (await ctx.db.get(id))?.pdfStorageId);
+    const first = await t.run(
+      async (ctx) => (await ctx.db.get(id))?.pdfStorageId,
+    );
 
     await t.action(api.invoicePdfAction.generate, { token, id });
-    const second = await t.run(async (ctx) => (await ctx.db.get(id))?.pdfStorageId);
+    const second = await t.run(
+      async (ctx) => (await ctx.db.get(id))?.pdfStorageId,
+    );
 
     expect(first).toBeDefined();
     expect(second).toBeDefined();
@@ -184,7 +200,10 @@ describe("invoice PDF generation", () => {
   test("fails clearly when the invoice does not exist", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);
-    const customerId = await t.mutation(api.customers.create, { token, name: "X" });
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "X",
+    });
     const id = await t.mutation(api.invoices.create, { token, customerId });
     await t.mutation(api.invoices.remove, { token, id });
 

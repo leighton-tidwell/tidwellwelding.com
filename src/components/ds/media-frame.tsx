@@ -39,7 +39,7 @@ export default function MediaFrame({
     media = children;
   } else if (src) {
     // Plain img by design; next.config sets images.unoptimized.
-     
+
     media = <img className="tsws-media__img" src={src} alt={alt} />;
   } else {
     media = (

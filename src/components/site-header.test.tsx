@@ -1,12 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const nav = vi.hoisted(() => ({ pathname: "/" }));
 
@@ -78,9 +71,9 @@ describe("SiteHeader", () => {
     const { container } = render(<SiteHeader />);
     const active = container.querySelector(".site-nav__link--active");
     expect(active).toHaveTextContent("About");
-    const home = Array.from(
-      container.querySelectorAll(".site-nav__link"),
-    ).find((l) => l.textContent === "Home");
+    const home = Array.from(container.querySelectorAll(".site-nav__link")).find(
+      (l) => l.textContent === "Home",
+    );
     expect(home).not.toHaveClass("site-nav__link--active");
   });
 

@@ -90,7 +90,9 @@ export default function Select({
           required={required}
           value={value}
           defaultValue={
-            value === undefined ? (defaultValue ?? (placeholder ? "" : undefined)) : undefined
+            value === undefined
+              ? (defaultValue ?? (placeholder ? "" : undefined))
+              : undefined
           }
           aria-invalid={error ? true : undefined}
           aria-describedby={

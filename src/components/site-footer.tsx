@@ -44,8 +44,12 @@ export default function SiteFooter() {
       <div className="site-footer__grid">
         <div className="site-footer__col" style={{ gap: 16 }}>
           {/* Placeholder path — the real badge PNG lands in /public later. */}
-          { }
-          <BadgeImg src="/logo-badge.png" alt="TSWS badge" className="site-footer__logo" />
+          {}
+          <BadgeImg
+            src="/logo-badge.png"
+            alt="TSWS badge"
+            className="site-footer__logo"
+          />
           <p className="site-footer__blurb">
             Welding and fabrication out of Granbury, Texas. Shop work when the
             part can come in. The truck when it can&apos;t.
@@ -57,10 +61,19 @@ export default function SiteFooter() {
             <div className="site-footer__heading">Services</div>
             <ul
               role="list"
-              style={{ display: "contents", listStyle: "none", margin: 0, padding: 0 }}
+              style={{
+                display: "contents",
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+              }}
             >
               {SERVICE_LINKS.map((l) => (
-                <li key={l.href} role="listitem" style={{ display: "contents" }}>
+                <li
+                  key={l.href}
+                  role="listitem"
+                  style={{ display: "contents" }}
+                >
                   <Link href={l.href} className="site-footer__link">
                     {l.label}
                   </Link>
@@ -72,10 +85,19 @@ export default function SiteFooter() {
             <div className="site-footer__heading">Service areas</div>
             <ul
               role="list"
-              style={{ display: "contents", listStyle: "none", margin: 0, padding: 0 }}
+              style={{
+                display: "contents",
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+              }}
             >
               {SERVICE_AREA_LINKS.map((l) => (
-                <li key={l.href} role="listitem" style={{ display: "contents" }}>
+                <li
+                  key={l.href}
+                  role="listitem"
+                  style={{ display: "contents" }}
+                >
                   <Link href={l.href} className="site-footer__link">
                     {l.label}
                   </Link>
@@ -88,7 +110,12 @@ export default function SiteFooter() {
           <div className="site-footer__heading">Company</div>
           <ul
             role="list"
-            style={{ display: "contents", listStyle: "none", margin: 0, padding: 0 }}
+            style={{
+              display: "contents",
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+            }}
           >
             {COMPANY_LINKS.map((l) => (
               <li key={l.href} role="listitem" style={{ display: "contents" }}>

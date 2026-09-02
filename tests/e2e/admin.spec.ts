@@ -64,16 +64,24 @@ function uniqueName(prefix: string) {
 }
 
 test.describe("access control", () => {
-  test("the sign-in screen shows no data before authenticating", async ({ page }) => {
+  test("the sign-in screen shows no data before authenticating", async ({
+    page,
+  }) => {
     await page.goto("/admin", { timeout: 60_000 });
 
-    await expect(page.getByRole("heading", { name: "Shop admin" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Shop admin" }),
+    ).toBeVisible();
     // Nothing from the console may render behind the gate.
-    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(
+      0,
+    );
     await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
   });
 
-  test("a wrong password is rejected and does not sign anyone in", async ({ page }) => {
+  test("a wrong password is rejected and does not sign anyone in", async ({
+    page,
+  }) => {
     const { email } = credentials();
     await page.goto("/admin", { timeout: 60_000 });
 
@@ -86,10 +94,14 @@ test.describe("access control", () => {
     await expect(formAlert(page)).toContainText(
       /incorrect|did not match|too many/i,
     );
-    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(
+      0,
+    );
   });
 
-  test("an unknown email fails the same way, revealing nothing", async ({ page }) => {
+  test("an unknown email fails the same way, revealing nothing", async ({
+    page,
+  }) => {
     await page.goto("/admin", { timeout: 60_000 });
 
     await page.getByLabel("Email").fill("nobody@example.com");
@@ -99,9 +111,10 @@ test.describe("access control", () => {
     await expect(formAlert(page)).toContainText(
       /incorrect|did not match|too many/i,
     );
-    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(
+      0,
+    );
   });
-
 });
 
 test.describe("the set-password link burns after one use", () => {
@@ -118,7 +131,9 @@ test.describe("the set-password link burns after one use", () => {
     await page.getByRole("button", { name: "Save password" }).click();
 
     await expect(formAlert(page)).toContainText(/no longer valid/i);
-    await expect(page.getByRole("heading", { name: "You are set" })).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "You are set" }),
+    ).toHaveCount(0);
   });
 
   test("a made-up token is refused", async ({ page }) => {
@@ -143,7 +158,9 @@ test.describe("the set-password link burns after one use", () => {
 });
 
 test.describe("invoicing, end to end", () => {
-  test("build the reference invoice and get the balance right", async ({ page }) => {
+  test("build the reference invoice and get the balance right", async ({
+    page,
+  }) => {
     await signIn(page);
 
     // A customer to bill.
@@ -158,13 +175,20 @@ test.describe("invoicing, end to end", () => {
     await page.getByRole("button", { name: "Invoices" }).click();
     await page.getByLabel("Customer").selectOption({ label: name });
     await page.getByRole("button", { name: "Create invoice" }).click();
-    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-\d{6}/, { timeout: 15_000 });
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-\d{6}/, {
+      timeout: 15_000,
+    });
 
     // The seven lines from the owner's real invoice, fuel split onto its own
     // row. Totals must land on $9,518.08.
     const lines: [string, string, string, string][] = [
       ["1", "ea", "LiftMaster LA400UL dual-swing operator", "2999.00"],
-      ["25", "hr", "Fabrication, installation and mobilization labor", "175.00"],
+      [
+        "25",
+        "hr",
+        "Fabrication, installation and mobilization labor",
+        "175.00",
+      ],
       ["1", "lot", "Fuel — mobilization surcharge", "44.08"],
       ["1", "ea", "Steel tubing and fabrication consumables", "1124.60"],
       ["1", "ea", "Paint and finishing supplies", "150.00"],
@@ -269,7 +293,9 @@ test.describe("invoicing, end to end", () => {
     await button.click();
 
     // While it works the control must lock, or an impatient tap fires again.
-    await expect(page.getByRole("button", { name: /Building the PDF/ })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Building the PDF/ }),
+    ).toBeVisible();
 
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^TSWS-\d{6}(-\d+)?\.pdf$/);
@@ -333,14 +359,18 @@ test.describe("invoicing, end to end", () => {
 
     await page.getByLabel("Status").selectOption("paid");
     await page.getByRole("button", { name: "All invoices" }).click();
-    await expect(page.getByText("paid").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("paid").first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("the editor is usable and the balance stays visible", async ({ page }) => {
+  test("the editor is usable and the balance stays visible", async ({
+    page,
+  }) => {
     await signIn(page);
 
     const name = uniqueName("Phone");
@@ -399,7 +429,9 @@ test.describe("accessibility", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("the console and invoice editor have no axe violations", async ({ page }) => {
+  test("the console and invoice editor have no axe violations", async ({
+    page,
+  }) => {
     await signIn(page);
 
     const listResults = await new AxeBuilder({ page })
@@ -416,7 +448,9 @@ test.describe("accessibility", () => {
     await page.getByRole("button", { name: "Invoices" }).click();
     await page.getByLabel("Customer").selectOption({ label: name });
     await page.getByRole("button", { name: "Create invoice" }).click();
-    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-\d{6}/, { timeout: 15_000 });
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-\d{6}/, {
+      timeout: 15_000,
+    });
 
     const editorResults = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -430,15 +464,23 @@ test.describe("accessibility", () => {
  * fresh login costs one of the ten attempts the rate limiter allows per window.
  */
 test.describe("signing out", () => {
-  test("returns to the gate and does not survive a reload", async ({ page }) => {
+  test("returns to the gate and does not survive a reload", async ({
+    page,
+  }) => {
     await signIn(page);
     await page.getByRole("button", { name: "Sign out" }).click();
 
-    await expect(page.getByRole("heading", { name: "Shop admin" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Shop admin" }),
+    ).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Shop admin" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Shop admin" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Invoices" })).toHaveCount(
+      0,
+    );
 
     cachedSessionToken = null;
   });

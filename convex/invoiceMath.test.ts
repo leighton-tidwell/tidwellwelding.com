@@ -19,7 +19,8 @@ const REFERENCE_LINES: InvoiceLine[] = [
   {
     qty: 1,
     unit: "ea",
-    description: "LiftMaster LA400UL, dual-swing operator with solar panel and battery kit",
+    description:
+      "LiftMaster LA400UL, dual-swing operator with solar panel and battery kit",
     rateCents: 299900,
     taxable: true,
   },
@@ -51,7 +52,13 @@ const REFERENCE_LINES: InvoiceLine[] = [
     rateCents: 15000,
     taxable: true,
   },
-  { qty: 1, unit: "ea", description: "Concrete", rateCents: 5000, taxable: true },
+  {
+    qty: 1,
+    unit: "ea",
+    description: "Concrete",
+    rateCents: 5000,
+    taxable: true,
+  },
   {
     qty: 1,
     unit: "ea",
@@ -94,8 +101,20 @@ describe("computeInvoiceTotals — tax", () => {
   test("taxes only the lines flagged taxable", () => {
     const totals = computeInvoiceTotals({
       lines: [
-        { qty: 10, unit: "hr", description: "Labor", rateCents: 10000, taxable: false },
-        { qty: 1, unit: "ea", description: "Steel", rateCents: 50000, taxable: true },
+        {
+          qty: 10,
+          unit: "hr",
+          description: "Labor",
+          rateCents: 10000,
+          taxable: false,
+        },
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Steel",
+          rateCents: 50000,
+          taxable: true,
+        },
       ],
       discountCents: 0,
       taxRateBasisPoints: 825,
@@ -111,7 +130,15 @@ describe("computeInvoiceTotals — tax", () => {
 
   test("a zero tax rate produces no tax", () => {
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Gate", rateCents: 100000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Gate",
+          rateCents: 100000,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 0,
       paymentsCents: 0,
@@ -124,7 +151,15 @@ describe("computeInvoiceTotals — tax", () => {
   test("rounds tax half-up to the nearest cent", () => {
     // 1000 cents * 8.25% = 82.5 cents exactly -> 83, never 82.
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Odd", rateCents: 1000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Odd",
+          rateCents: 1000,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 825,
       paymentsCents: 0,
@@ -138,7 +173,15 @@ describe("computeInvoiceTotals — discount and payments", () => {
   test("a discount reduces the taxable base, not just the total", () => {
     // $1,000 of taxable work, $100 off. Tax must be on $900, not $1,000.
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Work", rateCents: 100000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Work",
+          rateCents: 100000,
+          taxable: true,
+        },
+      ],
       discountCents: 10000,
       taxRateBasisPoints: 825,
       paymentsCents: 0,
@@ -151,7 +194,15 @@ describe("computeInvoiceTotals — discount and payments", () => {
 
   test("payments reduce the balance due but never the tax", () => {
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Work", rateCents: 100000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Work",
+          rateCents: 100000,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 825,
       paymentsCents: 50000,
@@ -164,7 +215,15 @@ describe("computeInvoiceTotals — discount and payments", () => {
 
   test("an overpayment yields a negative balance rather than clamping to zero", () => {
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Work", rateCents: 10000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Work",
+          rateCents: 10000,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 0,
       paymentsCents: 15000,
@@ -176,7 +235,15 @@ describe("computeInvoiceTotals — discount and payments", () => {
 
   test("a discount larger than the subtotal cannot drive the taxable base below zero", () => {
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1, unit: "ea", description: "Work", rateCents: 10000, taxable: true }],
+      lines: [
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Work",
+          rateCents: 10000,
+          taxable: true,
+        },
+      ],
       discountCents: 25000,
       taxRateBasisPoints: 825,
       paymentsCents: 0,
@@ -191,8 +258,20 @@ describe("computeInvoiceTotals — discount and payments", () => {
     // the taxable base, not the whole $100 -- otherwise tax is understated.
     const totals = computeInvoiceTotals({
       lines: [
-        { qty: 1, unit: "ea", description: "Materials", rateCents: 60000, taxable: true },
-        { qty: 1, unit: "hr", description: "Exempt labor", rateCents: 40000, taxable: false },
+        {
+          qty: 1,
+          unit: "ea",
+          description: "Materials",
+          rateCents: 60000,
+          taxable: true,
+        },
+        {
+          qty: 1,
+          unit: "hr",
+          description: "Exempt labor",
+          rateCents: 40000,
+          taxable: false,
+        },
       ],
       discountCents: 10000,
       taxRateBasisPoints: 825,
@@ -208,7 +287,15 @@ describe("computeInvoiceTotals — rejects nonsense", () => {
   test("throws on a negative quantity", () => {
     expect(() =>
       computeInvoiceTotals({
-        lines: [{ qty: -1, unit: "ea", description: "Bad", rateCents: 1000, taxable: true }],
+        lines: [
+          {
+            qty: -1,
+            unit: "ea",
+            description: "Bad",
+            rateCents: 1000,
+            taxable: true,
+          },
+        ],
         discountCents: 0,
         taxRateBasisPoints: 825,
         paymentsCents: 0,
@@ -219,7 +306,15 @@ describe("computeInvoiceTotals — rejects nonsense", () => {
   test("throws on a non-integer cent amount", () => {
     expect(() =>
       computeInvoiceTotals({
-        lines: [{ qty: 1, unit: "ea", description: "Bad", rateCents: 10.5, taxable: true }],
+        lines: [
+          {
+            qty: 1,
+            unit: "ea",
+            description: "Bad",
+            rateCents: 10.5,
+            taxable: true,
+          },
+        ],
         discountCents: 0,
         taxRateBasisPoints: 825,
         paymentsCents: 0,
@@ -230,7 +325,15 @@ describe("computeInvoiceTotals — rejects nonsense", () => {
   test("throws on a negative tax rate", () => {
     expect(() =>
       computeInvoiceTotals({
-        lines: [{ qty: 1, unit: "ea", description: "Work", rateCents: 1000, taxable: true }],
+        lines: [
+          {
+            qty: 1,
+            unit: "ea",
+            description: "Work",
+            rateCents: 1000,
+            taxable: true,
+          },
+        ],
         discountCents: 0,
         taxRateBasisPoints: -5,
         paymentsCents: 0,
@@ -241,7 +344,15 @@ describe("computeInvoiceTotals — rejects nonsense", () => {
   test("allows a fractional quantity for part-hours", () => {
     // 1.5 hours at $175 is a real thing Eric bills.
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 1.5, unit: "hr", description: "Labor", rateCents: 17500, taxable: true }],
+      lines: [
+        {
+          qty: 1.5,
+          unit: "hr",
+          description: "Labor",
+          rateCents: 17500,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 0,
       paymentsCents: 0,
@@ -253,7 +364,15 @@ describe("computeInvoiceTotals — rejects nonsense", () => {
   test("rounds a line amount that lands on a fraction of a cent", () => {
     // 0.333 hr * $100.00 = 3330 cents exactly; 0.3333 * 10000 = 3333 cents.
     const totals = computeInvoiceTotals({
-      lines: [{ qty: 0.3333, unit: "hr", description: "Labor", rateCents: 10000, taxable: true }],
+      lines: [
+        {
+          qty: 0.3333,
+          unit: "hr",
+          description: "Labor",
+          rateCents: 10000,
+          taxable: true,
+        },
+      ],
       discountCents: 0,
       taxRateBasisPoints: 0,
       paymentsCents: 0,

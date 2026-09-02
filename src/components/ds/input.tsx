@@ -33,7 +33,8 @@ export type InputProps = {
   id?: string;
   disabled?: boolean;
   autoComplete?: string;
-  inputMode?: "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url";
+  inputMode?:
+    "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url";
   maxLength?: number;
   className?: string;
   style?: CSSProperties;
@@ -122,7 +123,12 @@ export default function Input({
         {multiline ? (
           <textarea {...shared} rows={rows} />
         ) : (
-          <input {...shared} type={type} autoComplete={autoComplete} inputMode={inputMode} />
+          <input
+            {...shared}
+            type={type}
+            autoComplete={autoComplete}
+            inputMode={inputMode}
+          />
         )}
         <span className="tsws-control__seam" aria-hidden="true" />
       </div>

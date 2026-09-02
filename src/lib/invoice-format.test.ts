@@ -17,7 +17,9 @@ import {
  * holds it still: these tests fail the moment the two copies disagree, which is
  * the only reason the duplication is acceptable.
  */
-const MONEY_CASES = [0, 1, 50, 999, 1000, 4408, 262_50, 437_500, 951_808, -5000, -1];
+const MONEY_CASES = [
+  0, 1, 50, 999, 1000, 4408, 262_50, 437_500, 951_808, -5000, -1,
+];
 const UNITS: LineUnit[] = ["hr", "ea", "ft", "lb", "lot"];
 const PARSE_CASES = [
   "175",

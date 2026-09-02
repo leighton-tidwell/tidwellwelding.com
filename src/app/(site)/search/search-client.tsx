@@ -102,11 +102,7 @@ export default function SearchClient({
                   border: "none",
                 }}
               >
-                <Card
-                  interactive
-                  eyebrow={entry.url}
-                  title={entry.title}
-                >
+                <Card interactive eyebrow={entry.url} title={entry.title}>
                   <p
                     style={{
                       fontFamily: "var(--font-body)",

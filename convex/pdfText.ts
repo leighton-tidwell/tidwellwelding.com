@@ -88,7 +88,8 @@ export async function extractTextRuns(bytes: Uint8Array): Promise<string[]> {
     for (const [, hex, literal] of stream.matchAll(
       /(?:<([0-9A-Fa-f]*)>|\(((?:[^()\\]|\\.)*)\))\s*Tj/g,
     )) {
-      const run = hex !== undefined ? hexToString(hex) : unescapeLiteral(literal);
+      const run =
+        hex !== undefined ? hexToString(hex) : unescapeLiteral(literal);
       if (run.trim()) runs.push(run);
     }
   }

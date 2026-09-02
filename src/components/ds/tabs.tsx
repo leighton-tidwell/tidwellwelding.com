@@ -42,7 +42,9 @@ export default function Tabs({
   const [internal, setInternal] = useState(defaultValue ?? items[0]?.id ?? "");
   const active = value ?? internal;
   const listRef = useRef<HTMLDivElement | null>(null);
-  const [seam, setSeam] = useState<{ left: number; width: number } | null>(null);
+  const [seam, setSeam] = useState<{ left: number; width: number } | null>(
+    null,
+  );
   // Instance-scoped id prefix so tab/panel ids never collide across instances.
   const idBase = useId();
   const tabDomId = (id: string) => `${idBase}-tab-${id}`;
@@ -76,7 +78,10 @@ export default function Tabs({
 
   // Roving-tabindex keyboard support: Arrow keys cycle, Home/End jump;
   // selection follows focus (same effect as a click on the landed tab).
-  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, id: string) => {
+  const onTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    id: string,
+  ) => {
     const { key } = event;
     let target: string | undefined;
     if (key === "ArrowRight" || key === "ArrowDown") {
@@ -129,7 +134,9 @@ export default function Tabs({
               aria-selected={isActive}
               aria-controls={item.content ? panelDomId(item.id) : undefined}
               className={
-                isActive ? "tsws-tabs__tab tsws-tabs__tab--active" : "tsws-tabs__tab"
+                isActive
+                  ? "tsws-tabs__tab tsws-tabs__tab--active"
+                  : "tsws-tabs__tab"
               }
               onClick={() => select(item.id)}
               onKeyDown={(event) => onTabKeyDown(event, item.id)}

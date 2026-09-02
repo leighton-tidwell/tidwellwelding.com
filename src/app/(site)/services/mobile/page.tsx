@@ -74,9 +74,9 @@ const CONTENT: ServicePageContent = {
       paragraphs: [
         "Ranch gates and fence corners. Cracked loader buckets in the pasture. Plant repairs that have to land inside a window. Trailers dead on the shoulder. The truck meets all of them where they sit.",
         <>
-          Field work from the <Link href="/work">job log</Link>: a
-          reinforcement plate cut, fit and welded onto a dozer bucket on
-          location. Water trough bays framed, squared and set on the pad.
+          Field work from the <Link href="/work">job log</Link>: a reinforcement
+          plate cut, fit and welded onto a dozer bucket on location. Water
+          trough bays framed, squared and set on the pad.
         </>,
         <>
           Send photos, rough sizes and the location. Working numbers come back

@@ -4,7 +4,13 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import Badge from "@/components/ds/badge";
 
-const CATEGORIES = ["All", "Fabrication", "Structural", "Equipment", "Pipe"] as const;
+const CATEGORIES = [
+  "All",
+  "Fabrication",
+  "Structural",
+  "Equipment",
+  "Pipe",
+] as const;
 type Category = (typeof CATEGORIES)[number];
 type JobCategory = Exclude<Category, "All">;
 
@@ -135,7 +141,6 @@ function JobCard({ job, eager }: { job: Job; eager: boolean }) {
     >
       <div className="px-6 pt-5">
         {job.media.kind === "image" ? (
-           
           <img
             src={job.media.src}
             alt={job.media.alt}

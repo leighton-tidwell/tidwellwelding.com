@@ -18,7 +18,10 @@ const LINE = (over: Partial<EditorLine> = {}): EditorLine => ({
   ...over,
 });
 
-function setup(lines: EditorLine[], props: Partial<React.ComponentProps<typeof LineItemEditor>> = {}) {
+function setup(
+  lines: EditorLine[],
+  props: Partial<React.ComponentProps<typeof LineItemEditor>> = {},
+) {
   const onChange = vi.fn();
   const view = render(
     <LineItemEditor
@@ -142,8 +145,14 @@ describe("LineItemEditor — what the line is worth", () => {
 describe("LineItemEditor — built for a phone", () => {
   test("number fields ask for the numeric keypad", () => {
     setup([LINE()]);
-    expect(row(0).getByLabelText(/qty/i)).toHaveAttribute("inputMode", "decimal");
-    expect(row(0).getByLabelText(/rate/i)).toHaveAttribute("inputMode", "decimal");
+    expect(row(0).getByLabelText(/qty/i)).toHaveAttribute(
+      "inputMode",
+      "decimal",
+    );
+    expect(row(0).getByLabelText(/rate/i)).toHaveAttribute(
+      "inputMode",
+      "decimal",
+    );
   });
 
   test("every line is a labelled group so screen readers can navigate rows", () => {

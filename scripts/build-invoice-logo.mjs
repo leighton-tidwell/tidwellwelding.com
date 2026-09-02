@@ -59,7 +59,8 @@ function unfilter(raw, width, height) {
         const pa = Math.abs(pp - a);
         const pb = Math.abs(pp - b);
         const pc = Math.abs(pp - c);
-        line[i] = (line[i] + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 255;
+        line[i] =
+          (line[i] + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 255;
       }
     }
     line.copy(out, y * stride);
@@ -103,7 +104,8 @@ function crc32(buf) {
     crcTable = new Int32Array(256);
     for (let n = 0; n < 256; n += 1) {
       let c = n;
-      for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      for (let k = 0; k < 8; k += 1)
+        c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
       crcTable[n] = c;
     }
   }
@@ -120,7 +122,12 @@ function resize(pixels, width, height, targetWidth) {
     const sy = Math.min(height - 1, Math.floor((y * height) / targetHeight));
     for (let x = 0; x < targetWidth; x += 1) {
       const sx = Math.min(width - 1, Math.floor((x * width) / targetWidth));
-      pixels.copy(out, (y * targetWidth + x) * 4, (sy * width + sx) * 4, (sy * width + sx) * 4 + 4);
+      pixels.copy(
+        out,
+        (y * targetWidth + x) * 4,
+        (sy * width + sx) * 4,
+        (sy * width + sx) * 4 + 4,
+      );
     }
   }
   return { pixels: out, width: targetWidth, height: targetHeight };
@@ -148,7 +155,11 @@ while (queue.length) {
   if (x < 0 || y < 0 || x >= width || y >= height) continue;
   if (seen[y * width + x]) continue;
   const o = (y * width + x) * 4;
-  if (pixels[o] > BLACK_THRESHOLD || pixels[o + 1] > BLACK_THRESHOLD || pixels[o + 2] > BLACK_THRESHOLD) {
+  if (
+    pixels[o] > BLACK_THRESHOLD ||
+    pixels[o + 1] > BLACK_THRESHOLD ||
+    pixels[o + 2] > BLACK_THRESHOLD
+  ) {
     continue;
   }
   seen[y * width + x] = 1;

@@ -4,8 +4,7 @@ test.describe.configure({ timeout: 120_000 });
 
 /** Exact <title> per page, from the SEO spec. */
 const TITLES: Record<string, string> = {
-  "/":
-    "Welding & Fabrication in Granbury, TX | 24/7 Mobile Welder | Tidwell Specialty Welding",
+  "/": "Welding & Fabrication in Granbury, TX | 24/7 Mobile Welder | Tidwell Specialty Welding",
   "/services":
     "Welding Services: Fabrication, Pipe, Equipment Repair | Granbury & Fort Worth | TSWS",
   "/services/fabrication":
@@ -89,7 +88,9 @@ test("home page LocalBusiness JSON-LD parses with the legal name", async ({
     "HomeAndConstructionBusiness",
     "LocalBusiness",
   ]);
-  expect(business!["legalName"]).toBe("Tidwell Specialty Welding Services, LLC");
+  expect(business!["legalName"]).toBe(
+    "Tidwell Specialty Welding Services, LLC",
+  );
   expect(business!["@context"]).toBe("https://schema.org");
   expect(business!["name"]).toBe("Tidwell Specialty Welding");
 });
@@ -234,7 +235,12 @@ test("WebSite JSON-LD (with SearchAction) renders on the home page only", async 
 test("every page carries exactly one LocalBusiness block referenced by #business", async ({
   page,
 }) => {
-  for (const path of ["/", "/services/pipe", "/welder/granbury-tx", "/search"]) {
+  for (const path of [
+    "/",
+    "/services/pipe",
+    "/welder/granbury-tx",
+    "/search",
+  ]) {
     await page.goto(path, { timeout: 60_000 });
     const nodes = await readJsonLd(page);
     const businesses = nodes.filter((n) => {
@@ -243,7 +249,10 @@ test("every page carries exactly one LocalBusiness block referenced by #business
         ? type.includes("LocalBusiness")
         : type === "LocalBusiness";
     });
-    expect(businesses, `${path} must carry exactly one LocalBusiness`).toHaveLength(1);
+    expect(
+      businesses,
+      `${path} must carry exactly one LocalBusiness`,
+    ).toHaveLength(1);
     expect(businesses[0]["@id"]).toBe("https://tidwellwelding.com/#business");
   }
 });

@@ -1,11 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -130,10 +124,9 @@ describe("SiteFooter", () => {
 
   test("contact details render", () => {
     render(<SiteFooter />);
-    expect(screen.getByRole("link", { name: "(817) 894-6357" })).toHaveAttribute(
-      "href",
-      "tel:8178946357",
-    );
+    expect(
+      screen.getByRole("link", { name: "(817) 894-6357" }),
+    ).toHaveAttribute("href", "tel:8178946357");
     expect(
       screen.getByRole("link", { name: "eric@tidwellwelding.com" }),
     ).toHaveAttribute("href", "mailto:eric@tidwellwelding.com");

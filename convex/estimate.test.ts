@@ -116,7 +116,10 @@ describe("estimateSchema", () => {
     ["missing title", { ...canonicalEstimate, title: undefined }],
     ["empty title", { ...canonicalEstimate, title: "" }],
     ["title over 120 chars", { ...canonicalEstimate, title: "t".repeat(121) }],
-    ["summary over 600 chars", { ...canonicalEstimate, summary: "s".repeat(601) }],
+    [
+      "summary over 600 chars",
+      { ...canonicalEstimate, summary: "s".repeat(601) },
+    ],
     ["no line items", { ...canonicalEstimate, line_items: [] }],
     [
       "9 line items",

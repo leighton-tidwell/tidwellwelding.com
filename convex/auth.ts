@@ -222,7 +222,10 @@ export const login = mutation({
     // how cheap the guess is.
     const limit = await loginLimiter.limit(ctx, "adminLogin", { key: email });
     if (!limit.ok) {
-      return { ok: false, error: "Too many sign-in attempts. Try again later." };
+      return {
+        ok: false,
+        error: "Too many sign-in attempts. Try again later.",
+      };
     }
 
     const deny = { ok: false, error: "Email or password is incorrect." };

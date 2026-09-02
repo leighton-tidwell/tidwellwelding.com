@@ -95,7 +95,10 @@ beforeEach(() => {
     ) => cb("mock-email-id"),
   );
   sdkSendMock.mockReset();
-  sdkSendMock.mockResolvedValue({ data: { id: "mock-provider-id" }, error: null });
+  sdkSendMock.mockResolvedValue({
+    data: { id: "mock-provider-id" },
+    error: null,
+  });
   // Simulate production: turnstile enforced, no secret shortcuts, no emails
   // unless a test opts in by stubbing RESEND_API_KEY.
   vi.stubEnv("TURNSTILE_SECRET_KEY", "");
@@ -179,7 +182,10 @@ describe("input validation", () => {
     const t = setup();
     await markSessionVerified(t);
     await expectConvexError(
-      t.action(api.quotes.submitQuote, { ...baseArgs(), email: "not-an-email" }),
+      t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        email: "not-an-email",
+      }),
       "Enter a valid email or leave it blank.",
     );
     const res = await t.action(api.quotes.submitQuote, {
@@ -347,7 +353,11 @@ describe("requestId and stored row", () => {
     const res = await t.action(api.quotes.submitQuote, {
       ...baseArgs(),
       name: "N".repeat(300),
-      job: { type: "Repair", desc: "d".repeat(4000), location: "L".repeat(600) },
+      job: {
+        type: "Repair",
+        desc: "d".repeat(4000),
+        location: "L".repeat(600),
+      },
     });
     const row = await t.run(async (ctx) =>
       ctx.db

@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { usePathname } from "next/navigation";
 import { useConvex } from "convex/react";
 import { ConvexError } from "convex/values";
-import {
-  Turnstile,
-  type TurnstileInstance,
-} from "@marsidev/react-turnstile";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import HazardBar from "@/components/ds/hazard-bar";
@@ -178,11 +170,7 @@ export default function FaqBot() {
         </button>
       )}
       {open && (
-        <div
-          className="faqbot-panel"
-          role="dialog"
-          aria-label="Ask the shop"
-        >
+        <div className="faqbot-panel" role="dialog" aria-label="Ask the shop">
           <HazardBar variant="red" height="6px" />
           <div className="faqbot-head">
             <div>

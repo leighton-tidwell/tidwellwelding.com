@@ -109,9 +109,9 @@ export default function AboutPage() {
             Inconel and chrome-moly.
           </p>
           <p style={bodyParaStyle}>
-            He trained and tested on the torch, filed the LLC and carries insurance. The
-            standard is simple: if a weld wouldn&apos;t pass his eye, it
-            doesn&apos;t leave the shop. Every job, no exceptions.
+            He trained and tested on the torch, filed the LLC and carries
+            insurance. The standard is simple: if a weld wouldn&apos;t pass his
+            eye, it doesn&apos;t leave the shop. Every job, no exceptions.
           </p>
           <p style={bodyParaStyle}>
             The company has a reason. Eric and his wife Paige, a Fort Worth
@@ -185,7 +185,11 @@ export default function AboutPage() {
           </h2>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {shopCards.map((card) => (
-              <Card key={card.eyebrow} eyebrow={card.eyebrow} title={card.title}>
+              <Card
+                key={card.eyebrow}
+                eyebrow={card.eyebrow}
+                title={card.title}
+              >
                 <p style={cardParaStyle}>{card.text}</p>
               </Card>
             ))}

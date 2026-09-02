@@ -134,8 +134,8 @@ export default function WorkPage() {
             <div>
               <div style={kickerStyle}>@__tdaddy__ on TikTok</div>
               <h2 className="text-[38px] md:text-[52px]" style={sectionH2Style}>
-                10,000 watch the{" "}
-                <span style={{ color: "#c90314" }}>welds</span>.
+                10,000 watch the <span style={{ color: "#c90314" }}>welds</span>
+                .
               </h2>
             </div>
             <Button variant="ghost" href="https://www.tiktok.com/@__tdaddy__">

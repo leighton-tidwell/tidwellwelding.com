@@ -1,11 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Card from "@/components/ds/card";
 
 afterEach(cleanup);
@@ -68,9 +62,14 @@ describe("Card", () => {
 
   test("media and footer slots render in their wrappers", () => {
     const { container } = render(
-      <Card media={<img alt="weld" src="/x.jpg" />} footer={<span>foot</span>} />,
+      <Card
+        media={<img alt="weld" src="/x.jpg" />}
+        footer={<span>foot</span>}
+      />,
     );
-    expect(container.querySelector(".tsws-card__media img")).toBeInTheDocument();
+    expect(
+      container.querySelector(".tsws-card__media img"),
+    ).toBeInTheDocument();
     expect(container.querySelector(".tsws-card__footer")).toHaveTextContent(
       "foot",
     );

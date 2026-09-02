@@ -77,11 +77,14 @@ export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotals {
   // exempt work in proportion. Charging tax on the full taxable subtotal after
   // a discount would overstate the tax owed.
   const clampedDiscount = Math.min(Math.max(discountCents, 0), subtotalCents);
-  const taxableShare = subtotalCents === 0 ? 0 : rawTaxableCents / subtotalCents;
+  const taxableShare =
+    subtotalCents === 0 ? 0 : rawTaxableCents / subtotalCents;
   const discountOnTaxable = roundHalfUp(clampedDiscount * taxableShare);
   const taxableSubtotalCents = Math.max(rawTaxableCents - discountOnTaxable, 0);
 
-  const taxCents = roundHalfUp((taxableSubtotalCents * taxRateBasisPoints) / 10000);
+  const taxCents = roundHalfUp(
+    (taxableSubtotalCents * taxRateBasisPoints) / 10000,
+  );
   const totalCents = subtotalCents - clampedDiscount + taxCents;
   const balanceCents = totalCents - paymentsCents;
 
@@ -109,7 +112,11 @@ export function formatMoney(cents: number): string {
 
 /** Units that describe a measure get printed; a plain per-item price does not,
  * matching the invoice Eric already sends. */
-const PRINTED_UNITS: ReadonlySet<LineUnit> = new Set<LineUnit>(["hr", "ft", "lb"]);
+const PRINTED_UNITS: ReadonlySet<LineUnit> = new Set<LineUnit>([
+  "hr",
+  "ft",
+  "lb",
+]);
 
 export function formatRate(rateCents: number, unit: LineUnit): string {
   const money = formatMoney(rateCents);

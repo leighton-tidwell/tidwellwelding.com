@@ -27,12 +27,14 @@ const ROUTES: { path: string; h1Contains: string | RegExp }[] = [
   { path: "/search", h1Contains: "Find it fast" },
 ];
 
-const THIRD_PARTY = /tiktok\.com|google\.com|gstatic\.com|googleapis\.com|challenges\.cloudflare\.com|doubleclick\.net/;
+const THIRD_PARTY =
+  /tiktok\.com|google\.com|gstatic\.com|googleapis\.com|challenges\.cloudflare\.com|doubleclick\.net/;
 
 function collectPageErrors(page: Page): Error[] {
   const errors: Error[] = [];
   page.on("pageerror", (err) => {
-    if (THIRD_PARTY.test(err.stack ?? "") || THIRD_PARTY.test(err.message)) return;
+    if (THIRD_PARTY.test(err.stack ?? "") || THIRD_PARTY.test(err.message))
+      return;
     errors.push(err);
   });
   return errors;

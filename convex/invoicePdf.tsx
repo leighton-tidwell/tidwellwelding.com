@@ -212,7 +212,11 @@ const styles = StyleSheet.create({
   // Foot: notes beside totals ----------------------------------------------
   foot: { flexDirection: "row", marginTop: 12, gap: 12 },
   notes: { flex: 1 },
-  notesHead: { backgroundColor: SHADE, paddingVertical: 4, paddingHorizontal: 7 },
+  notesHead: {
+    backgroundColor: SHADE,
+    paddingVertical: 4,
+    paddingHorizontal: 7,
+  },
   notesHeadText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: RED },
   notesBody: { paddingTop: 4 },
   notesLine: {
@@ -244,8 +248,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginTop: 4,
   },
-  balanceLabel: { fontSize: 9.5, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
-  balanceValue: { fontSize: 12, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+  balanceLabel: {
+    fontSize: 9.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#FFFFFF",
+  },
+  balanceValue: {
+    fontSize: 12,
+    fontFamily: "Helvetica-Bold",
+    color: "#FFFFFF",
+  },
 
   // Footer ------------------------------------------------------------------
   // In normal flow, not absolutely positioned: an absolute footer sitting in
@@ -304,7 +316,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   });
 
   const { customer } = input;
-  const contactLine = [customer.phone, customer.email].filter(Boolean).join(" · ");
+  const contactLine = [customer.phone, customer.email]
+    .filter(Boolean)
+    .join(" · ");
 
   const leftFields: Array<[string, string]> = [
     ["BILL TO", customer.company ?? customer.name],
@@ -317,7 +331,10 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   const rightFields: Array<[string, string]> = [
     ["INVOICE #", input.number],
     ["DATE", formatDate(input.issuedAt)],
-    ["DUE DATE", input.dueAt === undefined ? input.terms : formatDate(input.dueAt)],
+    [
+      "DUE DATE",
+      input.dueAt === undefined ? input.terms : formatDate(input.dueAt),
+    ],
     ["TERMS", input.terms],
   ];
 
@@ -384,7 +401,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
               <Text style={styles.tHeadText}>QTY / HRS</Text>
             </View>
             <View style={styles.cDesc}>
-              <Text style={styles.tHeadText}>DESCRIPTION OF WORK / MATERIALS</Text>
+              <Text style={styles.tHeadText}>
+                DESCRIPTION OF WORK / MATERIALS
+              </Text>
             </View>
             <View style={styles.cRate}>
               <Text style={styles.tHeadText}>RATE</Text>
@@ -411,7 +430,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
                 </Text>
               </View>
               <View style={styles.cTax}>
-                <Text style={styles.cellCentre}>{line.taxable ? "Yes" : "No"}</Text>
+                <Text style={styles.cellCentre}>
+                  {line.taxable ? "Yes" : "No"}
+                </Text>
               </View>
               <View style={styles.cAmount}>
                 <Text style={styles.cellCentre}>

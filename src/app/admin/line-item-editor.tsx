@@ -28,7 +28,14 @@ const UNIT_OPTIONS: { value: LineUnit; label: string }[] = [
 ];
 
 export function emptyLine(key: string): EditorLine {
-  return { key, qty: "1", unit: "ea", description: "", rate: "", taxable: true };
+  return {
+    key,
+    qty: "1",
+    unit: "ea",
+    description: "",
+    rate: "",
+    taxable: true,
+  };
 }
 
 /** The amount for a line, or null when the numbers are not yet usable. */
@@ -54,7 +61,9 @@ export default function LineItemEditor({
   const idBase = useId();
 
   const update = (index: number, patch: Partial<EditorLine>) => {
-    onChange(lines.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+    onChange(
+      lines.map((line, i) => (i === index ? { ...line, ...patch } : line)),
+    );
   };
 
   /** Switching a line to hours prefills the rate, but only when the field is
@@ -71,7 +80,8 @@ export default function LineItemEditor({
       .slice(0, index)
       .reverse()
       .find((l) => l.unit === "hr" && l.rate.trim() !== "");
-    const prefill = priorHourly?.rate ?? (laborRate === null ? "" : String(laborRate));
+    const prefill =
+      priorHourly?.rate ?? (laborRate === null ? "" : String(laborRate));
     update(index, { unit, rate: prefill });
   };
 
@@ -128,7 +138,10 @@ export default function LineItemEditor({
                 checked={line.taxable}
                 onChange={(checked) => update(index, { taxable: checked })}
               />
-              <span className="admin-line-amount" aria-label={`Line ${index + 1} amount`}>
+              <span
+                className="admin-line-amount"
+                aria-label={`Line ${index + 1} amount`}
+              >
                 {amount === null ? "—" : formatMoney(amount)}
               </span>
               <Button

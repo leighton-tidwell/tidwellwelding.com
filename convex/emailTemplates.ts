@@ -12,13 +12,14 @@ export function esc(input: string): string {
 
 /** Strip control characters and newlines so user text is safe in a subject. */
 export function headerSafe(input: string, max = 80): string {
-  return input.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, max);
+  return input
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .trim()
+    .slice(0, max);
 }
 
 export function isEmail(input: string): boolean {
-  return (
-    input.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input)
-  );
+  return input.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(input);
 }
 
 export function phoneDigits(phone: string): string {
@@ -77,7 +78,8 @@ function jobFields(q: QuotePayload): Field[] {
   if (j.dims) out.push({ label: "Dimensions", value: j.dims });
   if (j.timeline) out.push({ label: "Timeline", value: j.timeline });
   if (j.location) out.push({ label: "Location", value: j.location });
-  if (j.compQuote) out.push({ label: "Quote they got", value: "$" + j.compQuote });
+  if (j.compQuote)
+    out.push({ label: "Quote they got", value: "$" + j.compQuote });
   if (j.photoNames?.length) {
     out.push({
       label: "Photos named",

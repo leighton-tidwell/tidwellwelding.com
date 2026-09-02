@@ -36,7 +36,10 @@ export type Estimate = z.infer<typeof estimateSchema>;
 
 /** What the browser gets. On low confidence the dollars stay server-side —
  * the customer sees hours plus a talk-to-Eric line; Eric's email gets it all. */
-export type CustomerEstimate = Omit<Estimate, "dollars_low" | "dollars_high"> & {
+export type CustomerEstimate = Omit<
+  Estimate,
+  "dollars_low" | "dollars_high"
+> & {
   dollars_low?: number;
   dollars_high?: number;
   dollarsWithheld?: boolean;
@@ -70,7 +73,8 @@ export function fallbackEstimate(jobType: string): Estimate {
     { task: "Weld-out", crew: 1, hours: 4 },
     { task: "Grind, dress and inspect", crew: 1, hours: 1 },
   ];
-  if (mobile) items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
+  if (mobile)
+    items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
   return {
     title: "Draft estimate",
     summary:
@@ -98,10 +102,7 @@ function roundMoney(n: number): number {
 /** A quote must never come in under what the labor alone costs. The model does
  * the pricing; this is the arithmetic backstop if it lowballs or fumbles.
  * A null rate (never configured) leaves the estimate untouched. */
-export function applyLaborFloor(
-  est: Estimate,
-  rate: number | null,
-): Estimate {
+export function applyLaborFloor(est: Estimate, rate: number | null): Estimate {
   if (rate === null) return est;
   const rawFloor = est.hours_low * rate;
   let floor = roundMoney(rawFloor);
@@ -198,7 +199,9 @@ export const draftEstimate = action({
 
     const verified = await verifyTurnstile(args.turnstileToken);
     if (!verified) {
-      throw new ConvexError("Verification failed. Reload the page and try again.");
+      throw new ConvexError(
+        "Verification failed. Reload the page and try again.",
+      );
     }
 
     await limitEstimateDraft(ctx, args.sessionId);
@@ -238,7 +241,10 @@ export const draftEstimate = action({
       });
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("No JSON in model reply");
-      const parsed = applyLaborFloor(estimateSchema.parse(JSON.parse(match[0])), rate);
+      const parsed = applyLaborFloor(
+        estimateSchema.parse(JSON.parse(match[0])),
+        rate,
+      );
       // Full numbers stay server-side for Eric's email, whatever the customer
       // ends up seeing.
       await ctx.runMutation(internal.estimate.saveDraft, {

@@ -61,7 +61,13 @@ const REFERENCE: InvoicePdfInput = {
       rateCents: 15000,
       taxable: true,
     },
-    { qty: 1, unit: "ea", description: "Concrete", rateCents: 5000, taxable: true },
+    {
+      qty: 1,
+      unit: "ea",
+      description: "Concrete",
+      rateCents: 5000,
+      taxable: true,
+    },
     {
       qty: 1,
       unit: "ea",
@@ -73,7 +79,8 @@ const REFERENCE: InvoicePdfInput = {
   discountCents: 0,
   taxRateBasisPoints: 825,
   paymentsCents: 0,
-  notes: "Gate hung and aligned; owner walked the job and approved on completion.",
+  notes:
+    "Gate hung and aligned; owner walked the job and approved on completion.",
 };
 
 function manyLines(count: number, prefix = "Line item number") {
@@ -204,7 +211,9 @@ describe("long and awkward text", () => {
     const partRuns = runs.filter((r) => /ABCDEF|\d{6,}/.test(r));
     expect(partRuns.length).toBeGreaterThan(1);
     for (const run of partRuns) {
-      expect(run.length, `run too wide for the column: ${run}`).toBeLessThan(30);
+      expect(run.length, `run too wide for the column: ${run}`).toBeLessThan(
+        30,
+      );
     }
 
     // The price is still present and legible as its own run.
@@ -229,10 +238,14 @@ describe("long and awkward text", () => {
     const runs = await extractTextRuns(bytes);
 
     // The URL is broken into column-width pieces rather than one long run.
-    const urlRuns = runs.filter((r) => r.includes("example.com") || r.includes("//"));
+    const urlRuns = runs.filter(
+      (r) => r.includes("example.com") || r.includes("//"),
+    );
     expect(urlRuns.length).toBeGreaterThan(0);
     for (const run of urlRuns) {
-      expect(run.length, `run too wide for the column: ${run}`).toBeLessThan(40);
+      expect(run.length, `run too wide for the column: ${run}`).toBeLessThan(
+        40,
+      );
     }
     expect(runs.some((r) => r.includes("$50.00"))).toBe(true);
   });
@@ -301,10 +314,34 @@ describe("filling the page", () => {
     // the totals were forced onto a second, near-empty page.
     const lineItems = [
       ...REFERENCE.lineItems,
-      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
-      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
-      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
-      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
+      {
+        qty: 1,
+        unit: "hr" as const,
+        description: "",
+        rateCents: 17500,
+        taxable: true,
+      },
+      {
+        qty: 1,
+        unit: "hr" as const,
+        description: "",
+        rateCents: 17500,
+        taxable: true,
+      },
+      {
+        qty: 1,
+        unit: "hr" as const,
+        description: "",
+        rateCents: 17500,
+        taxable: true,
+      },
+      {
+        qty: 1,
+        unit: "hr" as const,
+        description: "",
+        rateCents: 17500,
+        taxable: true,
+      },
     ];
 
     // This content genuinely needs more than one page, so the guarantee is not
@@ -348,7 +385,10 @@ describe("filling the page", () => {
 
   it("fits at least eleven single-line rows on one page", async () => {
     // A form that breaks after seven short lines wastes most of a sheet.
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(11) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(11),
+    });
     expect(await countPages(bytes)).toBe(1);
   });
 
@@ -364,7 +404,10 @@ describe("filling the page", () => {
   });
 
   it("draws empty filler rows so a short invoice still reads as a form", async () => {
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(2) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(2),
+    });
     expect(await countPages(bytes)).toBe(1);
     // The table should still reach down toward the totals rather than stopping
     // right under the second row; that is a visual property, so the check here
@@ -377,7 +420,10 @@ describe("filling the page", () => {
 
 describe("multiple pages", () => {
   it("paginates forty line items without losing one", async () => {
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(40) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(40),
+    });
 
     expect(await countPages(bytes)).toBeGreaterThan(1);
 
@@ -388,7 +434,10 @@ describe("multiple pages", () => {
   });
 
   it("repeats the column headings on every page", async () => {
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(40) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(40),
+    });
     const runs = await extractTextRuns(bytes);
 
     const headingCount = runs.filter((r) => r.includes("QTY / HRS")).length;
@@ -396,15 +445,23 @@ describe("multiple pages", () => {
   });
 
   it("prints the totals once, on the final page", async () => {
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(40) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(40),
+    });
     const runs = await extractTextRuns(bytes);
 
     expect(runs.filter((r) => r.includes("BALANCE DUE")).length).toBe(1);
-    expect(runs.filter((r) => r.includes("$9,518.08")).length).toBeLessThanOrEqual(1);
+    expect(
+      runs.filter((r) => r.includes("$9,518.08")).length,
+    ).toBeLessThanOrEqual(1);
   });
 
   it("survives a hundred line items", async () => {
-    const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(100) });
+    const bytes = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems: manyLines(100),
+    });
 
     expect(await countPages(bytes)).toBeGreaterThanOrEqual(3);
     const text = await await extractText(bytes);
@@ -446,7 +503,11 @@ describe("edge cases", () => {
 
   it("never prints a negative zero", async () => {
     const text = await extractText(
-      await renderInvoicePdf({ ...REFERENCE, discountCents: 0, paymentsCents: 0 }),
+      await renderInvoicePdf({
+        ...REFERENCE,
+        discountCents: 0,
+        paymentsCents: 0,
+      }),
     );
 
     expect(text).not.toContain("-$0.00");

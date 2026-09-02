@@ -24,7 +24,9 @@ test("capture the console", async ({ page }) => {
   await page.screenshot({ path: `${OUT}/01-login.png`, fullPage: true });
 
   // 2. Set password screen
-  await page.goto("/admin/set-password?token=example-token", { timeout: 60_000 });
+  await page.goto("/admin/set-password?token=example-token", {
+    timeout: 60_000,
+  });
   await page.screenshot({ path: `${OUT}/02-set-password.png`, fullPage: true });
 
   // Sign in for the rest.
@@ -46,7 +48,9 @@ test("capture the console", async ({ page }) => {
   await page.getByLabel("Company").fill("Bishop Fabrication LLC");
   await page.getByLabel("Contact").fill("Dale Bishop");
   await page.getByLabel("Phone").fill("(972) 999-7505");
-  await page.getByLabel("Address").fill("4100 County Road 1004, Joshua TX 76058");
+  await page
+    .getByLabel("Address")
+    .fill("4100 County Road 1004, Joshua TX 76058");
   await page.getByRole("button", { name: "Save customer" }).click();
   await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
   await page.screenshot({ path: `${OUT}/04-customers.png`, fullPage: true });
@@ -63,7 +67,12 @@ test("capture the console", async ({ page }) => {
   await page.getByLabel("Job / PO #").fill("Dual Swing Gate");
 
   const lines: [string, string, string, string][] = [
-    ["1", "ea", "LiftMaster LA400UL, dual-swing operator with solar panel", "2999.00"],
+    [
+      "1",
+      "ea",
+      "LiftMaster LA400UL, dual-swing operator with solar panel",
+      "2999.00",
+    ],
     ["25", "hr", "Fabrication, installation and mobilization labor", "175.00"],
     ["1", "lot", "Fuel — mobilization surcharge", "44.08"],
     ["1", "ea", "Steel tubing, metal and fabrication consumables", "1124.60"],
@@ -81,14 +90,22 @@ test("capture the console", async ({ page }) => {
     await row.getByLabel("Rate").fill(rate);
   }
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("$9,518.08").first()).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${OUT}/05-invoice-editor.png`, fullPage: true });
+  await expect(page.getByText("$9,518.08").first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.screenshot({
+    path: `${OUT}/05-invoice-editor.png`,
+    fullPage: true,
+  });
 
   // 6. Customer detail with the billed roll-up
   await page.getByRole("button", { name: "Customers" }).click();
   await page.getByRole("button", { name: new RegExp(name) }).click();
   await expect(page.getByText(/billed/)).toBeVisible({ timeout: 15_000 });
-  await page.screenshot({ path: `${OUT}/06-customer-detail.png`, fullPage: true });
+  await page.screenshot({
+    path: `${OUT}/06-customer-detail.png`,
+    fullPage: true,
+  });
 
   // 7. Download the PDF for visual review
   await page.getByRole("button", { name: /TSWS-/ }).first().click();

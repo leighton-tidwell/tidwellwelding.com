@@ -60,12 +60,32 @@ test.describe("desktop header", () => {
     page,
   }) => {
     const links: { label: string; url: string; h1: string }[] = [
-      { label: "Fabrication", url: "/services/fabrication", h1: "Built to the spec" },
-      { label: "Staircases & handrail", url: "/services/structural", h1: "pass the walk" },
+      {
+        label: "Fabrication",
+        url: "/services/fabrication",
+        h1: "Built to the spec",
+      },
+      {
+        label: "Staircases & handrail",
+        url: "/services/structural",
+        h1: "pass the walk",
+      },
       { label: "Pipe welding", url: "/services/pipe", h1: "Roots that pass" },
-      { label: "Heavy equipment repair", url: "/services/equipment", h1: "holds under load" },
-      { label: "Mobile welding", url: "/services/mobile", h1: "carries the shop" },
-      { label: "Emergency & on-call", url: "/services/emergency", h1: "book appointments" },
+      {
+        label: "Heavy equipment repair",
+        url: "/services/equipment",
+        h1: "holds under load",
+      },
+      {
+        label: "Mobile welding",
+        url: "/services/mobile",
+        h1: "carries the shop",
+      },
+      {
+        label: "Emergency & on-call",
+        url: "/services/emergency",
+        h1: "book appointments",
+      },
     ];
 
     for (const link of links) {

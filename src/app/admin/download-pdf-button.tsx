@@ -40,7 +40,8 @@ export default function DownloadPdfButton({
       // Fetching the bytes and handing over a same-origin blob URL keeps the
       // invoice number as the filename.
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`Fetching the PDF failed: ${response.status}`);
+      if (!response.ok)
+        throw new Error(`Fetching the PDF failed: ${response.status}`);
       const blobUrl = URL.createObjectURL(await response.blob());
 
       const anchor = document.createElement("a");
@@ -66,14 +67,11 @@ export default function DownloadPdfButton({
 
   return (
     <div className="admin-download">
-      <Button
-        onClick={handleClick}
-        disabled={working}
-        ariaBusy={working}
-      >
+      <Button onClick={handleClick} disabled={working} ariaBusy={working}>
         {working ? (
           <>
-            <span className="admin-spinner" aria-hidden="true" /> Building the PDF…
+            <span className="admin-spinner" aria-hidden="true" /> Building the
+            PDF…
           </>
         ) : (
           <>
