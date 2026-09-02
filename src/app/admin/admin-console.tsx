@@ -8,10 +8,7 @@ import { Badge, Button, HazardBar, Icon, Input, Select } from "@/components/ds";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
 import DownloadPdfButton from "./download-pdf-button";
-import LineItemEditor, {
-  emptyLine,
-  type EditorLine,
-} from "./line-item-editor";
+import LineItemEditor, { emptyLine, type EditorLine } from "./line-item-editor";
 import { useAdminSession } from "./use-admin-session";
 import "./admin.css";
 
@@ -68,7 +65,9 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
         }}
       >
         <h1 className="admin-gate__title">Shop admin</h1>
-        <p className="admin-gate__sub">Invoices for Tidwell Specialty Welding.</p>
+        <p className="admin-gate__sub">
+          Invoices for Tidwell Specialty Welding.
+        </p>
 
         <div className="admin-gate__fields">
           <Input
@@ -102,7 +101,13 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
 
 /* -------------------------------------------------------------- console --- */
 
-function Console({ token, onSignOut }: { token: string; onSignOut: () => void }) {
+function Console({
+  token,
+  onSignOut,
+}: {
+  token: string;
+  onSignOut: () => void;
+}) {
   const [view, setView] = useState<View>({ name: "invoices" });
 
   return (
@@ -119,7 +124,11 @@ function Console({ token, onSignOut }: { token: string; onSignOut: () => void })
       </header>
       <HazardBar />
 
-      <nav className="admin-main" aria-label="Sections" style={{ paddingBottom: 0 }}>
+      <nav
+        className="admin-main"
+        aria-label="Sections"
+        style={{ paddingBottom: 0 }}
+      >
         <div className="admin-actions" style={{ marginTop: 0 }}>
           <Button
             variant={view.name === "invoices" ? "primary" : "secondary"}
@@ -140,10 +149,16 @@ function Console({ token, onSignOut }: { token: string; onSignOut: () => void })
 
       <main className="admin-main">
         {view.name === "invoices" && (
-          <InvoiceList token={token} onOpen={(id) => setView({ name: "invoice", id })} />
+          <InvoiceList
+            token={token}
+            onOpen={(id) => setView({ name: "invoice", id })}
+          />
         )}
         {view.name === "customers" && (
-          <CustomerList token={token} onOpen={(id) => setView({ name: "customer", id })} />
+          <CustomerList
+            token={token}
+            onOpen={(id) => setView({ name: "customer", id })}
+          />
         )}
         {view.name === "customer" && (
           <CustomerDetail
@@ -168,7 +183,9 @@ function Console({ token, onSignOut }: { token: string; onSignOut: () => void })
 /* ------------------------------------------------------------- invoices --- */
 
 function StatusPill({ status }: { status: string }) {
-  return <span className={`admin-status admin-status--${status}`}>{status}</span>;
+  return (
+    <span className={`admin-status admin-status--${status}`}>{status}</span>
+  );
 }
 
 function InvoiceList({
@@ -200,7 +217,9 @@ function InvoiceList({
       <div className="admin-card">
         <h2 className="admin-card__title">Start a new invoice</h2>
         {options.length === 0 ? (
-          <p className="admin-note">Add a customer first, then bill them here.</p>
+          <p className="admin-note">
+            Add a customer first, then bill them here.
+          </p>
         ) : (
           <div className="admin-grid-2">
             <Select
@@ -296,9 +315,22 @@ function CustomerList({
       <div className="admin-card">
         <h2 className="admin-card__title">Add a customer</h2>
         <div className="admin-grid-2">
-          <Input label="Name" value={form.name} onChange={set("name")} required />
-          <Input label="Company" value={form.company} onChange={set("company")} />
-          <Input label="Contact" value={form.contact} onChange={set("contact")} />
+          <Input
+            label="Name"
+            value={form.name}
+            onChange={set("name")}
+            required
+          />
+          <Input
+            label="Company"
+            value={form.company}
+            onChange={set("company")}
+          />
+          <Input
+            label="Contact"
+            value={form.contact}
+            onChange={set("contact")}
+          />
           <Input
             label="Phone"
             value={form.phone}
@@ -311,7 +343,11 @@ function CustomerList({
             onChange={set("email")}
             inputMode="email"
           />
-          <Input label="Address" value={form.address} onChange={set("address")} />
+          <Input
+            label="Address"
+            value={form.address}
+            onChange={set("address")}
+          />
         </div>
         <div className="admin-actions">
           <Button
@@ -358,8 +394,9 @@ function CustomerList({
               <span className="admin-row__main">
                 <span className="admin-row__title">{customer.name}</span>
                 <span className="admin-row__meta">
-                  {[customer.company, customer.phone].filter(Boolean).join(" · ") ||
-                    "No contact details"}
+                  {[customer.company, customer.phone]
+                    .filter(Boolean)
+                    .join(" · ") || "No contact details"}
                 </span>
               </span>
               <Icon name="chevron-right" />
@@ -383,7 +420,10 @@ function CustomerDetail({
   onOpenInvoice: (id: Id<"invoices">) => void;
 }) {
   const summary = useQuery(api.customers.summary, { token, id });
-  const invoices = useQuery(api.invoices.listForCustomer, { token, customerId: id });
+  const invoices = useQuery(api.invoices.listForCustomer, {
+    token,
+    customerId: id,
+  });
 
   if (summary === undefined) return <p className="admin-note">Loading…</p>;
 
@@ -510,7 +550,9 @@ function InvoiceEditor({
 
   const save = useCallback(async () => {
     const payload = editorLines
-      .filter((line) => line.description.trim() !== "" || line.rate.trim() !== "")
+      .filter(
+        (line) => line.description.trim() !== "" || line.rate.trim() !== "",
+      )
       .map((line) => ({
         qty: Number(line.qty) || 0,
         unit: line.unit,
@@ -537,7 +579,8 @@ function InvoiceEditor({
   }, [save, generatePdf, token, id]);
 
   if (invoice === undefined) return <p className="admin-note">Loading…</p>;
-  if (invoice === null) return <p className="admin-empty">That invoice is gone.</p>;
+  if (invoice === null)
+    return <p className="admin-empty">That invoice is gone.</p>;
 
   return (
     <>
@@ -625,15 +668,14 @@ function InvoiceEditor({
             </span>
           </div>
         </div>
-        <p className="admin-note" style={{ marginTop: 12 }}>
-          Tax defaults to the Granbury rate and applies only to lines marked
-          taxable. Texas treats nonresidential repair work differently from new
-          construction — check anything unusual with your accountant.
-        </p>
       </div>
 
       <div className="admin-actions">
-        <Button variant="secondary" onClick={() => void save()} disabled={saved}>
+        <Button
+          variant="secondary"
+          onClick={() => void save()}
+          disabled={saved}
+        >
           {saved ? "Saved" : "Save changes"}
         </Button>
         <DownloadPdfButton

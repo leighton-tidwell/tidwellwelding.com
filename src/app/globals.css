@@ -243,7 +243,10 @@ clip-path:var(--clip-chamfer-sm);transition:var(--transition-control)}
 .tsws-iconbtn--lg{width:var(--control-h-lg);height:var(--control-h-lg)}
 .tsws-iconbtn:disabled{opacity:.38;cursor:not-allowed}
 /* ---- Icon ------------------------------------------------------------ */
-.tsws-icon{display:inline-grid;place-items:center;flex:none}
+/* vertical-align:middle keeps the glyph on the optical centre of adjacent
+   text. Left at the default baseline an inline-grid icon is set on the text
+   baseline, which lifts it a few pixels above the label inside a button. */
+.tsws-icon{display:inline-grid;place-items:center;flex:none;vertical-align:middle}
 .tsws-icon>svg{display:block;width:100%;height:100%}
 /* ---- Badge ----------------------------------------------------------- */
 .tsws-badge{display:inline-flex;align-items:center;gap:var(--space-2);font-family:var(--font-mono);
