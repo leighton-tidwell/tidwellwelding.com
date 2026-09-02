@@ -142,7 +142,7 @@ describe("no public registration path exists", () => {
     }
   });
 
-  test("the only public auth endpoints are login, logout and setPassword", async () => {
+  test("the only public auth endpoints are the four the UI needs", async () => {
     const mod = (await import("./auth")) as unknown as Record<
       string,
       { isPublic?: boolean } | undefined
@@ -150,7 +150,14 @@ describe("no public registration path exists", () => {
     const publicNames = Object.keys(mod)
       .filter((k) => mod[k] && (mod[k] as { isPublic?: boolean }).isPublic)
       .sort();
-    expect(publicNames).toEqual(["login", "logout", "setPassword"]);
+    // checkSetupToken is read-only and answers a bare boolean; every account
+    // mutation stays internal. Anything else appearing here is a mistake.
+    expect(publicNames).toEqual([
+      "checkSetupToken",
+      "login",
+      "logout",
+      "setPassword",
+    ]);
   });
 });
 
@@ -227,6 +234,65 @@ describe("setPassword (the burn-on-use link)", () => {
         .unique(),
     );
     expect(user!.passwordHash).toBeUndefined();
+  });
+});
+
+describe("checkSetupToken (so a spent link does not show a live form)", () => {
+  async function userWithToken(t: ReturnType<typeof setup>) {
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const token = await t.mutation(internal.auth.issueSetupToken, { userId });
+    return { userId, token };
+  }
+
+  test("reports a fresh link as usable", async () => {
+    const t = setup();
+    const { token } = await userWithToken(t);
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      valid: true,
+    });
+  });
+
+  test("reports a spent link as unusable", async () => {
+    const t = setup();
+    const { token } = await userWithToken(t);
+    await t.mutation(api.auth.setPassword, { token, password: GOOD_PASSWORD });
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      valid: false,
+    });
+  });
+
+  test("reports a token that was never issued as unusable", async () => {
+    const t = setup();
+    expect(
+      await t.query(api.auth.checkSetupToken, { token: "f".repeat(64) }),
+    ).toEqual({ valid: false });
+  });
+
+  test("reports an expired link as unusable", async () => {
+    const t = setup();
+    const { token } = await userWithToken(t);
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("setupTokens").first();
+      await ctx.db.patch(row!._id, { expiresAt: Date.now() - 1 });
+    });
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      valid: false,
+    });
+  });
+
+  test("says nothing about who the token belongs to", async () => {
+    // The reply is a bare boolean: a link handed to the wrong person must not
+    // confirm an account exists or whose it is.
+    const t = setup();
+    const { token } = await userWithToken(t);
+
+    const reply = await t.query(api.auth.checkSetupToken, { token });
+    expect(Object.keys(reply)).toEqual(["valid"]);
   });
 });
 

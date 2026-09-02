@@ -2,7 +2,12 @@ import { MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { ConvexError, v } from "convex/values";
 import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { internalMutation, mutation, type QueryCtx } from "./_generated/server";
+import {
+  internalMutation,
+  mutation,
+  query,
+  type QueryCtx,
+} from "./_generated/server";
 
 // 10 attempts per 15 minutes per email address.
 const loginLimiter = new RateLimiter(components.rateLimiter, {
@@ -110,6 +115,37 @@ async function derivePasswordHash(
  * passwordSetAt is stamped in the same transaction as the hash write, so a
  * replayed link can never take effect.
  */
+
+/**
+ * Whether a setup link is still usable, so the page can show "this link has
+ * already been used" instead of a form that will only fail on submit.
+ *
+ * Returns a bare boolean on purpose: a link that reached the wrong person must
+ * not confirm that an account exists or reveal whose it is. This is a
+ * convenience for the UI, not the security boundary — setPassword re-checks
+ * every condition inside the transaction that burns the token.
+ */
+export const checkSetupToken = query({
+  args: { token: v.string() },
+  returns: v.object({ valid: v.boolean() }),
+  handler: async (ctx, { token }) => {
+    const tokenHash = await sha256Hex(token);
+    const row = await ctx.db
+      .query("setupTokens")
+      .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
+      .unique();
+    if (!row) return { valid: false };
+    if (row.usedAt !== undefined || row.expiresAt <= Date.now()) {
+      return { valid: false };
+    }
+
+    const user = await ctx.db.get(row.userId);
+    if (!user || user.passwordSetAt !== undefined) return { valid: false };
+
+    return { valid: true };
+  },
+});
+
 export const setPassword = mutation({
   args: { token: v.string(), password: v.string() },
   returns: v.null(),

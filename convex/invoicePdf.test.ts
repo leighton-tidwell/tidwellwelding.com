@@ -295,6 +295,57 @@ describe("long and awkward text", () => {
 });
 
 describe("filling the page", () => {
+  it("never adds filler rows that push the totals onto another page", async () => {
+    // Eleven lines, several of which wrap: the old character-count estimate
+    // computed a partial last row, then padded it out with blank rows until
+    // the totals were forced onto a second, near-empty page.
+    const lineItems = [
+      ...REFERENCE.lineItems,
+      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
+      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
+      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
+      { qty: 1, unit: "hr" as const, description: "", rateCents: 17500, taxable: true },
+    ];
+
+    // This content genuinely needs more than one page, so the guarantee is not
+    // "one page" but "filler costs nothing": the same length either way.
+    const withFiller = await renderInvoicePdf({ ...REFERENCE, lineItems });
+    const bare = await renderInvoicePdf({
+      ...REFERENCE,
+      lineItems,
+      suppressFillerRows: true,
+    });
+
+    expect(await countPages(withFiller)).toBe(await countPages(bare));
+  }, 60_000);
+
+  it("does not spill for the sake of filler at any line count", async () => {
+    // Whatever the count, adding blank rows must never cost an extra page:
+    // the page count has to match what the same invoice needs with no filler
+    // at all.
+    for (const count of [1, 5, 8, 9, 10, 11, 12]) {
+      const lineItems = Array.from({ length: count }, (_, i) => ({
+        qty: 1,
+        unit: "ea" as const,
+        description: `Fabrication and installation work, item number ${i + 1}`,
+        rateCents: 5000,
+        taxable: true,
+      }));
+
+      const withFiller = await renderInvoicePdf({ ...REFERENCE, lineItems });
+      const bare = await renderInvoicePdf({
+        ...REFERENCE,
+        lineItems,
+        suppressFillerRows: true,
+      });
+
+      expect(
+        await countPages(withFiller),
+        `${count} lines gained a page from filler`,
+      ).toBe(await countPages(bare));
+    }
+  }, 120_000);
+
   it("fits at least eleven single-line rows on one page", async () => {
     // A form that breaks after seven short lines wastes most of a sheet.
     const bytes = await renderInvoicePdf({ ...REFERENCE, lineItems: manyLines(11) });

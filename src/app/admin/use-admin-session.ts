@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "tsws_admin_session";
 
@@ -34,18 +34,22 @@ function emit() {
   for (const listener of listeners) listener();
 }
 
+/**
+ * True only after hydration. Both sides start from the server snapshot
+ * (`false`), so the first client render matches the server's HTML; React then
+ * re-reads and gets `true`. No setState, so no cascading-render lint either.
+ */
+const subscribeNoop = () => () => {};
+
 export function useAdminSession() {
   // useSyncExternalStore reads sessionStorage without a setState-in-effect
   // cascade, and its server snapshot keeps hydration consistent.
-  const token = useSyncExternalStore(
-    subscribe,
-    read,
-    () => null,
+  const token = useSyncExternalStore(subscribe, read, () => null);
+  const ready = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
   );
-  const [ready, setReady] = useState(false);
-
-  // The first client render is the point where the real value is known.
-  if (!ready && typeof window !== "undefined") setReady(true);
 
   const signIn = useCallback((next: string) => {
     try {

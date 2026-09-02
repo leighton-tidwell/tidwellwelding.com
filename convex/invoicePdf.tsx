@@ -57,6 +57,13 @@ export type InvoicePdfInput = {
   notes?: string;
   /** PNG or JPEG bytes. Named for history; either format works. */
   logoPngBytes?: Uint8Array;
+  /**
+   * Blank rows drawn under the last entry. Resolved by measurement in
+   * renderInvoicePdf rather than set by callers.
+   */
+  fillerRows?: number;
+  /** Skip filler entirely. Used to measure the document's natural length. */
+  suppressFillerRows?: boolean;
 };
 
 /**
@@ -87,20 +94,9 @@ const SHADE = "#EFEFEF";
 const HAIRLINE = "#C8C8C8";
 
 /**
- * Filler rows keep a short invoice looking like a form rather than stopping
- * dead under the last entry. The count is budgeted against the space actually
- * left on the page: a description that wraps to two lines costs two rows'
- * worth of height, so counting entries instead of height overfills the sheet
- * and pushes the totals onto a second page.
+ * Upper bound on filler rows to try. Anything past a full sheet is pointless.
  */
-const ROWS_PER_PAGE = 11;
-
-/** A description roughly this long wraps to another line in its column. */
-const CHARS_PER_DESC_LINE = 46;
-
-function rowsConsumed(description: string): number {
-  return Math.max(1, Math.ceil(description.length / CHARS_PER_DESC_LINE));
-}
+const MAX_FILLER_ROWS = 12;
 
 const styles = StyleSheet.create({
   page: {
@@ -254,14 +250,14 @@ const styles = StyleSheet.create({
   // Footer ------------------------------------------------------------------
   // In normal flow, not absolutely positioned: an absolute footer sitting in
   // the page's bottom padding counts as overflow and forces an extra page.
-  footer: { marginTop: "auto", paddingTop: 16, textAlign: "center" },
+  footer: { marginTop: "auto", paddingTop: 10, textAlign: "center" },
   thanks: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
     color: RED,
-    marginBottom: 5,
+    marginBottom: 3,
   },
-  smallPrint: { fontSize: 7, color: GREY, lineHeight: 1.4 },
+  smallPrint: { fontSize: 6.5, color: GREY, lineHeight: 1.3 },
 });
 
 const FOOTER_SMALL_PRINT =
@@ -338,15 +334,8 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
     ["PAYMENTS", signed(input.paymentsCents)],
   ];
 
-  // Budget by height, not by entry count, and only fill the last page.
-  const usedRows = input.lineItems.reduce(
-    (sum, line) => sum + rowsConsumed(line.description),
-    0,
-  );
-  const rowsOnLastPage =
-    usedRows <= ROWS_PER_PAGE ? usedRows : usedRows % ROWS_PER_PAGE;
-  const fillerCount = Math.max(0, ROWS_PER_PAGE - rowsOnLastPage);
-  const noteLineCount = 6;
+  const fillerCount = input.fillerRows ?? 0;
+  const noteLineCount = 5;
   const noteText = input.notes ?? "";
 
   return (
@@ -503,9 +492,52 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   );
 }
 
+/**
+ * Pages in a rendered document. react-pdf writes an uncompressed page tree, so
+ * the /Count entry is readable without pulling in a PDF parser.
+ */
+function pageCountOf(bytes: Uint8Array): number {
+  const text = Buffer.from(bytes).toString("latin1");
+  let max = 0;
+  for (const [, count] of text.matchAll(/\/Count\s+(\d+)/g)) {
+    max = Math.max(max, Number(count));
+  }
+  return max || 1;
+}
+
+/** Render once and report how many pages the document needs. */
+async function renderPages(input: InvoicePdfInput): Promise<{
+  bytes: Uint8Array;
+  pages: number;
+}> {
+  const buffer = await renderToBuffer(<InvoiceDocument input={input} />);
+  const bytes = new Uint8Array(buffer);
+  return { bytes, pages: pageCountOf(bytes) };
+}
+
 export async function renderInvoicePdf(
   input: InvoicePdfInput,
 ): Promise<Uint8Array> {
-  const buffer = await renderToBuffer(<InvoiceDocument input={input} />);
-  return new Uint8Array(buffer);
+  // An explicit count means the caller is measuring; render exactly that.
+  if (input.fillerRows !== undefined) {
+    return (await renderPages(input)).bytes;
+  }
+
+  // Measure the document's natural length first. Guessing row heights from
+  // character counts is what previously padded an invoice with blank rows
+  // until the totals were pushed onto a second, nearly empty page.
+  const bare = await renderPages({ ...input, fillerRows: 0 });
+  if (input.suppressFillerRows) return bare.bytes;
+
+  // Then take the most filler that still fits in that many pages. Each step is
+  // a real render, so the answer accounts for wrapping, long descriptions and
+  // every other thing an estimate gets wrong.
+  let best = bare;
+  for (let rows = 1; rows <= MAX_FILLER_ROWS; rows += 1) {
+    const candidate = await renderPages({ ...input, fillerRows: rows });
+    if (candidate.pages > bare.pages) break;
+    best = candidate;
+  }
+
+  return best.bytes;
 }
