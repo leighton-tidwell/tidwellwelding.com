@@ -48,7 +48,11 @@ export default function SiteHeader() {
     >
       <HazardBar variant="red" height="4px" />
       <div className="site-header__inner">
-        <Link href="/" className="site-header__brand" aria-label="Tidwell Specialty Welding home">
+        <Link
+          href="/"
+          className="site-header__brand"
+          aria-label="Tidwell Specialty Welding home"
+        >
           <BadgeImg
             src="/logo-badge.png"
             alt="Tidwell Specialty Welding badge"
@@ -63,16 +67,27 @@ export default function SiteHeader() {
         <nav className="site-nav" aria-label="Site">
           <ul
             role="list"
-            style={{ display: "contents", listStyle: "none", margin: 0, padding: 0 }}
+            style={{
+              display: "contents",
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+            }}
           >
             {NAV_LINKS.map((link) => {
               const active = isActive(link.href, pathname);
               return (
-                <li key={link.id} role="listitem" style={{ display: "contents" }}>
+                <li
+                  key={link.id}
+                  role="listitem"
+                  style={{ display: "contents" }}
+                >
                   <Link
                     href={link.href}
                     className={
-                      active ? "site-nav__link site-nav__link--active" : "site-nav__link"
+                      active
+                        ? "site-nav__link site-nav__link--active"
+                        : "site-nav__link"
                     }
                     aria-current={active ? "page" : undefined}
                   >
@@ -117,15 +132,27 @@ export default function SiteHeader() {
       </div>
       <div className="site-sheet" id="site-menu">
         <div className="site-sheet__panel">
-          <nav aria-label="Site" style={{ display: "flex", flexDirection: "column" }}>
+          <nav
+            aria-label="Site"
+            style={{ display: "flex", flexDirection: "column" }}
+          >
             <ul
               role="list"
-              style={{ display: "contents", listStyle: "none", margin: 0, padding: 0 }}
+              style={{
+                display: "contents",
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+              }}
             >
               {NAV_LINKS.map((link) => {
                 const active = isActive(link.href, pathname);
                 return (
-                  <li key={link.id} role="listitem" style={{ display: "contents" }}>
+                  <li
+                    key={link.id}
+                    role="listitem"
+                    style={{ display: "contents" }}
+                  >
                     <Link
                       href={link.href}
                       className={

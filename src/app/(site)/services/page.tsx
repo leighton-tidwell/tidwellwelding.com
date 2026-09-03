@@ -37,7 +37,13 @@ export const metadata: Metadata = {
 };
 
 type Service = {
-  id: "fabrication" | "structural" | "pipe" | "equipment" | "mobile" | "emergency";
+  id:
+    | "fabrication"
+    | "structural"
+    | "pipe"
+    | "equipment"
+    | "mobile"
+    | "emergency";
   kicker: string;
   title: string;
   serviceType: string;
@@ -63,7 +69,6 @@ const SERVICES: Service[] = [
     fullLabel: "Full fabrication page",
     note: "Shop · Granbury",
     media: (
-       
       <img
         className={styles.mediaEl}
         src="/media/gate-fabrication.webp"
@@ -83,7 +88,6 @@ const SERVICES: Service[] = [
     fullLabel: "Full staircase & handrail page",
     note: "Shop + field install",
     media: (
-       
       <img
         className={styles.mediaEl}
         src="/media/custom-handrail.webp"
@@ -127,7 +131,6 @@ const SERVICES: Service[] = [
     fullLabel: "Full equipment repair page",
     note: "Field-first",
     media: (
-       
       <img
         className={styles.mediaEl}
         src="/media/bulldozer-reinforcement-plate.webp"
@@ -147,7 +150,6 @@ const SERVICES: Service[] = [
     fullLabel: "Full mobile welding page",
     note: "DFW to Stephenville",
     media: (
-       
       <img
         className={styles.mediaEl}
         src="/media/welding-rig-at-work.webp"
@@ -214,7 +216,7 @@ export default function ServicesPage() {
         </h1>
         <p className={styles.heroLede}>
           Six service lines, one standard. Nothing leaves the shop unless the
-          welds pass Eric&apos;s eye. That covers crew work too.
+          welds pass Eric&apos;s eye. Every job, start to finish.
         </p>
       </section>
 

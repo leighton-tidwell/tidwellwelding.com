@@ -4,7 +4,7 @@ import SiteFooter from "@/components/site-footer";
 import FaqBot from "@/components/faq-bot";
 
 /**
- * Shell for every public page. /crew lives OUTSIDE this group and gets
+ * Shell for every public page. /admin lives OUTSIDE this group and gets
  * no header/footer/FaqBot. Pages should render sections, not <main> —
  * this layout owns the single <main> landmark.
  */

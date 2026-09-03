@@ -106,10 +106,12 @@ let store: Map<string, string>;
 
 beforeEach(() => {
   h.action.mockReset();
-  h.action.mockImplementation(async (_ref: unknown, args: Record<string, unknown>) => {
-    if ("slot" in args) return { ok: true, requestId: "Q-2026-777" };
-    return MOCK_ESTIMATE;
-  });
+  h.action.mockImplementation(
+    async (_ref: unknown, args: Record<string, unknown>) => {
+      if ("slot" in args) return { ok: true, requestId: "Q-2026-777" };
+      return MOCK_ESTIMATE;
+    },
+  );
   store = mockLocalStorage();
   window.scrollTo = vi.fn();
 });
@@ -155,9 +157,8 @@ describe("QuoteFlow", () => {
 
   test("file inputs are focusable (visually hidden, not display:none)", () => {
     const { container } = render(<QuoteFlow />);
-    const fileInputs = container.querySelectorAll<HTMLInputElement>(
-      'input[type="file"]',
-    );
+    const fileInputs =
+      container.querySelectorAll<HTMLInputElement>('input[type="file"]');
     expect(fileInputs).toHaveLength(2);
     for (const input of Array.from(fileInputs)) {
       expect(input.style.display).not.toBe("none");
@@ -224,7 +225,11 @@ describe("QuoteFlow", () => {
 
     // Mocked estimate lands: title, line items, hours, dollar range.
     expect(
-      await screen.findByText("Excavator bucket crack repair", {}, { timeout: 4000 }),
+      await screen.findByText(
+        "Excavator bucket crack repair",
+        {},
+        { timeout: 4000 },
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Vee out the crack, preheat and weld out with 7018."),
@@ -241,7 +246,9 @@ describe("QuoteFlow", () => {
     ).toBeInTheDocument();
 
     // AI-draft disclaimers.
-    expect(screen.getByText("AI draft — not a final quote")).toBeInTheDocument();
+    expect(
+      screen.getByText("AI draft — not a final quote"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/An AI drafted these numbers from your description/),
     ).toBeInTheDocument();
@@ -285,18 +292,17 @@ describe("QuoteFlow", () => {
       ),
     ).toBeInTheDocument();
 
-    // Confirmation links: back home and to the work log — never to /crew.
-    expect(screen.getByRole("link", { name: "Back to the site" })).toHaveAttribute(
-      "href",
-      "/",
-    );
+    // Confirmation links: back home and to the work log — never to /admin.
+    expect(
+      screen.getByRole("link", { name: "Back to the site" }),
+    ).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "See the work" })).toHaveAttribute(
       "href",
       "/work",
     );
     expect(
       Array.from(document.querySelectorAll("a")).filter((a) =>
-        (a.getAttribute("href") ?? "").startsWith("/crew"),
+        (a.getAttribute("href") ?? "").startsWith("/admin"),
       ),
     ).toHaveLength(0);
 
@@ -315,7 +321,7 @@ describe("QuoteFlow", () => {
     expect(String(submitArgs.requestId)).toMatch(/^Q-\d{4}-\d{3}$/);
     expect(String(submitArgs.slot)).toMatch(/· Morning$/);
 
-    // The request also lands in mocked localStorage for the crew console.
+    // The request also lands in mocked localStorage for local history.
     const saved = JSON.parse(store.get("tsws_quotes") ?? "[]");
     expect(saved).toHaveLength(1);
     expect(saved[0]).toMatchObject({ id: "Q-2026-777", status: "New" });
@@ -333,7 +339,11 @@ describe("QuoteFlow", () => {
 
     // Static fallback drafts numbers instead of crashing.
     expect(
-      await screen.findByText(/An AI drafted these numbers/, {}, { timeout: 4000 }),
+      await screen.findByText(
+        /An AI drafted these numbers/,
+        {},
+        { timeout: 4000 },
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText("Weld-out")).toBeInTheDocument();
     expect(

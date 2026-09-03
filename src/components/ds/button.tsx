@@ -15,6 +15,9 @@ export type ButtonProps = {
   className?: string;
   style?: CSSProperties;
   ariaLabel?: string;
+  /** Marks the button busy while its action runs (e.g. generating a file).
+   * Left undefined the attribute is omitted entirely. */
+  ariaBusy?: boolean;
   target?: string;
   rel?: string;
   children?: ReactNode;
@@ -33,6 +36,7 @@ export default function Button({
   className,
   style,
   ariaLabel,
+  ariaBusy,
   target,
   rel,
   children,
@@ -93,6 +97,7 @@ export default function Button({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-busy={ariaBusy === undefined ? undefined : ariaBusy}
     >
       {inner}
     </button>

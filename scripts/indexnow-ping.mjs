@@ -60,9 +60,13 @@ try {
     console.log(`IndexNow: ${res.status} — submitted ${urlList.length} URL(s)`);
   } else {
     const body = await res.text().catch(() => "");
-    console.error(`IndexNow: HTTP ${res.status} — not failing the deploy. ${body}`.trim());
+    console.error(
+      `IndexNow: HTTP ${res.status} — not failing the deploy. ${body}`.trim(),
+    );
   }
 } catch (err) {
-  console.error(`IndexNow: ping failed — not failing the deploy. ${err?.message ?? err}`);
+  console.error(
+    `IndexNow: ping failed — not failing the deploy. ${err?.message ?? err}`,
+  );
 }
 process.exit(0);

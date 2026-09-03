@@ -83,10 +83,7 @@ export const submitQuote = action({
     sessionId: v.string(),
     turnstileToken: v.optional(v.string()),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{ ok: boolean; requestId: string }> => {
+  handler: async (ctx, args): Promise<{ ok: boolean; requestId: string }> => {
     assertSessionId(args.sessionId);
 
     if (!args.name.trim()) throw new ConvexError("Enter your name.");

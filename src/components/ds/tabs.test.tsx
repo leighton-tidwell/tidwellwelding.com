@@ -1,20 +1,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 import Tabs, { type TabItem } from "@/components/ds/tabs";
 
 afterEach(cleanup);
 
 beforeAll(() => {
   // Tabs uses CSS.escape for the seam position lookup.
-  if (typeof window.CSS === "undefined" || typeof window.CSS.escape !== "function") {
+  if (
+    typeof window.CSS === "undefined" ||
+    typeof window.CSS.escape !== "function"
+  ) {
     Object.defineProperty(window, "CSS", {
       writable: true,
       value: {
@@ -134,7 +130,9 @@ describe("Tabs", () => {
         <Tabs items={ITEMS} />
       </>,
     );
-    const ids = Array.from(document.querySelectorAll("[id]")).map((el) => el.id);
+    const ids = Array.from(document.querySelectorAll("[id]")).map(
+      (el) => el.id,
+    );
     expect(new Set(ids).size).toBe(ids.length);
     // Each tab still labels its panel.
     for (const panel of screen.getAllByRole("tabpanel")) {

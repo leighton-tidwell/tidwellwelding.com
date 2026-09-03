@@ -13,7 +13,7 @@
 //     disallows *.workers.dev regardless).
 //   • WORKER_SELF_REFERENCE is repointed at the preview Worker so it doesn't
 //     call back into production.
-//   • CREW_ACCESS_KEY is set to a throwaway value so /crew stays gated here
+//   • ADMIN_ACCESS_KEY is set to a throwaway value so /admin stays gated here
 //     exactly as it is in production.
 
 import { randomBytes } from "node:crypto";
@@ -46,7 +46,7 @@ if (Array.isArray(config.services)) {
 
 config.vars = {
   ...(config.vars ?? {}),
-  CREW_ACCESS_KEY: randomBytes(12).toString("hex"),
+  ADMIN_ACCESS_KEY: randomBytes(12).toString("hex"),
 };
 
 writeFileSync("wrangler.preview.jsonc", JSON.stringify(config, null, 2) + "\n");

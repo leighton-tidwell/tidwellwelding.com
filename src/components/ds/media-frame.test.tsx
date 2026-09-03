@@ -1,10 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-} from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import MediaFrame from "@/components/ds/media-frame";
 
 afterEach(cleanup);
@@ -60,6 +55,8 @@ describe("MediaFrame", () => {
 
   test("no scrim by default", () => {
     const { container } = render(<MediaFrame src="/a.jpg" />);
-    expect(container.querySelector(".tsws-media__scrim")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".tsws-media__scrim"),
+    ).not.toBeInTheDocument();
   });
 });

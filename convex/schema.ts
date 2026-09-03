@@ -67,7 +67,7 @@ export default defineSchema({
   }).index("by_createdAt", ["createdAt"]),
 
   // Operator-editable shop settings (labor rate today, more later). Lives in
-  // the database, never in code, so the crew console can edit it without a
+  // the database, never in code, so the admin console can edit it without a
   // deploy. Values are confidential and never leave the server.
   shopSettings: defineTable({
     key: v.string(),
@@ -82,4 +82,94 @@ export default defineSchema({
     estimate: v.any(),
     createdAt: v.number(),
   }).index("by_sessionId", ["sessionId", "createdAt"]),
+
+  // --- Admin console -------------------------------------------------------
+  // One operator account, created server-side. There is deliberately no public
+  // registration path anywhere in the API.
+  adminUsers: defineTable({
+    email: v.string(),
+    passwordHash: v.optional(v.string()),
+    passwordSalt: v.optional(v.string()),
+    // Set the first time a password is chosen. Its presence permanently blocks
+    // the public set-password route, even if a token were somehow replayed.
+    passwordSetAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
+
+  // One-time set-password links. Only the hash is stored, so reading the table
+  // does not yield a usable link. Burned by stamping usedAt.
+  setupTokens: defineTable({
+    tokenHash: v.string(),
+    userId: v.id("adminUsers"),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_tokenHash", ["tokenHash"]),
+
+  adminSessions: defineTable({
+    token: v.string(),
+    userId: v.id("adminUsers"),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"]),
+
+  // Saved customers so Eric never retypes billing details.
+  customers: defineTable({
+    name: v.string(),
+    company: v.optional(v.string()),
+    contact: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
+  // Money is integer cents throughout. Totals are always recomputed from the
+  // line items server-side; a client-supplied total is never trusted.
+  invoices: defineTable({
+    number: v.string(),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sent"),
+      v.literal("paid"),
+      v.literal("void"),
+    ),
+    customerId: v.id("customers"),
+    jobPo: v.optional(v.string()),
+    issuedAt: v.number(),
+    dueAt: v.optional(v.number()),
+    terms: v.string(),
+    lineItems: v.array(
+      v.object({
+        qty: v.number(),
+        unit: v.union(
+          v.literal("hr"),
+          v.literal("ea"),
+          v.literal("ft"),
+          v.literal("lb"),
+          v.literal("lot"),
+        ),
+        description: v.string(),
+        rateCents: v.number(),
+        taxable: v.boolean(),
+      }),
+    ),
+    discountCents: v.number(),
+    taxRateBasisPoints: v.number(),
+    paymentsCents: v.number(),
+    notes: v.optional(v.string()),
+    /** Last generated PDF. Replaced on every regeneration so downloads never
+     * serve a stale file and old blobs do not accumulate. */
+    pdfStorageId: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_number", ["number"])
+    .index("by_status", ["status", "createdAt"])
+    .index("by_customer", ["customerId", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
 });

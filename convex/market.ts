@@ -110,7 +110,11 @@ export async function loadSnapshotForPrompt(
   const stale = !snap || Date.now() - snap.createdAt > SNAPSHOT_TTL_MS;
   if (stale) {
     try {
-      await ctx.scheduler.runAfter(0, internal.market.refreshMarketSnapshot, {});
+      await ctx.scheduler.runAfter(
+        0,
+        internal.market.refreshMarketSnapshot,
+        {},
+      );
     } catch (err) {
       console.error("Could not schedule market refresh", err);
     }

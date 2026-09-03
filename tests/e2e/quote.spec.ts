@@ -78,11 +78,11 @@ test(
         "A copy went to eric@tidwellwelding.com. Check your email for the recap.",
       ),
     ).toBeVisible();
-    // The crew console is no longer publicly linked; the secondary CTA
+    // The admin console is not publicly linked; the secondary CTA
     // points at the job log instead.
     await expect(
       page.getByRole("link", { name: "See the work" }),
     ).toHaveAttribute("href", "/work");
-    await expect(page.locator("a[href^='/crew']")).toHaveCount(0);
+    await expect(page.locator("a[href^='/admin']")).toHaveCount(0);
   },
 );

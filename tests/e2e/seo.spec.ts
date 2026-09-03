@@ -4,8 +4,7 @@ test.describe.configure({ timeout: 120_000 });
 
 /** Exact <title> per page, from the SEO spec. */
 const TITLES: Record<string, string> = {
-  "/":
-    "Welding & Fabrication in Granbury, TX | 24/7 Mobile Welder | Tidwell Specialty Welding",
+  "/": "Welding & Fabrication in Granbury, TX | 24/7 Mobile Welder | Tidwell Specialty Welding",
   "/services":
     "Welding Services: Fabrication, Pipe, Equipment Repair | Granbury & Fort Worth | TSWS",
   "/services/fabrication":
@@ -34,7 +33,6 @@ const TITLES: Record<string, string> = {
   "/welder/stephenville-tx":
     "Welder in Stephenville, TX | Free Quotes, We Beat Any Bid | Tidwell Specialty Welding",
   "/search": "Search | Tidwell Specialty Welding",
-  "/crew": "Crew console | TSWS",
 };
 
 /** Every URL the sitemap must list — apex-absolute, in the P0-7 map's order. */
@@ -90,7 +88,9 @@ test("home page LocalBusiness JSON-LD parses with the legal name", async ({
     "HomeAndConstructionBusiness",
     "LocalBusiness",
   ]);
-  expect(business!["legalName"]).toBe("Tidwell Specialty Welding Services, LLC");
+  expect(business!["legalName"]).toBe(
+    "Tidwell Specialty Welding Services, LLC",
+  );
   expect(business!["@context"]).toBe("https://schema.org");
   expect(business!["name"]).toBe("Tidwell Specialty Welding");
 });
@@ -131,8 +131,8 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
   expect(urls.sort()).toEqual([...SITEMAP_URLS].sort());
 
-  // /crew is private and /search is noindexed — neither may ever appear.
-  expect(urls.some((u) => u.includes("/crew"))).toBe(false);
+  // /admin is private and /search is noindexed — neither may ever appear.
+  expect(urls.some((u) => u.includes("/admin"))).toBe(false);
   expect(urls.some((u) => u.includes("/search"))).toBe(false);
 
   // P0-7: every URL carries a literal ISO-date lastmod; priority/changefreq
@@ -149,7 +149,7 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   expect(xml).not.toContain("<changefreq>");
 });
 
-test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /crew", async ({
+test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /admin", async ({
   request,
 }) => {
   const res = await request.get("/robots.txt");
@@ -163,10 +163,10 @@ test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallo
 
   const wildcard = groups.find((g) => /user-agent:\s*\*/i.test(g));
   expect(wildcard, "wildcard group missing").toBeTruthy();
-  expect(wildcard!).toMatch(/Disallow:\s*\/crew/i);
+  expect(wildcard!).toMatch(/Disallow:\s*\/admin/i);
 
   // P1-2: a bot matching a specific group IGNORES the wildcard group, so the
-  // explicit AI group must re-state the /crew disallow itself.
+  // explicit AI group must re-state the /admin disallow itself.
   const AI_BOTS = [
     "OAI-SearchBot",
     "ChatGPT-User",
@@ -183,23 +183,14 @@ test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallo
       new RegExp(`user-agent:\\s*${bot}\\s*$`, "im").test(g),
     );
     expect(group, `no explicit group for ${bot}`).toBeTruthy();
-    expect(group!, `${bot} group must disallow /crew`).toMatch(
-      /Disallow:\s*\/crew/i,
+    expect(group!, `${bot} group must disallow /admin`).toMatch(
+      /Disallow:\s*\/admin/i,
     );
   }
 
   expect(body).toMatch(
     /Sitemap:\s*https:\/\/tidwellwelding\.com\/sitemap\.xml/i,
   );
-});
-
-test("/crew carries a noindex robots meta", async ({ page }) => {
-  await page.goto("/crew", { timeout: 60_000 });
-  const content = await page
-    .locator("meta[name='robots']")
-    .first()
-    .getAttribute("content");
-  expect(content).toContain("noindex");
 });
 
 test("/search carries a noindex robots meta and a self-canonical", async ({
@@ -244,7 +235,12 @@ test("WebSite JSON-LD (with SearchAction) renders on the home page only", async 
 test("every page carries exactly one LocalBusiness block referenced by #business", async ({
   page,
 }) => {
-  for (const path of ["/", "/services/pipe", "/welder/granbury-tx", "/search"]) {
+  for (const path of [
+    "/",
+    "/services/pipe",
+    "/welder/granbury-tx",
+    "/search",
+  ]) {
     await page.goto(path, { timeout: 60_000 });
     const nodes = await readJsonLd(page);
     const businesses = nodes.filter((n) => {
@@ -253,7 +249,10 @@ test("every page carries exactly one LocalBusiness block referenced by #business
         ? type.includes("LocalBusiness")
         : type === "LocalBusiness";
     });
-    expect(businesses, `${path} must carry exactly one LocalBusiness`).toHaveLength(1);
+    expect(
+      businesses,
+      `${path} must carry exactly one LocalBusiness`,
+    ).toHaveLength(1);
     expect(businesses[0]["@id"]).toBe("https://tidwellwelding.com/#business");
   }
 });

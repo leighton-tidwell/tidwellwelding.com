@@ -64,8 +64,9 @@ export default function TikTokEmbeds() {
     if (!mounted) return;
     if (document.querySelector('script[src*="tiktok.com/embed.js"]')) {
       // Re-running the loader upgrades any blockquotes added after first load.
-      (window as unknown as { tiktokEmbed?: { lib?: { render?: () => void } } })
-        .tiktokEmbed?.lib?.render?.();
+      (
+        window as unknown as { tiktokEmbed?: { lib?: { render?: () => void } } }
+      ).tiktokEmbed?.lib?.render?.();
       return;
     }
     const s = document.createElement("script");
@@ -90,7 +91,12 @@ export default function TikTokEmbeds() {
               className="tiktok-embed"
               cite={`https://www.tiktok.com/@__tdaddy__/video/${e.id}`}
               data-video-id={e.id}
-              style={{ maxWidth: 325, minWidth: "min(288px, 100%)", width: "100%", margin: 0 }}
+              style={{
+                maxWidth: 325,
+                minWidth: "min(288px, 100%)",
+                width: "100%",
+                margin: 0,
+              }}
             >
               <section>
                 <a

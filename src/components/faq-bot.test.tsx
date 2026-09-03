@@ -6,14 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 
 type FakeConvexClient = {
@@ -51,7 +44,10 @@ import FaqBot from "@/components/faq-bot";
 
 afterEach(cleanup);
 
-function makeClient(reply: { text: string; contact: boolean }): FakeConvexClient {
+function makeClient(reply: {
+  text: string;
+  contact: boolean;
+}): FakeConvexClient {
   return {
     mutation: vi.fn().mockResolvedValue("thread-1"),
     action: vi.fn().mockResolvedValue(reply),
@@ -105,12 +101,12 @@ describe("FaqBot", () => {
     await waitFor(() => expect(pill).toHaveFocus());
   });
 
-  test("hides itself on /quote and /crew", () => {
+  test("hides itself on /quote and /admin", () => {
     state.pathname = "/quote";
     const { container, unmount } = render(<FaqBot />);
     expect(container.querySelector(".faqbot-pill")).toBeNull();
     unmount();
-    state.pathname = "/crew";
+    state.pathname = "/admin";
     const { container: c2 } = render(<FaqBot />);
     expect(c2.querySelector(".faqbot-pill")).toBeNull();
   });
@@ -205,7 +201,9 @@ describe("FaqBot", () => {
       await screen.findByText(/Can't reach the assistant right now/),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Call Eric" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Email Eric" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Email Eric" }),
+    ).toBeInTheDocument();
   });
 
   test("backend error path also falls back instead of throwing", async () => {

@@ -9,10 +9,11 @@ export default defineConfig({
   test: {
     projects: [
       {
+        plugins: [react()],
         test: {
           name: "convex",
           environment: "edge-runtime",
-          include: ["convex/**/*.test.ts"],
+          include: ["convex/**/*.test.{ts,tsx}"],
           server: {
             deps: {
               // convex-test relies on import.meta.glob; keep it processed by Vite.

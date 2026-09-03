@@ -1,12 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const nav = vi.hoisted(() => ({ pathname: "/" }));
 
@@ -78,9 +71,9 @@ describe("SiteHeader", () => {
     const { container } = render(<SiteHeader />);
     const active = container.querySelector(".site-nav__link--active");
     expect(active).toHaveTextContent("About");
-    const home = Array.from(
-      container.querySelectorAll(".site-nav__link"),
-    ).find((l) => l.textContent === "Home");
+    const home = Array.from(container.querySelectorAll(".site-nav__link")).find(
+      (l) => l.textContent === "Home",
+    );
     expect(home).not.toHaveClass("site-nav__link--active");
   });
 
@@ -137,11 +130,11 @@ describe("SiteHeader", () => {
     ).toBeInTheDocument();
   });
 
-  test("crew console is not linked from the public header", () => {
+  test("admin console is not linked from the public header", () => {
     const { container } = render(<SiteHeader />);
     // Check the sheet too (its links exist in the DOM even when closed).
     const crewHrefs = Array.from(container.querySelectorAll("a")).filter((a) =>
-      (a.getAttribute("href") ?? "").startsWith("/crew"),
+      (a.getAttribute("href") ?? "").startsWith("/admin"),
     );
     expect(crewHrefs).toHaveLength(0);
   });

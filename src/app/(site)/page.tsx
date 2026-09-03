@@ -108,7 +108,7 @@ const STEPS = [
   {
     n: "02",
     title: "Get working numbers",
-    body: "The estimator drafts tasks, crew size, hours and a dollar range.",
+    body: "The estimator drafts the task list, hours and a dollar range.",
   },
   {
     n: "03",
@@ -183,8 +183,8 @@ export default function HomePage() {
               textWrap: "pretty",
             }}
           >
-            Welds that look like a <span style={{ color: "#c90314" }}>robot</span>{" "}
-            ran them.
+            Welds that look like a{" "}
+            <span style={{ color: "#c90314" }}>robot</span> ran them.
           </h1>
           <p
             style={{
@@ -227,7 +227,7 @@ export default function HomePage() {
             <span>Free quotes</span>
           </div>
         </div>
-        { }
+        {}
         <img
           src="/media/stainless-pipe-8in.webp"
           alt="Stacked TIG beads on 8 in stainless pipe, Granbury TX"
@@ -252,14 +252,16 @@ export default function HomePage() {
                 i < TRUST.length - 1
                   ? "border-b border-white/8 md:border-b-0 md:border-r"
                   : "",
-                i === 0 ? "md:pr-7" : i === TRUST.length - 1 ? "md:pl-7" : "md:px-7",
+                i === 0
+                  ? "md:pr-7"
+                  : i === TRUST.length - 1
+                    ? "md:pl-7"
+                    : "md:px-7",
               ].join(" ")}
             >
               <Icon name={t.icon} size={24} color="#ffb020" />
               <div>
-                <div
-                  style={{ ...displayHead, fontSize: 24, lineHeight: 1 }}
-                >
+                <div style={{ ...displayHead, fontSize: 24, lineHeight: 1 }}>
                   {t.title}
                 </div>
                 <p
@@ -287,10 +289,7 @@ export default function HomePage() {
             <div style={{ ...kicker, color: "#ffb020" }}>
               Emergency response · On call now
             </div>
-            <h2
-              className="text-[44px] lg:text-[62px]"
-              style={displayHead}
-            >
+            <h2 className="text-[44px] lg:text-[62px]" style={displayHead}>
               Something&apos;s down. Call now.
             </h2>
             <p
@@ -365,7 +364,10 @@ export default function HomePage() {
               }}
             >
               Can&apos;t call? Email{" "}
-              <a href="mailto:eric@tidwellwelding.com" style={{ color: "#eef0f1" }}>
+              <a
+                href="mailto:eric@tidwellwelding.com"
+                style={{ color: "#eef0f1" }}
+              >
                 eric@tidwellwelding.com
               </a>{" "}
               and mark it urgent.
@@ -442,7 +444,9 @@ export default function HomePage() {
       {/* ---- Mobile welding --------------------------------------------- */}
       <section
         className="border-t border-white/10"
-        style={{ background: "linear-gradient(180deg, #101214 0%, #0a0b0c 100%)" }}
+        style={{
+          background: "linear-gradient(180deg, #101214 0%, #0a0b0c 100%)",
+        }}
       >
         <div className="mx-auto grid max-w-[1280px] items-center gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-22">
           <video
@@ -618,9 +622,9 @@ export default function HomePage() {
               }}
             >
               Describe the job and attach photos. The estimator drafts the task
-              list, crew size and hours while you watch. Eric checks the
-              numbers and calls you back. Quotes are free. Got one from another
-              shop? Send it and we&apos;ll beat it.
+              list and the hours while you watch. Eric checks the numbers and
+              calls you back. Quotes are free. Got one from another shop? Send
+              it and we&apos;ll beat it.
             </p>
             <div className="flex flex-wrap gap-3.5">
               <Button variant="primary" size="lg" href="/quote">

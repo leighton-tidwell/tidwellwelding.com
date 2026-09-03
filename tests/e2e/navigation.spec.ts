@@ -60,12 +60,32 @@ test.describe("desktop header", () => {
     page,
   }) => {
     const links: { label: string; url: string; h1: string }[] = [
-      { label: "Fabrication", url: "/services/fabrication", h1: "Built to the spec" },
-      { label: "Staircases & handrail", url: "/services/structural", h1: "pass the walk" },
+      {
+        label: "Fabrication",
+        url: "/services/fabrication",
+        h1: "Built to the spec",
+      },
+      {
+        label: "Staircases & handrail",
+        url: "/services/structural",
+        h1: "pass the walk",
+      },
       { label: "Pipe welding", url: "/services/pipe", h1: "Roots that pass" },
-      { label: "Heavy equipment repair", url: "/services/equipment", h1: "holds under load" },
-      { label: "Mobile welding", url: "/services/mobile", h1: "carries the shop" },
-      { label: "Emergency & on-call", url: "/services/emergency", h1: "book appointments" },
+      {
+        label: "Heavy equipment repair",
+        url: "/services/equipment",
+        h1: "holds under load",
+      },
+      {
+        label: "Mobile welding",
+        url: "/services/mobile",
+        h1: "carries the shop",
+      },
+      {
+        label: "Emergency & on-call",
+        url: "/services/emergency",
+        h1: "book appointments",
+      },
     ];
 
     for (const link of links) {
@@ -125,12 +145,11 @@ test.describe("desktop header", () => {
     });
   });
 
-  // Spec change (2026-08-18): the crew console must not be publicly linked.
-  // The footer's "Crew login" link was removed; /crew is direct-URL only.
-  test("public chrome contains no link to /crew", async ({ page }) => {
+  // The admin console must not be publicly linked; /admin is direct-URL only.
+  test("public chrome contains no link to /admin", async ({ page }) => {
     for (const path of ["/", "/contact"]) {
       await page.goto(path, { timeout: 60_000 });
-      await expect(page.locator("a[href^='/crew']")).toHaveCount(0);
+      await expect(page.locator("a[href^='/admin']")).toHaveCount(0);
       await expect(page.locator("body")).not.toContainText("Crew login");
     }
   });

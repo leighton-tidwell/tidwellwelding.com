@@ -38,7 +38,9 @@ test(
     // Never any dollar figures in chat replies.
     expect(reply).not.toMatch(/\$\s*\d/);
     // The service-area answer names the territory.
-    expect(reply).toMatch(/granbury|stephenville|fort worth|dfw|weatherford|cleburne/i);
+    expect(reply).toMatch(
+      /granbury|stephenville|fort worth|dfw|weatherford|cleburne/i,
+    );
 
     // ---- Over-length input is blocked client-side (no send, no AI call) --
     await expect(input).toHaveAttribute("maxlength", "500");

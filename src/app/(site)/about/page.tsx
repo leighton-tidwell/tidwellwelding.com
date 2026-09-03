@@ -6,7 +6,7 @@ import { Button, Card, MediaFrame } from "@/components/ds";
 const TITLE =
   "Eric Tidwell, Welder Since 2011 | Tidwell Specialty Welding, Granbury TX";
 const DESCRIPTION =
-  "Eric Tidwell started welding in 2011. He runs Tidwell Specialty Welding from Granbury, TX with a small crew and one standard for every weld.";
+  "Eric Tidwell started welding in 2011. He runs Tidwell Specialty Welding from Granbury, TX as a one-man shop with one standard for every weld.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -60,21 +60,21 @@ const cardParaStyle: CSSProperties = {
   margin: 0,
 };
 
-const crewCards = [
+const shopCards = [
   {
-    eyebrow: "CREW — WHO",
-    title: "Peers, not hands",
-    text: "Jobs run with two to three welders. Each runs his own shop and works under TSWS on the bigger packages.",
+    eyebrow: "SHOP — WHO",
+    title: "Same hands, every step",
+    text: "Eric quotes the job, welds the job and hands it back. No subs, no handoffs, nobody else to point at.",
   },
   {
-    eyebrow: "CREW — STANDARD",
+    eyebrow: "SHOP — STANDARD",
     title: "One set of eyes",
-    text: "Eric inspects the crew's welds the way he inspects his own. Nothing ships until it passes.",
+    text: "Every weld passes the same eye before it leaves. If it wouldn't pass his, it doesn't ship.",
   },
   {
-    eyebrow: "CREW — PAY",
-    title: "Worth it, both ways",
-    text: "Eric pays his welders well on purpose. Good pay keeps good welders on your job.",
+    eyebrow: "SHOP — SCHEDULE",
+    title: "One job at a time",
+    text: "One welder books one job at a time. You get a straight answer on when it starts and when it's done.",
   },
 ] as const;
 
@@ -109,9 +109,9 @@ export default function AboutPage() {
             Inconel and chrome-moly.
           </p>
           <p style={bodyParaStyle}>
-            He trained and tested on the torch, filed the LLC and carries insurance. The
-            standard is simple: if a weld wouldn&apos;t pass his eye, it
-            doesn&apos;t leave the shop. That covers crew work too.
+            He trained and tested on the torch, filed the LLC and carries
+            insurance. The standard is simple: if a weld wouldn&apos;t pass his
+            eye, it doesn&apos;t leave the shop. Every job, no exceptions.
           </p>
           <p style={bodyParaStyle}>
             The company has a reason. Eric and his wife Paige, a Fort Worth
@@ -159,7 +159,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Crew */}
+      {/* Shop */}
       <section
         style={{
           borderTop: "1px solid rgba(255,255,255,.1)",
@@ -167,7 +167,7 @@ export default function AboutPage() {
         }}
       >
         <div className="mx-auto w-full max-w-[1280px] px-6 py-14 md:px-8 lg:py-[88px]">
-          <div style={{ ...kickerStyle, marginBottom: 14 }}>The crew</div>
+          <div style={{ ...kickerStyle, marginBottom: 14 }}>The shop</div>
           <h2
             style={{
               fontFamily: "var(--font-display)",
@@ -180,12 +180,16 @@ export default function AboutPage() {
               margin: "0 0 40px",
             }}
           >
-            Two or three welders. Paid what they&apos;re{" "}
-            <span style={{ color: "#c90314" }}>worth</span>.
+            One welder. Start to{" "}
+            <span style={{ color: "#c90314" }}>finish</span>.
           </h2>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            {crewCards.map((card) => (
-              <Card key={card.eyebrow} eyebrow={card.eyebrow} title={card.title}>
+            {shopCards.map((card) => (
+              <Card
+                key={card.eyebrow}
+                eyebrow={card.eyebrow}
+                title={card.title}
+              >
                 <p style={cardParaStyle}>{card.text}</p>
               </Card>
             ))}

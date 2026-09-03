@@ -4,8 +4,18 @@
 // America/Chicago).
 
 const MONTHS: Record<string, number> = {
-  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+  Jan: 0,
+  Feb: 1,
+  Mar: 2,
+  Apr: 3,
+  May: 4,
+  Jun: 5,
+  Jul: 6,
+  Aug: 7,
+  Sep: 8,
+  Oct: 9,
+  Nov: 10,
+  Dec: 11,
 };
 
 // RFC 5545 text escaping.
@@ -56,7 +66,9 @@ export function buildCallbackIcs(input: {
   attendeeEmail: string;
 }): { filename: string; contentBase64: string } | null {
   // "Thu, Aug 20 · Morning" → month name, day number, window.
-  const m = input.slot.match(/([A-Za-z]{3})\s+(\d{1,2})\s*·\s*(Morning|Afternoon)/);
+  const m = input.slot.match(
+    /([A-Za-z]{3})\s+(\d{1,2})\s*·\s*(Morning|Afternoon)/,
+  );
   if (!m) return null;
   const month = MONTHS[m[1] as keyof typeof MONTHS];
   const day = Number(m[2]);

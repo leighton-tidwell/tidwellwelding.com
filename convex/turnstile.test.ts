@@ -92,7 +92,10 @@ describe("secret configured", () => {
   test("siteverify success:false fails", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ success: false, "error-codes": ["invalid-input-response"] }),
+      json: async () => ({
+        success: false,
+        "error-codes": ["invalid-input-response"],
+      }),
     });
     await expect(verifyTurnstile(FAKE_TOKEN)).resolves.toBe(false);
   });

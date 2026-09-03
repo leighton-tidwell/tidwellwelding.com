@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { usePathname } from "next/navigation";
 import { useConvex } from "convex/react";
 import { ConvexError } from "convex/values";
-import {
-  Turnstile,
-  type TurnstileInstance,
-} from "@marsidev/react-turnstile";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import HazardBar from "@/components/ds/hazard-bar";
@@ -37,7 +29,7 @@ type Msg = {
 
 /**
  * "Ask the shop" floating FAQ chat (FaqBot.dc.html). Rendered from the
- * (site) layout on every public page; hides itself on /quote. /crew sits
+ * (site) layout on every public page; hides itself on /quote. /admin sits
  * outside the (site) group and never renders it. Backed by convex/chat.ts
  * (startThread + sendMessage); shows the fallback message and contact CTAs
  * whenever the backend is unreachable — including when NEXT_PUBLIC_CONVEX_URL
@@ -102,7 +94,7 @@ export default function FaqBot() {
     }
   }, [open]);
 
-  if (pathname?.startsWith("/quote") || pathname?.startsWith("/crew")) {
+  if (pathname?.startsWith("/quote") || pathname?.startsWith("/admin")) {
     return null;
   }
 
@@ -178,11 +170,7 @@ export default function FaqBot() {
         </button>
       )}
       {open && (
-        <div
-          className="faqbot-panel"
-          role="dialog"
-          aria-label="Ask the shop"
-        >
+        <div className="faqbot-panel" role="dialog" aria-label="Ask the shop">
           <HazardBar variant="red" height="6px" />
           <div className="faqbot-head">
             <div>

@@ -1,11 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Button from "@/components/ds/button";
 
 afterEach(cleanup);
@@ -43,12 +37,15 @@ describe("Button", () => {
     },
   );
 
-  test.each(["sm", "md", "lg"] as const)("size %s renders its modifier class", (size) => {
-    render(<Button size={size}>S</Button>);
-    expect(screen.getByRole("button", { name: "S" })).toHaveClass(
-      `tsws-btn--${size}`,
-    );
-  });
+  test.each(["sm", "md", "lg"] as const)(
+    "size %s renders its modifier class",
+    (size) => {
+      render(<Button size={size}>S</Button>);
+      expect(screen.getByRole("button", { name: "S" })).toHaveClass(
+        `tsws-btn--${size}`,
+      );
+    },
+  );
 
   test("block prop adds the block class", () => {
     render(<Button block>B</Button>);
@@ -143,5 +140,28 @@ describe("Button", () => {
     expect(screen.getByTestId("left")).toBeInTheDocument();
     expect(screen.getByTestId("right")).toBeInTheDocument();
     expect(screen.getByText("Mid")).toHaveClass("tsws-btn__label");
+  });
+
+  test("ariaBusy marks a button whose action is still running", () => {
+    render(<Button ariaBusy>Building</Button>);
+    expect(screen.getByRole("button", { name: "Building" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+  });
+
+  test("a button that is not busy says so rather than omitting the state", () => {
+    render(<Button ariaBusy={false}>Idle</Button>);
+    expect(screen.getByRole("button", { name: "Idle" })).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
+  test("aria-busy is absent entirely when the caller does not manage it", () => {
+    render(<Button>Plain</Button>);
+    expect(screen.getByRole("button", { name: "Plain" })).not.toHaveAttribute(
+      "aria-busy",
+    );
   });
 });

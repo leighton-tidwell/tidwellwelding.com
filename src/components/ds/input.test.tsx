@@ -1,12 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import Input from "@/components/ds/input";
 
 afterEach(cleanup);
@@ -39,7 +33,9 @@ describe("Input", () => {
   });
 
   test("error replaces the hint, sets aria-invalid and describedby", () => {
-    render(<Input label="Phone" hint="10 digits" error="Enter a 10-digit number." />);
+    render(
+      <Input label="Phone" hint="10 digits" error="Enter a 10-digit number." />,
+    );
     const input = screen.getByLabelText("Phone");
     const error = screen.getByText("Enter a 10-digit number.");
     expect(error).toHaveClass("tsws-field__error");

@@ -1,11 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import {
-  afterEach,
-  describe,
-  expect,
-  test,
-  vi,
-} from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -65,11 +59,11 @@ describe("SiteFooter", () => {
     ).toBeInTheDocument();
   });
 
-  test("crew console is not linked from the public footer", () => {
+  test("admin console is not linked from the public footer", () => {
     const { container } = render(<SiteFooter />);
-    expect(screen.queryByRole("link", { name: /crew/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /admin/i })).toBeNull();
     const crewHrefs = Array.from(container.querySelectorAll("a")).filter((a) =>
-      (a.getAttribute("href") ?? "").startsWith("/crew"),
+      (a.getAttribute("href") ?? "").startsWith("/admin"),
     );
     expect(crewHrefs).toHaveLength(0);
   });
@@ -130,10 +124,9 @@ describe("SiteFooter", () => {
 
   test("contact details render", () => {
     render(<SiteFooter />);
-    expect(screen.getByRole("link", { name: "(817) 894-6357" })).toHaveAttribute(
-      "href",
-      "tel:8178946357",
-    );
+    expect(
+      screen.getByRole("link", { name: "(817) 894-6357" }),
+    ).toHaveAttribute("href", "tel:8178946357");
     expect(
       screen.getByRole("link", { name: "eric@tidwellwelding.com" }),
     ).toHaveAttribute("href", "mailto:eric@tidwellwelding.com");

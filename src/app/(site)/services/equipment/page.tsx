@@ -54,8 +54,8 @@ const CONTENT: ServicePageContent = {
         <>
           Ranch equipment breaks the same way. Hay season cracks balers around{" "}
           <Link href="/welder/stephenville-tx">Stephenville</Link>, and Eric
-          welds them in the field. Feeders, cattle gates and trailer frames
-          ride the same truck.
+          welds them in the field. Feeders, cattle gates and trailer frames ride
+          the same truck.
         </>,
       ],
     },

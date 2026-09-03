@@ -3,12 +3,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Card, Icon, MediaFrame } from "@/components/ds";
 import JsonLd from "@/components/json-ld";
-import {
-  EMAIL,
-  EMAIL_MAILTO,
-  PHONE_DISPLAY,
-  PHONE_TEL,
-} from "@/lib/business";
+import { EMAIL, EMAIL_MAILTO, PHONE_DISPLAY, PHONE_TEL } from "@/lib/business";
 
 const TITLE = `Contact a Welder Now: ${PHONE_DISPLAY} | Granbury to Stephenville | TSWS`;
 const DESCRIPTION = `Call or text ${PHONE_DISPLAY}, any hour. Email ${EMAIL}. Granbury shop, mobile truck from Fort Worth to Stephenville. Free quotes.`;
@@ -190,7 +185,10 @@ export default function ContactPage() {
             </p>
           </Card>
         </a>
-        <Link href="/quote" style={{ textDecoration: "none", display: "block" }}>
+        <Link
+          href="/quote"
+          style={{ textDecoration: "none", display: "block" }}
+        >
           <Card
             interactive
             eyebrow="QUOTE — FREE"
@@ -265,13 +263,25 @@ export default function ContactPage() {
                 textTransform: "uppercase",
               }}
             >
-              <Link href="/welder/granbury-tx" className="py-1 sm:py-0" style={{ color: "#eef0f1" }}>
+              <Link
+                href="/welder/granbury-tx"
+                className="py-1 sm:py-0"
+                style={{ color: "#eef0f1" }}
+              >
                 Welder in Granbury
               </Link>
-              <Link href="/welder/fort-worth-tx" className="py-1 sm:py-0" style={{ color: "#eef0f1" }}>
+              <Link
+                href="/welder/fort-worth-tx"
+                className="py-1 sm:py-0"
+                style={{ color: "#eef0f1" }}
+              >
                 Welder in Fort Worth
               </Link>
-              <Link href="/welder/stephenville-tx" className="py-1 sm:py-0" style={{ color: "#eef0f1" }}>
+              <Link
+                href="/welder/stephenville-tx"
+                className="py-1 sm:py-0"
+                style={{ color: "#eef0f1" }}
+              >
                 Welder in Stephenville
               </Link>
             </div>

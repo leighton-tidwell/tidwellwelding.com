@@ -1,10 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useConvex } from "convex/react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { api } from "../../../../convex/_generated/api";
-import { Badge, Button, Card, HazardBar, Icon, Input, Select } from "@/components/ds";
+import {
+  Badge,
+  Button,
+  Card,
+  HazardBar,
+  Icon,
+  Input,
+  Select,
+} from "@/components/ds";
 import { getSessionId } from "@/lib/session";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -77,13 +91,15 @@ const TIMELINE_OPTIONS = [
 
 /** Static fallback ported verbatim from quote.dc.html. */
 function fallbackEstimate(jobType: string): Estimate {
-  const mobile = jobType === "Mobile / on-site repair" || jobType === "Emergency";
+  const mobile =
+    jobType === "Mobile / on-site repair" || jobType === "Emergency";
   const items: LineItem[] = [
     { task: "Assess, prep and fit-up", crew: 1, hours: 2 },
     { task: "Weld-out", crew: 1, hours: 4 },
     { task: "Grind, dress and inspect", crew: 1, hours: 1 },
   ];
-  if (mobile) items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
+  if (mobile)
+    items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
   return {
     title: "Draft estimate",
     summary:
@@ -119,7 +135,10 @@ function makeSlots() {
 
 function makeRequestId(): string {
   return (
-    "Q-" + new Date().getFullYear() + "-" + String(Math.floor(100 + Math.random() * 900))
+    "Q-" +
+    new Date().getFullYear() +
+    "-" +
+    String(Math.floor(100 + Math.random() * 900))
   );
 }
 
@@ -379,7 +398,8 @@ export default function QuoteFlow() {
   const toStep3 = () => {
     const next: Record<string, string> = {};
     if (!c.name.trim()) next.name = "Enter your name.";
-    if (c.phone.replace(/\D/g, "").length !== 10) next.phone = "Enter a 10-digit number.";
+    if (c.phone.replace(/\D/g, "").length !== 10)
+      next.phone = "Enter a 10-digit number.";
     if (Object.keys(next).length) {
       setErrs(next);
       focusFirstInvalid(["name", "phone"], next);
@@ -423,7 +443,7 @@ export default function QuoteFlow() {
       }
     } catch {
       // Backend unreachable or unverified: keep the provisional id so the
-      // request still lands in the crew console demo.
+      // request still lands in local history for the owner.
     }
     try {
       const key = "tsws_quotes";
@@ -447,7 +467,8 @@ export default function QuoteFlow() {
     window.scrollTo(0, 0);
   };
 
-  const isEmergency = f.timeline === "Emergency. Right now." || f.type === "Emergency";
+  const isEmergency =
+    f.timeline === "Emergency. Right now." || f.type === "Emergency";
   const estReady = !!est && !estBusy;
   const photoLabel = f.photos.length
     ? f.photos.length + " file(s): " + f.photos.join(", ")
@@ -473,7 +494,8 @@ export default function QuoteFlow() {
             margin: 0,
           }}
         >
-          Describe the job. Get working <span style={{ color: "#c90314" }}>numbers</span>.
+          Describe the job. Get working{" "}
+          <span style={{ color: "#c90314" }}>numbers</span>.
         </h1>
         <ol className="qf-steps" aria-label="Quote progress">
           {STEP_NAMES.map((label, i) => (
@@ -522,7 +544,12 @@ export default function QuoteFlow() {
           <div className="qf-grid-main">
             <div
               className="qf-pad"
-              style={{ display: "flex", flexDirection: "column", gap: 20, ...panelChamfer }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 20,
+                ...panelChamfer,
+              }}
             >
               <div className="qf-grid-2">
                 <Select
@@ -580,7 +607,8 @@ export default function QuoteFlow() {
                     gap: 14,
                     flexWrap: "wrap",
                     textDecoration: "none",
-                    background: "linear-gradient(180deg, #e2101f 0%, #a00210 100%)",
+                    background:
+                      "linear-gradient(180deg, #e2101f 0%, #a00210 100%)",
                     color: "#ffffff",
                     padding: "16px 20px",
                     clipPath:
@@ -631,7 +659,12 @@ export default function QuoteFlow() {
               <div className="qf-grid-2">
                 <label
                   className="qf-file"
-                  style={{ display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    cursor: "pointer",
+                  }}
                 >
                   <span style={fileLabelText}>Photos or video of the job</span>
                   <span className="qf-file__drop" style={fileDropText}>
@@ -644,7 +677,9 @@ export default function QuoteFlow() {
                     onChange={(e) =>
                       setJob((prev) => ({
                         ...prev,
-                        photos: Array.from(e.target.files ?? []).map((x) => x.name),
+                        photos: Array.from(e.target.files ?? []).map(
+                          (x) => x.name,
+                        ),
                       }))
                     }
                     style={hiddenFileInput}
@@ -652,7 +687,12 @@ export default function QuoteFlow() {
                 </label>
                 <label
                   className="qf-file"
-                  style={{ display: "flex", flexDirection: "column", gap: 8, cursor: "pointer" }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    cursor: "pointer",
+                  }}
                 >
                   <span style={fileLabelText}>Competitor quote (optional)</span>
                   <span className="qf-file__drop" style={fileDropText}>
@@ -664,14 +704,22 @@ export default function QuoteFlow() {
                     onChange={(e) =>
                       setJob((prev) => ({
                         ...prev,
-                        compFile: e.target.files?.[0] ? e.target.files[0].name : "",
+                        compFile: e.target.files?.[0]
+                          ? e.target.files[0].name
+                          : "",
                       }))
                     }
                     style={hiddenFileInput}
                   />
                 </label>
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 4,
+                }}
+              >
                 <Button variant="primary" size="lg" onClick={toStep2}>
                   Send the details
                 </Button>
@@ -688,12 +736,17 @@ export default function QuoteFlow() {
                     margin: 0,
                   }}
                 >
-                  The estimator reads your description and drafts a task list, crew size,
-                  hours and a dollar range. Eric checks every number before it becomes a
-                  quote. You commit to nothing by sending this.
+                  The estimator reads your description and drafts a task list,
+                  crew size, hours and a dollar range. Eric checks every number
+                  before it becomes a quote. You commit to nothing by sending
+                  this.
                 </p>
               </Card>
-              <Card eyebrow="THE STANDING OFFER" title="We beat quotes" rule={false}>
+              <Card
+                eyebrow="THE STANDING OFFER"
+                title="We beat quotes"
+                rule={false}
+              >
                 <p
                   style={{
                     fontFamily: BODY,
@@ -703,8 +756,8 @@ export default function QuoteFlow() {
                     margin: 0,
                   }}
                 >
-                  Quotes are free. Put the other shop&apos;s number in the box and ours
-                  comes in under it.
+                  Quotes are free. Put the other shop&apos;s number in the box
+                  and ours comes in under it.
                 </p>
               </Card>
             </div>
@@ -798,7 +851,11 @@ export default function QuoteFlow() {
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
               {/* 4.1.3: persistent live region announces the busy→ready swap. */}
               <div role="status" style={srOnly}>
-                {estBusy ? "Drafting your numbers." : estReady ? "Estimate ready." : ""}
+                {estBusy
+                  ? "Drafting your numbers."
+                  : estReady
+                    ? "Estimate ready."
+                    : ""}
               </div>
               {estBusy ? (
                 <div
@@ -922,10 +979,22 @@ export default function QuoteFlow() {
                           }}
                         >
                           <span>{li.task}</span>
-                          <span style={{ textAlign: "right", fontFamily: MONO, fontSize: 13 }}>
+                          <span
+                            style={{
+                              textAlign: "right",
+                              fontFamily: MONO,
+                              fontSize: 13,
+                            }}
+                          >
                             {li.crew}
                           </span>
-                          <span style={{ textAlign: "right", fontFamily: MONO, fontSize: 13 }}>
+                          <span
+                            style={{
+                              textAlign: "right",
+                              fontFamily: MONO,
+                              fontSize: 13,
+                            }}
+                          >
                             {li.hours}
                           </span>
                         </div>
@@ -1040,8 +1109,8 @@ export default function QuoteFlow() {
                             color: "rgba(255,255,255,.82)",
                           }}
                         >
-                          You told us the other bid was ${f.compQuote}. Eric&apos;s final
-                          quote comes in under it.
+                          You told us the other bid was ${f.compQuote}.
+                          Eric&apos;s final quote comes in under it.
                         </span>
                       </div>
                     ) : null}
@@ -1059,7 +1128,13 @@ export default function QuoteFlow() {
                         >
                           Eric will ask about
                         </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 8,
+                          }}
+                        >
                           {est.questions.map((q) => (
                             <div
                               key={q}
@@ -1071,7 +1146,10 @@ export default function QuoteFlow() {
                                 color: "rgba(255,255,255,.72)",
                               }}
                             >
-                              <span style={{ color: "#c90314" }} aria-hidden="true">
+                              <span
+                                style={{ color: "#c90314" }}
+                                aria-hidden="true"
+                              >
                                 ◆
                               </span>
                               <span>{q}</span>
@@ -1091,9 +1169,9 @@ export default function QuoteFlow() {
                         color: "rgba(255,255,255,.75)",
                       }}
                     >
-                      An AI drafted these numbers from your description. They are not the
-                      final quote and can change once Eric sees the job. He confirms every
-                      number before work starts.
+                      An AI drafted these numbers from your description. They
+                      are not the final quote and can change once Eric sees the
+                      job. He confirms every number before work starts.
                     </div>
                   </div>
 
@@ -1147,7 +1225,9 @@ export default function QuoteFlow() {
                                 fontSize: 10,
                                 letterSpacing: "0.14em",
                                 textTransform: "uppercase",
-                                color: active ? "#ffffff" : "rgba(255,255,255,.6)",
+                                color: active
+                                  ? "#ffffff"
+                                  : "rgba(255,255,255,.6)",
                               }}
                             >
                               {sl.day}
@@ -1177,7 +1257,9 @@ export default function QuoteFlow() {
                           color: "rgba(255,255,255,.5)",
                         }}
                       >
-                        {slot ? "Slot: " + slot : "Pick a window for the callback."}
+                        {slot
+                          ? "Slot: " + slot
+                          : "Pick a window for the callback."}
                       </span>
                       <Button
                         variant="primary"
@@ -1238,7 +1320,12 @@ export default function QuoteFlow() {
               style={{ display: "flex", flexDirection: "column", gap: 18 }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <Icon name="circle-check" size={28} color="#3ec96a" strokeWidth={2.5} />
+                <Icon
+                  name="circle-check"
+                  size={28}
+                  color="#3ec96a"
+                  strokeWidth={2.5}
+                />
                 <h2
                   className="qf-h2-lg qf-focus-target"
                   style={{ ...h2Style, margin: 0 }}
@@ -1257,9 +1344,10 @@ export default function QuoteFlow() {
                   margin: 0,
                 }}
               >
-                Eric will call you back within the hour at your slot: {slot}. Your
-                reference is {reqId}. The AI draft you saw is a starting point, not the
-                final quote. Eric sets the real number on the call.
+                Eric will call you back within the hour at your slot: {slot}.
+                Your reference is {reqId}. The AI draft you saw is a starting
+                point, not the final quote. Eric sets the real number on the
+                call.
               </p>
               <div
                 style={{
@@ -1270,9 +1358,17 @@ export default function QuoteFlow() {
                   color: "rgba(255,255,255,.5)",
                 }}
               >
-                A copy went to eric@tidwellwelding.com. Check your email for the recap.
+                A copy went to eric@tidwellwelding.com. Check your email for the
+                recap.
               </div>
-              <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  marginTop: 8,
+                  flexWrap: "wrap",
+                }}
+              >
                 <Button variant="secondary" href="/">
                   Back to the site
                 </Button>

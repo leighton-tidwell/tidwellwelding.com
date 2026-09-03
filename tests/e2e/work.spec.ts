@@ -26,9 +26,7 @@ test("filter chips filter the job cards", async ({ page }) => {
     // Every visible card belongs to the selected category.
     if (chip !== "All jobs") {
       for (let i = 0; i < count; i++) {
-        await expect(cards.nth(i)).toContainText(
-          `JOB — ${chip.toUpperCase()}`,
-        );
+        await expect(cards.nth(i)).toContainText(`JOB — ${chip.toUpperCase()}`);
       }
     }
   }
@@ -64,9 +62,7 @@ test("TikTok row mounts lazily without breaking layout", async ({ page }) => {
 
   // Scroll the TikTok wall toward the viewport; the IntersectionObserver
   // (or the idle callback) mounts the three tiles.
-  await page
-    .locator("h2", { hasText: "watch the" })
-    .scrollIntoViewIfNeeded();
+  await page.locator("h2", { hasText: "watch the" }).scrollIntoViewIfNeeded();
 
   // The page ships three official TikTok blockquote embeds, mounted lazily
   // by an IntersectionObserver; TikTok's embed.js then upgrades each

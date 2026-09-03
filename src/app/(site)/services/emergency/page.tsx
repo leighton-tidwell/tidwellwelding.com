@@ -66,8 +66,8 @@ const CONTENT: ServicePageContent = {
         <>
           Plants call about lines that have to run by morning. A cracked frame,
           a leaking tank, a seam that let go. The job is to get the line
-          running. <Link href="/services/pipe">Pipe repairs</Link> ride the
-          same truck.
+          running. <Link href="/services/pipe">Pipe repairs</Link> ride the same
+          truck.
         </>,
         "Ranchers get equipment back in the field. A baler cracks in the middle of a cut, or a parlor rail tears loose before milking. Contractors hold their schedule when a repair lands the same night.",
       ],

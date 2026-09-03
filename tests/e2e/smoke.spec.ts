@@ -25,15 +25,16 @@ const ROUTES: { path: string; h1Contains: string | RegExp }[] = [
   { path: "/welder/fort-worth-tx", h1Contains: "rolls to Fort Worth" },
   { path: "/welder/stephenville-tx", h1Contains: "forty minutes down" },
   { path: "/search", h1Contains: "Find it fast" },
-  { path: "/crew", h1Contains: "Crew console" },
 ];
 
-const THIRD_PARTY = /tiktok\.com|google\.com|gstatic\.com|googleapis\.com|challenges\.cloudflare\.com|doubleclick\.net/;
+const THIRD_PARTY =
+  /tiktok\.com|google\.com|gstatic\.com|googleapis\.com|challenges\.cloudflare\.com|doubleclick\.net/;
 
 function collectPageErrors(page: Page): Error[] {
   const errors: Error[] = [];
   page.on("pageerror", (err) => {
-    if (THIRD_PARTY.test(err.stack ?? "") || THIRD_PARTY.test(err.message)) return;
+    if (THIRD_PARTY.test(err.stack ?? "") || THIRD_PARTY.test(err.message))
+      return;
     errors.push(err);
   });
   return errors;
