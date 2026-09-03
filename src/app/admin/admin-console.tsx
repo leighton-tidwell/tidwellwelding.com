@@ -188,6 +188,14 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+const STATUS_FILTERS = [
+  { value: "", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "paid", label: "Paid" },
+  { value: "void", label: "Void" },
+] as const;
+
 function InvoiceList({
   token,
   onOpen,
@@ -195,6 +203,9 @@ function InvoiceList({
   token: string;
   onOpen: (id: Id<"invoices">) => void;
 }) {
+  const [status, setStatus] = useState("");
+  // Unfiltered: the counts on the chips have to reflect everything, not the
+  // slice currently shown, or the filter would hide its own way back.
   const invoices = useQuery(api.invoices.list, { token });
   const customers = useQuery(api.customers.list, { token });
   const create = useMutation(api.invoices.create);
@@ -203,6 +214,22 @@ function InvoiceList({
   const options = useMemo(
     () => (customers ?? []).map((c) => ({ value: c._id, label: c.name })),
     [customers],
+  );
+
+  const counts = useMemo(() => {
+    const tally: Record<string, number> = {};
+    for (const invoice of invoices ?? []) {
+      tally[invoice.status] = (tally[invoice.status] ?? 0) + 1;
+    }
+    return tally;
+  }, [invoices]);
+
+  const shown = useMemo(
+    () =>
+      status === ""
+        ? (invoices ?? [])
+        : (invoices ?? []).filter((invoice) => invoice.status === status),
+    [invoices, status],
   );
 
   return (
@@ -252,28 +279,71 @@ function InvoiceList({
       ) : invoices.length === 0 ? (
         <p className="admin-empty">No invoices yet.</p>
       ) : (
-        <div className="admin-list">
-          {invoices.map((invoice) => (
-            <button
-              key={invoice._id}
-              type="button"
-              className="admin-row"
-              onClick={() => onOpen(invoice._id)}
-            >
-              <span className="admin-row__main">
-                <span className="admin-row__title">{invoice.number}</span>
-                <span className="admin-row__meta">
-                  {invoice.customerName} · {invoice.lineItems.length} line
-                  {invoice.lineItems.length === 1 ? "" : "s"}
-                </span>
-              </span>
-              <span className="admin-row__amount">
-                {formatMoney(invoice.totals.balanceCents)}
-              </span>
-              <StatusPill status={invoice.status} />
-            </button>
-          ))}
-        </div>
+        <>
+          <div
+            className="admin-filters"
+            role="group"
+            aria-label="Filter invoices by status"
+          >
+            {STATUS_FILTERS.map((filter) => {
+              const count =
+                filter.value === ""
+                  ? invoices.length
+                  : (counts[filter.value] ?? 0);
+              const active = status === filter.value;
+              return (
+                <button
+                  key={filter.value || "all"}
+                  type="button"
+                  className={
+                    active ? "admin-filter admin-filter--on" : "admin-filter"
+                  }
+                  aria-pressed={active}
+                  onClick={() => setStatus(filter.value)}
+                >
+                  {filter.label}
+                  <span className="admin-filter__count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {shown.length === 0 ? (
+            <p className="admin-empty">
+              Nothing with that status.{" "}
+              <button
+                type="button"
+                className="admin-linkish"
+                onClick={() => setStatus("")}
+              >
+                Show all
+              </button>
+            </p>
+          ) : (
+            <div className="admin-list">
+              {shown.map((invoice) => (
+                <button
+                  key={invoice._id}
+                  type="button"
+                  className="admin-row"
+                  onClick={() => onOpen(invoice._id)}
+                >
+                  <span className="admin-row__main">
+                    <span className="admin-row__title">{invoice.number}</span>
+                    <span className="admin-row__meta">
+                      {invoice.customerName} · {invoice.lineItems.length} line
+                      {invoice.lineItems.length === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <span className="admin-row__amount">
+                    {formatMoney(invoice.totals.balanceCents)}
+                  </span>
+                  <StatusPill status={invoice.status} />
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
   );

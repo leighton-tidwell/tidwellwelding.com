@@ -11,7 +11,13 @@ test.describe.configure({ timeout: 180_000 });
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-type Credentials = { email: string; password: string; usedSetupToken: string };
+type Credentials = {
+  email: string;
+  password: string;
+  usedSetupToken: string;
+  /** Issued but never redeemed, for tests that need to reach the form. */
+  liveSetupToken: string;
+};
 
 function credentials(): Credentials {
   const file = path.join(__dirname, ".admin-credentials.json");
@@ -118,37 +124,47 @@ test.describe("access control", () => {
 });
 
 test.describe("the set-password link burns after one use", () => {
-  test("the token already used during setup is refused a second time", async ({
+  test("a spent link is refused in the server HTML, with no form flash", async ({
     page,
+    request,
   }) => {
     const { usedSetupToken } = credentials();
+
+    // The server response itself must already say the link is spent. If the
+    // check only ran in the browser the form would paint first and flash.
+    const html = await (
+      await request.get(`/admin/set-password?token=${usedSetupToken}`)
+    ).text();
+    expect(html).toMatch(/used up/i);
+    expect(html).not.toMatch(/New password/i);
 
     await page.goto(`/admin/set-password?token=${usedSetupToken}`, {
       timeout: 60_000,
     });
-    await page.getByLabel("New password").fill("another-long-password-1");
-    await page.getByLabel("Confirm password").fill("another-long-password-1");
-    await page.getByRole("button", { name: "Save password" }).click();
-
-    await expect(formAlert(page)).toContainText(/no longer valid/i);
-    await expect(
-      page.getByRole("heading", { name: "You are set" }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /used up/i })).toBeVisible();
+    await expect(page.getByLabel("New password")).toHaveCount(0);
   });
 
-  test("a made-up token is refused", async ({ page }) => {
+  test("a made-up token is refused", async ({ page, request }) => {
+    const html = await (
+      await request.get("/admin/set-password?token=deadbeefdeadbeefdeadbeef")
+    ).text();
+    expect(html).toMatch(/used up/i);
+    expect(html).not.toMatch(/New password/i);
+
     await page.goto("/admin/set-password?token=deadbeefdeadbeefdeadbeef", {
       timeout: 60_000,
     });
-    await page.getByLabel("New password").fill("another-long-password-1");
-    await page.getByLabel("Confirm password").fill("another-long-password-1");
-    await page.getByRole("button", { name: "Save password" }).click();
-
-    await expect(formAlert(page)).toContainText(/no longer valid/i);
+    await expect(page.getByRole("heading", { name: /used up/i })).toBeVisible();
   });
 
   test("mismatched confirmations never reach the server", async ({ page }) => {
-    await page.goto("/admin/set-password?token=whatever", { timeout: 60_000 });
+    // A real, unredeemed token: the page validates server-side now, so an
+    // invented one renders the spent screen instead of the form.
+    const { liveSetupToken } = credentials();
+    await page.goto(`/admin/set-password?token=${liveSetupToken}`, {
+      timeout: 60_000,
+    });
     await page.getByLabel("New password").fill("a-long-enough-password");
     await page.getByLabel("Confirm password").fill("a-different-password-x");
     await page.getByRole("button", { name: "Save password" }).click();
@@ -264,6 +280,67 @@ test.describe("invoicing, end to end", () => {
       timeout: 20_000,
     });
     await expect(page.getByLabel("Due date")).toHaveValue("2026-09-30");
+  });
+
+  test("status chips filter the invoice list", async ({ page }) => {
+    await signIn(page);
+
+    // Two invoices for the same customer, one moved to paid.
+    const name = uniqueName("Filter");
+    await page.getByRole("button", { name: "Customers" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByRole("button", { name: "Save customer" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Invoices" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create invoice" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-/, {
+      timeout: 15_000,
+    });
+    const paidNumber = await page.locator("h1.admin-title").textContent();
+    await page.getByLabel("Status").selectOption("paid");
+
+    await page.getByRole("button", { name: "All invoices" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create invoice" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-/, {
+      timeout: 15_000,
+    });
+    const draftNumber = await page.locator("h1.admin-title").textContent();
+    await page.getByRole("button", { name: "All invoices" }).click();
+
+    const filters = page.getByRole("group", {
+      name: "Filter invoices by status",
+    });
+    await expect(filters).toBeVisible({ timeout: 15_000 });
+
+    // Paid shows the paid one and hides the draft.
+    await filters.getByRole("button", { name: /^Paid/ }).click();
+    await expect(
+      page.getByRole("button", { name: new RegExp(paidNumber!.trim()) }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: new RegExp(draftNumber!.trim()) }),
+    ).toHaveCount(0);
+
+    // Draft is the mirror image.
+    await filters.getByRole("button", { name: /^Draft/ }).click();
+    await expect(
+      page.getByRole("button", { name: new RegExp(draftNumber!.trim()) }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: new RegExp(paidNumber!.trim()) }),
+    ).toHaveCount(0);
+
+    // All brings both back.
+    await filters.getByRole("button", { name: /^All/ }).click();
+    await expect(
+      page.getByRole("button", { name: new RegExp(paidNumber!.trim()) }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: new RegExp(draftNumber!.trim()) }),
+    ).toBeVisible();
   });
 
   test("downloading produces a real PDF and blocks repeat clicks", async ({

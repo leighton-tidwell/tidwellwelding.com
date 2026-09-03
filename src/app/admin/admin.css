@@ -176,6 +176,72 @@
 
 /* --- Lists --------------------------------------------------------------- */
 
+/* Status filter chips ---------------------------------------------------- */
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  /* 44px on a phone, per the touch-target floor the rest of the console uses. */
+  min-height: 36px;
+  padding: 0 12px;
+  font-family: var(--font-mono, inherit);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-body);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.admin-filter:hover,
+.admin-filter:focus-visible {
+  border-color: var(--border-accent);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.admin-filter--on {
+  background: var(--surface-raised);
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+
+.admin-filter__count {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+}
+
+.admin-filter--on .admin-filter__count {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* A button that reads as a link, for the "show all" escape hatch. */
+.admin-linkish {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--text-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .admin-list {
   display: grid;
   gap: 10px;
@@ -397,6 +463,10 @@
 @media (max-width: 767px) {
   .admin-actions .tsws-btn--sm,
   .admin-bar .tsws-btn--sm {
+    min-height: 44px;
+  }
+
+  .admin-filter {
     min-height: 44px;
   }
 }

@@ -470,6 +470,49 @@ describe("invoices", () => {
     expect(summary.invoiceCount).toBe(2);
   });
 
+  test("listing can be narrowed to one status", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
+
+    const draft = await t.mutation(api.invoices.create, { token, customerId });
+    const sent = await t.mutation(api.invoices.create, { token, customerId });
+    await t.mutation(api.invoices.setStatus, {
+      token,
+      id: sent,
+      status: "sent",
+    });
+    const paid = await t.mutation(api.invoices.create, { token, customerId });
+    await t.mutation(api.invoices.setStatus, {
+      token,
+      id: paid,
+      status: "paid",
+    });
+
+    const all = await t.query(api.invoices.list, { token });
+    expect(all).toHaveLength(3);
+
+    const onlySent = await t.query(api.invoices.list, {
+      token,
+      status: "sent",
+    });
+    expect(onlySent.map((row) => row._id)).toEqual([sent]);
+
+    const onlyDrafts = await t.query(api.invoices.list, {
+      token,
+      status: "draft",
+    });
+    expect(onlyDrafts.map((row) => row._id)).toEqual([draft]);
+
+    // An unused status is empty, not an error.
+    expect(await t.query(api.invoices.list, { token, status: "void" })).toEqual(
+      [],
+    );
+  });
+
   test("deleting an invoice removes it from the list", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);

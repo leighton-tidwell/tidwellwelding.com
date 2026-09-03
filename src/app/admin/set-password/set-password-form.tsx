@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "../../../../convex/_generated/api";
@@ -11,7 +11,6 @@ const MIN_LENGTH = 12;
 
 export default function SetPasswordForm({ token }: { token: string }) {
   const setPassword = useMutation(api.auth.setPassword);
-  const tokenState = useQuery(api.auth.checkSetupToken, { token });
   const [password, setPassword_] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -56,25 +55,6 @@ export default function SetPasswordForm({ token }: { token: string }) {
           </p>
           <Button href="/admin" block>
             Go to the console
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // A spent or expired link gets a plain explanation instead of a form that
-  // can only fail. Checked before render; setPassword still enforces it.
-  if (tokenState && !tokenState.valid && !done) {
-    return (
-      <div className="admin-gate">
-        <div className="admin-gate__plate">
-          <h1 className="admin-gate__title">This link is used up</h1>
-          <p className="admin-gate__sub">
-            A setup link works exactly once. If you have already set your
-            password, sign in below — otherwise ask for a fresh link.
-          </p>
-          <Button href="/admin" block>
-            Go to sign in
           </Button>
         </div>
       </div>

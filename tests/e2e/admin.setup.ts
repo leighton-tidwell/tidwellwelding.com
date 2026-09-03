@@ -49,10 +49,25 @@ setup(
       timeout: 30_000,
     });
 
+    // A second account whose link is left unburned, so tests that need to
+    // reach the form itself have a genuinely valid token. The page now checks
+    // the token server-side, so an invented one never renders a form.
+    const spareUserId = convexRun("auth:createAdminUser", {
+      email: `e2e-spare-${Date.now()}@tidwellwelding.test`,
+    });
+    const liveSetupToken = convexRun("auth:issueSetupToken", {
+      userId: spareUserId,
+    });
+
     writeFileSync(
       path.join(__dirname, ".admin-credentials.json"),
       JSON.stringify(
-        { email: TEST_EMAIL, password: TEST_PASSWORD, usedSetupToken: token },
+        {
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+          usedSetupToken: token,
+          liveSetupToken,
+        },
         null,
         2,
       ),
