@@ -152,7 +152,7 @@ const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   "@id": "https://tidwellwelding.com/#website",
-  url: "https://tidwellwelding.com/",
+  url: "https://tidwellwelding.com",
   name: "Tidwell Specialty Welding",
   alternateName: ["TSWS", "Tidwell Specialty Welding Services"],
   potentialAction: {

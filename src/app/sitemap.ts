@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const BASE = "https://tidwellwelding.com";
+import { SITE_URL } from "@/lib/business";
 
 // Truthful lastmod (SEO P0-7). Google uses <lastmod> only when it is
 // consistently accurate; Bing leans on it harder. Bump a route's date ONLY
@@ -31,7 +30,8 @@ const ROUTE_LASTMOD: Record<string, string> = {
 // scripts/indexnow-ping.mjs duplicates this route list — keep the two in sync.
 export default function sitemap(): MetadataRoute.Sitemap {
   return Object.entries(ROUTE_LASTMOD).map(([path, lastModified]) => ({
-    url: `${BASE}${path}`,
+    // Root is slash-less: Next renders its canonical as a bare origin.
+    url: path === "/" ? SITE_URL : `${SITE_URL}${path}`,
     lastModified,
   }));
 }
