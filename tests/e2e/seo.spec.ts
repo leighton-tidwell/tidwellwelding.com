@@ -37,7 +37,7 @@ const TITLES: Record<string, string> = {
 
 /** Every URL the sitemap must list — apex-absolute, in the P0-7 map's order. */
 const SITEMAP_URLS = [
-  "https://tidwellwelding.com/",
+  "https://tidwellwelding.com",
   "https://tidwellwelding.com/services",
   "https://tidwellwelding.com/services/fabrication",
   "https://tidwellwelding.com/services/structural",
@@ -149,6 +149,28 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   expect(xml).not.toContain("<changefreq>");
 });
 
+test("every sitemap <loc> is byte-identical to that page's canonical", async ({
+  page,
+  request,
+}) => {
+  const res = await request.get("/sitemap.xml");
+  const xml = await res.text();
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  expect(locs.length).toBe(SITEMAP_URLS.length);
+
+  // A <loc> that disagrees with its own canonical gives Google two candidates.
+  for (const loc of locs) {
+    const path = new URL(loc).pathname;
+    await page.goto(path, { timeout: 60_000 });
+    const canonical = await page
+      .locator("link[rel='canonical']")
+      .getAttribute("href");
+    expect(canonical, `${path}: canonical must equal its sitemap <loc>`).toBe(
+      loc,
+    );
+  }
+});
+
 test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /admin", async ({
   request,
 }) => {
@@ -216,6 +238,7 @@ test("WebSite JSON-LD (with SearchAction) renders on the home page only", async 
   const site = nodes.find((n) => n["@type"] === "WebSite");
   expect(site, "WebSite JSON-LD block missing on /").toBeTruthy();
   expect(site!["@id"]).toBe("https://tidwellwelding.com/#website");
+  expect(site!["url"]).toBe("https://tidwellwelding.com");
   expect(site!["name"]).toBe("Tidwell Specialty Welding");
   const action = site!["potentialAction"] as {
     target: { urlTemplate: string };
@@ -283,7 +306,7 @@ test("town and service pages carry a BreadcrumbList whose last item has no `item
     }[];
     expect(items.length).toBeGreaterThanOrEqual(2);
     expect(items[0].name).toBe("Home");
-    expect(items[0].item).toBe("https://tidwellwelding.com/");
+    expect(items[0].item).toBe("https://tidwellwelding.com");
     // Google guideline: the final crumb (the page itself) carries no `item`.
     expect(items[items.length - 1].item).toBeUndefined();
     // The visible trail matches.

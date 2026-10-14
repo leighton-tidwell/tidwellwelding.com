@@ -48,7 +48,7 @@ const paths = arg
       .map((p) => (p.startsWith("/") ? p : `/${p}`))
   : SITEMAP_PATHS;
 
-const urlList = paths.map((p) => `https://${HOST}${p}`);
+const urlList = paths.map((p) => `https://${HOST}${p === "/" ? "" : p}`);
 
 try {
   const res = await fetch(ENDPOINT, {
