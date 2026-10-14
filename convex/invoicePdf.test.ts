@@ -468,7 +468,7 @@ describe("multiple pages", () => {
     expect(text).toContain("Line item number 1 ");
     expect(text).toContain("Line item number 100");
     expect(text).toContain("BALANCE DUE");
-  }, 60_000);
+  });
 });
 
 describe("edge cases", () => {
