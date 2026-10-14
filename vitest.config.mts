@@ -14,6 +14,12 @@ export default defineConfig({
           name: "convex",
           environment: "edge-runtime",
           include: ["convex/**/*.test.{ts,tsx}"],
+          // PDF rendering costs ~17ms per invoice line locally and ~96ms on CI
+          // runners, so a 100-line invoice takes ~1.7s here and ~9.6s there.
+          // Vitest's 5s default sat inside that spread: four tests in
+          // invoicePdf.test.ts ran at 76-192% of it, and the build flipped
+          // red on roughly half of all runs. See issue #10.
+          testTimeout: 30_000,
           server: {
             deps: {
               // convex-test relies on import.meta.glob; keep it processed by Vite.
