@@ -145,17 +145,35 @@ test.describe("the set-password link burns after one use", () => {
     await expect(page.getByLabel("New password")).toHaveCount(0);
   });
 
-  test("a made-up token is refused", async ({ page, request }) => {
+  test("a made-up token is refused as unrecognized, not as spent", async ({
+    page,
+    request,
+  }) => {
+    // A token that never existed gets its own screen: telling someone their
+    // link is "used up" when it was only mistyped sends them hunting for the
+    // wrong problem.
     const html = await (
       await request.get("/admin/set-password?token=deadbeefdeadbeefdeadbeef")
     ).text();
-    expect(html).toMatch(/used up/i);
+    expect(html).toMatch(/recognize that link/i);
     expect(html).not.toMatch(/New password/i);
 
     await page.goto("/admin/set-password?token=deadbeefdeadbeefdeadbeef", {
       timeout: 60_000,
     });
-    await expect(page.getByRole("heading", { name: /used up/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /recognize that link/i }),
+    ).toBeVisible();
+  });
+
+  test("no token at all is refused separately from a bad one", async ({
+    page,
+  }) => {
+    await page.goto("/admin/set-password", { timeout: 60_000 });
+    await expect(
+      page.getByRole("heading", { name: /link is incomplete/i }),
+    ).toBeVisible();
+    await expect(page.getByLabel("New password")).toHaveCount(0);
   });
 
   test("mismatched confirmations never reach the server", async ({ page }) => {
