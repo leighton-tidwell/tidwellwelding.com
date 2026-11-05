@@ -117,32 +117,55 @@ async function derivePasswordHash(
  */
 
 /**
- * Whether a setup link is still usable, so the page can show "this link has
- * already been used" instead of a form that will only fail on submit.
+ * Why a setup link cannot be used — or that it can — so the page can say which
+ * of these actually happened instead of a form that will only fail on submit.
  *
- * Returns a bare boolean on purpose: a link that reached the wrong person must
- * not confirm that an account exists or reveal whose it is. This is a
- * convenience for the UI, not the security boundary — setPassword re-checks
+ * This used to be a bare boolean, and the single false meant four different
+ * situations were indistinguishable: a token that was never issued, one that
+ * was already spent, one that timed out, and an account that already has a
+ * password. Worse, the page's catch-all turned "the backend is unreachable"
+ * into the same screen, so a perfectly valid link on a misconfigured
+ * deployment read as "used up" with no error anywhere. Naming the state is
+ * what makes those cases tellable apart.
+ *
+ * Deliberately still says nothing about *whose* token it is: no email, no user
+ * id. A link that reached the wrong person must not reveal whose account it
+ * belongs to — it only names why the holder's own token failed. This is a
+ * convenience for the UI, not the security boundary: setPassword re-checks
  * every condition inside the transaction that burns the token.
  */
+const setupTokenState = v.union(
+  v.object({ state: v.literal("valid") }),
+  v.object({ state: v.literal("unknown") }),
+  v.object({ state: v.literal("spent") }),
+  v.object({ state: v.literal("expired") }),
+  v.object({ state: v.literal("already_set") }),
+);
+
 export const checkSetupToken = query({
   args: { token: v.string() },
-  returns: v.object({ valid: v.boolean() }),
+  returns: setupTokenState,
   handler: async (ctx, { token }) => {
     const tokenHash = await sha256Hex(token);
     const row = await ctx.db
       .query("setupTokens")
       .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
       .unique();
-    if (!row) return { valid: false };
-    if (row.usedAt !== undefined || row.expiresAt <= Date.now()) {
-      return { valid: false };
-    }
+    if (!row) return { state: "unknown" as const };
+    // Spent is checked before expired: a burned token is burned regardless of
+    // whether its 48h window also ran out while it sat in an inbox.
+    if (row.usedAt !== undefined) return { state: "spent" as const };
+    if (row.expiresAt <= Date.now()) return { state: "expired" as const };
 
     const user = await ctx.db.get(row.userId);
-    if (!user || user.passwordSetAt !== undefined) return { valid: false };
+    // A token pointing at an account that no longer exists is as good as one
+    // that was never issued, and saying so leaks nothing extra.
+    if (!user) return { state: "unknown" as const };
+    if (user.passwordSetAt !== undefined) {
+      return { state: "already_set" as const };
+    }
 
-    return { valid: true };
+    return { state: "valid" as const };
   },
 });
 

@@ -152,8 +152,9 @@ describe("no public registration path exists", () => {
     const publicNames = Object.keys(mod)
       .filter((k) => mod[k] && (mod[k] as { isPublic?: boolean }).isPublic)
       .sort();
-    // checkSetupToken is read-only and answers a bare boolean; every account
-    // mutation stays internal. Anything else appearing here is a mistake.
+    // checkSetupToken is read-only and answers only a reason code; every
+    // account mutation stays internal. Anything else appearing here is a
+    // mistake.
     expect(publicNames).toEqual([
       "checkSetupToken",
       "login",
@@ -253,28 +254,40 @@ describe("checkSetupToken (so a spent link does not show a live form)", () => {
     const { token } = await userWithToken(t);
 
     expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
-      valid: true,
+      state: "valid",
     });
   });
 
-  test("reports a spent link as unusable", async () => {
+  test("names a spent link as spent, not merely unusable", async () => {
     const t = setup();
     const { token } = await userWithToken(t);
     await t.mutation(api.auth.setPassword, { token, password: GOOD_PASSWORD });
 
     expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
-      valid: false,
+      state: "spent",
     });
   });
 
-  test("reports a token that was never issued as unusable", async () => {
+  test("reports a token that was never issued as unknown", async () => {
     const t = setup();
     expect(
       await t.query(api.auth.checkSetupToken, { token: "f".repeat(64) }),
-    ).toEqual({ valid: false });
+    ).toEqual({ state: "unknown" });
   });
 
-  test("reports an expired link as unusable", async () => {
+  test("reports a truncated or malformed token as unknown", async () => {
+    const t = setup();
+    const { token } = await userWithToken(t);
+
+    expect(
+      await t.query(api.auth.checkSetupToken, { token: token.slice(0, 20) }),
+    ).toEqual({ state: "unknown" });
+    expect(
+      await t.query(api.auth.checkSetupToken, { token: "not-a-token" }),
+    ).toEqual({ state: "unknown" });
+  });
+
+  test("reports an expired link as expired", async () => {
     const t = setup();
     const { token } = await userWithToken(t);
     await t.run(async (ctx) => {
@@ -283,18 +296,60 @@ describe("checkSetupToken (so a spent link does not show a live form)", () => {
     });
 
     expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
-      valid: false,
+      state: "expired",
+    });
+  });
+
+  test("a spent link that also expired still reads as spent", async () => {
+    // Burned is burned: the 48h window running out afterwards does not change
+    // what the holder needs to be told.
+    const t = setup();
+    const { token } = await userWithToken(t);
+    await t.mutation(api.auth.setPassword, { token, password: GOOD_PASSWORD });
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("setupTokens").first();
+      await ctx.db.patch(row!._id, { expiresAt: Date.now() - 1 });
+    });
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      state: "spent",
+    });
+  });
+
+  test("reports a pristine token on an account that already has a password as already_set", async () => {
+    const t = setup();
+    const { userId, token } = await userWithToken(t);
+    // The password arrived by some other route, leaving the token unburned.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userId, { passwordSetAt: Date.now() });
+    });
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      state: "already_set",
+    });
+  });
+
+  test("reports a token whose account is gone as unknown", async () => {
+    const t = setup();
+    const { userId, token } = await userWithToken(t);
+    await t.run(async (ctx) => {
+      await ctx.db.delete(userId);
+    });
+
+    expect(await t.query(api.auth.checkSetupToken, { token })).toEqual({
+      state: "unknown",
     });
   });
 
   test("says nothing about who the token belongs to", async () => {
-    // The reply is a bare boolean: a link handed to the wrong person must not
-    // confirm an account exists or whose it is.
+    // The reply names why a token failed and nothing else: a link handed to
+    // the wrong person must not reveal whose account it is.
     const t = setup();
     const { token } = await userWithToken(t);
 
     const reply = await t.query(api.auth.checkSetupToken, { token });
-    expect(Object.keys(reply)).toEqual(["valid"]);
+    expect(Object.keys(reply)).toEqual(["state"]);
+    expect(JSON.stringify(reply)).not.toContain(EMAIL);
   });
 });
 
