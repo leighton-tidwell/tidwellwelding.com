@@ -9,7 +9,7 @@ import styles from "./services.module.css";
 const PAGE_TITLE =
   "Welding Services: Fabrication, Pipe, Equipment Repair | Granbury & Fort Worth | TSWS";
 const PAGE_DESCRIPTION =
-  "Six service lines out of Granbury, TX: fabrication, staircases and handrail, pipe welding, heavy equipment repair, mobile welding, 24/7 emergency.";
+  "Seven service lines out of Granbury, TX: fabrication, staircases and handrail, pipe welding, heavy equipment repair, mobile welding, 24/7 emergency, CNC plasma cutting.";
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -43,7 +43,8 @@ type Service = {
     | "pipe"
     | "equipment"
     | "mobile"
-    | "emergency";
+    | "emergency"
+    | "cnc-plasma-cutting";
   kicker: string;
   title: string;
   serviceType: string;
@@ -176,6 +177,31 @@ const SERVICES: Service[] = [
       />
     ),
   },
+  {
+    id: "cnc-plasma-cutting",
+    kicker: "SERVICE 07 — CNC PLASMA",
+    title: "CNC plasma cutting",
+    serviceType: "CNC plasma cutting",
+    body: "A CNC plasma table that takes a full 5x10 sheet and cuts steel, stainless and aluminum. Custom metal signs, ranch entry signs, brand and name signs, brackets and plate parts. Eric cuts from a DXF file, a drawing, a sketch or a part to copy. One part or a production run.",
+    chips: [
+      "Signs",
+      "Full 5x10 sheet",
+      "Steel, stainless, aluminum",
+      "From DXF or sketch",
+    ],
+    ctaLabel: "Request a quote",
+    ctaHref: "/quote",
+    fullLabel: "Full CNC plasma page",
+    note: "Shop · Granbury",
+    media: (
+      // Shop photo stands in until the CNC plasma videos are ready.
+      <img
+        className={styles.mediaEl}
+        src="/media/gate-fabrication.webp"
+        alt="Grinding a carbon steel frame in the Granbury shop, sparks flying"
+      />
+    ),
+  },
 ];
 
 const AREA_SERVED = [
@@ -215,7 +241,7 @@ export default function ServicesPage() {
           <span className={styles.accent}>spec</span>.
         </h1>
         <p className={styles.heroLede}>
-          Six service lines, one standard. Nothing leaves the shop unless the
+          Seven service lines, one standard. Nothing leaves the shop unless the
           welds pass Eric&apos;s eye. Every job, start to finish.
         </p>
       </section>

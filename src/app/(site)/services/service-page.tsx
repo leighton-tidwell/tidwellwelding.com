@@ -85,7 +85,8 @@ export type ServicePageContent = {
     | "pipe"
     | "equipment"
     | "mobile"
-    | "emergency";
+    | "emergency"
+    | "cnc-plasma-cutting";
   breadcrumbName: string;
   eyebrow: string;
   headline: ReactNode;

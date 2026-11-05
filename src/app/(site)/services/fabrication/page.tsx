@@ -56,6 +56,10 @@ const CONTENT: ServicePageContent = {
           built for an asphalt plant.
         </>,
         "Porch gates, carports, brackets and trailer frames run through the same shop. One-off parts get built to fit the space they live in. Full builds start from steel and a plan.",
+        <>
+          Eric cuts plate parts in-house on the{" "}
+          <Link href="/services/cnc-plasma-cutting">CNC plasma table</Link>.
+        </>,
       ],
     },
     {

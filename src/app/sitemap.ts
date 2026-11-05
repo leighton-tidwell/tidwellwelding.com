@@ -10,14 +10,15 @@ import { SITE_URL } from "@/lib/business";
 // All public routes. /admin is private (robots-disallowed) and /search ships
 // noindexed — both deliberately excluded.
 const ROUTE_LASTMOD: Record<string, string> = {
-  "/": "2026-08-19",
-  "/services": "2026-08-19",
-  "/services/fabrication": "2026-08-19",
+  "/": "2026-11-04",
+  "/services": "2026-11-04",
+  "/services/fabrication": "2026-11-04",
   "/services/structural": "2026-08-19",
   "/services/pipe": "2026-08-19",
   "/services/equipment": "2026-08-19",
   "/services/mobile": "2026-08-19",
   "/services/emergency": "2026-08-19",
+  "/services/cnc-plasma-cutting": "2026-11-04",
   "/work": "2026-08-19",
   "/about": "2026-08-19",
   "/contact": "2026-08-19",

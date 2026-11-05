@@ -86,6 +86,11 @@ test.describe("desktop header", () => {
         url: "/services/emergency",
         h1: "book appointments",
       },
+      {
+        label: "CNC plasma cutting",
+        url: "/services/cnc-plasma-cutting",
+        h1: "Cut from the",
+      },
     ];
 
     for (const link of links) {

@@ -350,4 +350,44 @@ describe("QuoteFlow", () => {
       screen.getByRole("button", { name: "Send the request" }),
     ).toBeDisabled();
   });
+
+  test("CNC plasma / signs skips the AI estimate and quotes from the drawing", async () => {
+    const user = userEvent.setup();
+    render(<QuoteFlow />);
+
+    await user.selectOptions(
+      screen.getByLabelText(/^Job type/),
+      "CNC plasma cutting / signs",
+    );
+    await user.type(
+      screen.getByLabelText(/What needs welding or building/),
+      "Ranch entry sign, 6 ft wide, our brand in the middle.",
+    );
+    await user.click(screen.getByRole("button", { name: "Send the details" }));
+    await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+    await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+    await user.click(screen.getByRole("button", { name: "Run the estimate" }));
+
+    expect(
+      await screen.findByText("Quoted from the drawing"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Total man-hours/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/We estimate/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("AI draft — not a final quote"),
+    ).not.toBeInTheDocument();
+    // No estimate action ran.
+    expect(h.action).not.toHaveBeenCalled();
+
+    await user.click(
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    expect(await screen.findByText("Request sent.")).toBeInTheDocument();
+    const submitArgs = h.action.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(submitArgs).toMatchObject({
+      job: expect.objectContaining({ type: "CNC plasma cutting / signs" }),
+    });
+    expect(submitArgs.estimate).toBeUndefined();
+  });
 });

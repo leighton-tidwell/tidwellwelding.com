@@ -106,6 +106,7 @@ const SERVICE_LINES = [
   { label: "Equipment repair", href: "/services/equipment" },
   { label: "Mobile welding", href: "/services/mobile" },
   { label: "24/7 emergency", href: "/services/emergency" },
+  { label: "CNC plasma cutting", href: "/services/cnc-plasma-cutting" },
 ];
 
 const serviceJsonLd = (c: TownContent) => ({

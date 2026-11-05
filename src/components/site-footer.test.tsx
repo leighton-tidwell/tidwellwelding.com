@@ -43,6 +43,7 @@ const EXPECTED_SERVICE_LINKS: Array<[string, string]> = [
   ["Heavy equipment repair", "/services/equipment"],
   ["Mobile welding", "/services/mobile"],
   ["Emergency & on-call", "/services/emergency"],
+  ["CNC plasma cutting", "/services/cnc-plasma-cutting"],
 ];
 
 const EXPECTED_SERVICE_AREA_LINKS: Array<[string, string]> = [

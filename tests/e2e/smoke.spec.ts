@@ -17,6 +17,7 @@ const ROUTES: { path: string; h1Contains: string | RegExp }[] = [
   { path: "/services/equipment", h1Contains: "holds under load" },
   { path: "/services/mobile", h1Contains: "carries the shop" },
   { path: "/services/emergency", h1Contains: "book appointments" },
+  { path: "/services/cnc-plasma-cutting", h1Contains: "Cut from the" },
   { path: "/work", h1Contains: "The work speaks" },
   { path: "/about", h1Contains: "16 years on the torch" },
   { path: "/contact", h1Contains: "Eric answers" },

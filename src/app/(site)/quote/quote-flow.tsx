@@ -64,6 +64,24 @@ type ContactFields = {
 
 const STEP_NAMES = ["The job", "Contact", "Estimate & slot", "Done"];
 
+const CNC_TYPE = "CNC plasma cutting / signs";
+
+/** CNC work is priced from the drawing, not labor hours: no AI draft. */
+const CNC_ESTIMATE: Estimate = {
+  title: "Quoted from the drawing",
+  summary:
+    "Eric prices CNC cutting and sign work from the file, drawing or sketch. Pick a callback slot and he will go over it with you.",
+  line_items: [],
+  hours_low: 0,
+  hours_high: 0,
+  dollarsWithheld: true,
+  questions: [
+    "The DXF file, drawing or sketch with sizes",
+    "Material and thickness",
+    "How many pieces",
+  ],
+};
+
 const TYPE_OPTIONS = [
   "Fabrication (new build)",
   "Staircase / handrail / structural",
@@ -71,6 +89,7 @@ const TYPE_OPTIONS = [
   "Heavy equipment repair",
   "Mobile / on-site repair",
   "Emergency",
+  CNC_TYPE,
 ];
 
 const MATERIAL_OPTIONS = [
@@ -364,6 +383,10 @@ export default function QuoteFlow() {
   };
 
   const runEstimate = async () => {
+    if (f.type === CNC_TYPE) {
+      setEst(CNC_ESTIMATE);
+      return;
+    }
     setEstBusy(true);
     setEst(null);
     const started = Date.now();
@@ -434,7 +457,7 @@ export default function QuoteFlow() {
             compQuote: f.compQuote || undefined,
             photoNames: f.photos.length ? f.photos : undefined,
           },
-          estimate: est ?? undefined,
+          estimate: f.type === CNC_TYPE ? undefined : (est ?? undefined),
           slot,
           sessionId: getSessionId(),
           turnstileToken: turnstileToken || "dev",
@@ -469,6 +492,7 @@ export default function QuoteFlow() {
 
   const isEmergency =
     f.timeline === "Emergency. Right now." || f.type === "Emergency";
+  const isCnc = f.type === CNC_TYPE;
   const estReady = !!est && !estBusy;
   const photoLabel = f.photos.length
     ? f.photos.length + " file(s): " + f.photos.join(", ")
@@ -933,9 +957,11 @@ export default function QuoteFlow() {
                           {est.title}
                         </h2>
                       </div>
-                      <Badge variant="warn" dot>
-                        AI draft — not a final quote
-                      </Badge>
+                      {isCnc ? null : (
+                        <Badge variant="warn" dot>
+                          AI draft — not a final quote
+                        </Badge>
+                      )}
                     </div>
                     <p
                       style={{
@@ -948,109 +974,111 @@ export default function QuoteFlow() {
                     >
                       {est.summary}
                     </p>
-                    <div style={{ border: "1px solid rgba(255,255,255,.1)" }}>
-                      <div
-                        className="qf-li-row"
-                        style={{
-                          padding: "10px 16px",
-                          borderBottom: "1px solid rgba(255,255,255,.1)",
-                          fontFamily: MONO,
-                          fontSize: 10,
-                          letterSpacing: "0.18em",
-                          textTransform: "uppercase",
-                          color: "rgba(255,255,255,.5)",
-                          background: "#101214",
-                        }}
-                      >
-                        <span>Task</span>
-                        <span style={{ textAlign: "right" }}>Crew</span>
-                        <span style={{ textAlign: "right" }}>Hours</span>
-                      </div>
-                      {est.line_items.map((li, i) => (
+                    {isCnc ? null : (
+                      <div style={{ border: "1px solid rgba(255,255,255,.1)" }}>
                         <div
-                          key={i}
                           className="qf-li-row"
                           style={{
-                            padding: "12px 16px",
-                            borderBottom: "1px solid rgba(255,255,255,.06)",
-                            fontFamily: BODY,
-                            fontSize: 14,
-                            color: "rgba(255,255,255,.82)",
-                          }}
-                        >
-                          <span>{li.task}</span>
-                          <span
-                            style={{
-                              textAlign: "right",
-                              fontFamily: MONO,
-                              fontSize: 13,
-                            }}
-                          >
-                            {li.crew}
-                          </span>
-                          <span
-                            style={{
-                              textAlign: "right",
-                              fontFamily: MONO,
-                              fontSize: 13,
-                            }}
-                          >
-                            {li.hours}
-                          </span>
-                        </div>
-                      ))}
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr auto",
-                          padding: "14px 16px",
-                          background: "#101214",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <span
-                          style={{
+                            padding: "10px 16px",
+                            borderBottom: "1px solid rgba(255,255,255,.1)",
                             fontFamily: MONO,
-                            fontSize: 11,
-                            letterSpacing: "0.16em",
+                            fontSize: 10,
+                            letterSpacing: "0.18em",
                             textTransform: "uppercase",
-                            color: "rgba(255,255,255,.6)",
+                            color: "rgba(255,255,255,.5)",
+                            background: "#101214",
                           }}
                         >
-                          Total man-hours {est.hours_low}–{est.hours_high}
-                        </span>
-                        {est.dollarsWithheld ||
-                        est.dollars_low === undefined ||
-                        est.dollars_high === undefined ? (
+                          <span>Task</span>
+                          <span style={{ textAlign: "right" }}>Crew</span>
+                          <span style={{ textAlign: "right" }}>Hours</span>
+                        </div>
+                        {est.line_items.map((li, i) => (
+                          <div
+                            key={i}
+                            className="qf-li-row"
+                            style={{
+                              padding: "12px 16px",
+                              borderBottom: "1px solid rgba(255,255,255,.06)",
+                              fontFamily: BODY,
+                              fontSize: 14,
+                              color: "rgba(255,255,255,.82)",
+                            }}
+                          >
+                            <span>{li.task}</span>
+                            <span
+                              style={{
+                                textAlign: "right",
+                                fontFamily: MONO,
+                                fontSize: 13,
+                              }}
+                            >
+                              {li.crew}
+                            </span>
+                            <span
+                              style={{
+                                textAlign: "right",
+                                fontFamily: MONO,
+                                fontSize: 13,
+                              }}
+                            >
+                              {li.hours}
+                            </span>
+                          </div>
+                        ))}
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr auto",
+                            padding: "14px 16px",
+                            background: "#101214",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
                           <span
                             style={{
                               fontFamily: MONO,
-                              fontSize: 12,
-                              letterSpacing: "0.14em",
+                              fontSize: 11,
+                              letterSpacing: "0.16em",
                               textTransform: "uppercase",
-                              color: "#ffb020",
-                              textAlign: "right",
+                              color: "rgba(255,255,255,.6)",
                             }}
                           >
-                            Eric sets the number on the call
+                            Total man-hours {est.hours_low}–{est.hours_high}
                           </span>
-                        ) : (
-                          <span
-                            style={{
-                              fontFamily: DISPLAY,
-                              fontWeight: 900,
-                              fontStyle: "oblique 10deg",
-                              fontSize: 32,
-                              color: "#ffffff",
-                            }}
-                          >
-                            {fmt(est.dollars_low)} – {fmt(est.dollars_high)}
-                          </span>
-                        )}
+                          {est.dollarsWithheld ||
+                          est.dollars_low === undefined ||
+                          est.dollars_high === undefined ? (
+                            <span
+                              style={{
+                                fontFamily: MONO,
+                                fontSize: 12,
+                                letterSpacing: "0.14em",
+                                textTransform: "uppercase",
+                                color: "#ffb020",
+                                textAlign: "right",
+                              }}
+                            >
+                              Eric sets the number on the call
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontFamily: DISPLAY,
+                                fontWeight: 900,
+                                fontStyle: "oblique 10deg",
+                                fontSize: 32,
+                                color: "#ffffff",
+                              }}
+                            >
+                              {fmt(est.dollars_low)} – {fmt(est.dollars_high)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {est.dollarsWithheld ? (
+                    )}
+                    {est.dollarsWithheld && !isCnc ? (
                       <div
                         style={{
                           display: "flex",
@@ -1158,21 +1186,23 @@ export default function QuoteFlow() {
                         </div>
                       </div>
                     ) : null}
-                    <div
-                      style={{
-                        border: "1px solid rgba(255,176,32,.4)",
-                        background: "rgba(255,176,32,.04)",
-                        padding: "12px 14px",
-                        fontFamily: BODY,
-                        fontSize: 13,
-                        lineHeight: 1.5,
-                        color: "rgba(255,255,255,.75)",
-                      }}
-                    >
-                      An AI drafted these numbers from your description. They
-                      are not the final quote and can change once Eric sees the
-                      job. He confirms every number before work starts.
-                    </div>
+                    {isCnc ? null : (
+                      <div
+                        style={{
+                          border: "1px solid rgba(255,176,32,.4)",
+                          background: "rgba(255,176,32,.04)",
+                          padding: "12px 14px",
+                          fontFamily: BODY,
+                          fontSize: 13,
+                          lineHeight: 1.5,
+                          color: "rgba(255,255,255,.75)",
+                        }}
+                      >
+                        An AI drafted these numbers from your description. They
+                        are not the final quote and can change once Eric sees
+                        the job. He confirms every number before work starts.
+                      </div>
+                    )}
                   </div>
 
                   <div

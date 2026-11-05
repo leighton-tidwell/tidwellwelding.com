@@ -79,6 +79,12 @@ const SERVICES = [
     body: "24/7. Nights, weekends, holidays. Eric drops what he's doing and comes to you.",
     href: "/services#emergency",
   },
+  {
+    eyebrow: "SERVICE 07 — CNC PLASMA",
+    title: "CNC plasma cutting",
+    body: "Custom metal signs and cut parts off a 5x10 table. Steel, stainless, aluminum.",
+    href: "/services#cnc-plasma-cutting",
+  },
 ];
 
 const REVIEWS = [
