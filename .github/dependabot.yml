@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      # jsdom >= 30.1 pulls undici 8, which needs Node >= 24; we run 22 (.node-version).
+      - dependency-name: jsdom
+        versions: [">=30.1.0"]
+    groups:
+      # Everything non-breaking in one PR.
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      # Majors stay grouped but separate, so the risky one is obvious.
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
