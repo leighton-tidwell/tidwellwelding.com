@@ -187,6 +187,48 @@ describe("fallbackEstimate", () => {
     ]);
   });
 
+  test("non-CNC fallback keeps the welding draft and questions", () => {
+    const est = fallbackEstimate("Fabrication");
+    expect(est).toMatchObject({
+      hours_low: 6,
+      hours_high: 10,
+      dollars_low: 750,
+      dollars_high: 1750,
+      confidence: "low",
+      questions: [
+        "Exact sizes and material thickness",
+        "Site access and power",
+      ],
+    });
+  });
+
+  test("CNC fallback is shop-only cutting with CNC questions", () => {
+    const est = fallbackEstimate("CNC plasma cutting / signs");
+    expect(estimateSchema.safeParse(est).success).toBe(true);
+    expect(est.confidence).toBe("low");
+    expect(est.line_items.map((li) => li.task)).toEqual([
+      "Layout and file prep",
+      "Plasma cutting",
+      "Cleanup and deburr",
+    ]);
+    expect(est.line_items.every((li) => li.crew === 1)).toBe(true);
+    expect(est.questions).toEqual([
+      "The drawing or file to cut from",
+      "Material and thickness",
+      "Finished size and quantity",
+    ]);
+    const text = JSON.stringify(est).toLowerCase();
+    for (const banned of [
+      "weld",
+      "site access",
+      "power",
+      "mobilize",
+      "truck",
+    ]) {
+      expect(text).not.toContain(banned);
+    }
+  });
+
   test.each(["Mobile / on-site repair", "Emergency"])(
     "%s jobs prepend truck mobilization",
     (jobType) => {
@@ -251,6 +293,30 @@ describe("draftEstimate action", () => {
     });
     expect(res).toEqual(toCustomerEstimate(fallbackEstimate("Emergency")));
     expect(res.line_items[0].task).toBe("Mobilize the truck to site");
+  });
+
+  test("CNC falls back to the CNC draft with dollars withheld", async () => {
+    const t = setup();
+    generateTextMock.mockRejectedValue(new Error("no API key"));
+    const res = await t.action(api.estimate.draftEstimate, {
+      ...baseArgs(),
+      type: "CNC plasma cutting / signs",
+    });
+    expect(res).toEqual(
+      toCustomerEstimate(fallbackEstimate("CNC plasma cutting / signs")),
+    );
+    expect(res.dollarsWithheld).toBe(true);
+    expect(res.questions).not.toContain("Site access and power");
+  });
+
+  test("the CNC prompt rules out site-access questions", async () => {
+    const t = setup();
+    generateTextMock.mockResolvedValue({
+      text: JSON.stringify(canonicalEstimate),
+    });
+    await t.action(api.estimate.draftEstimate, baseArgs());
+    const system: string = generateTextMock.mock.calls[0][0].system;
+    expect(system).toContain("never ask about site access or power");
   });
 
   test("compQuote is sanitized to number-ish characters before hitting the system prompt", async () => {

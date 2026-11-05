@@ -13,6 +13,7 @@ import type * as chat from "../chat.js";
 import type * as customers from "../customers.js";
 import type * as emailTemplates from "../emailTemplates.js";
 import type * as estimate from "../estimate.js";
+import type * as estimateFallback from "../estimateFallback.js";
 import type * as ics from "../ics.js";
 import type * as invoiceLogo from "../invoiceLogo.js";
 import type * as invoiceMath from "../invoiceMath.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   emailTemplates: typeof emailTemplates;
   estimate: typeof estimate;
+  estimateFallback: typeof estimateFallback;
   ics: typeof ics;
   invoiceLogo: typeof invoiceLogo;
   invoiceMath: typeof invoiceMath;

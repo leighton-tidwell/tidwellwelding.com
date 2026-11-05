@@ -259,6 +259,17 @@ describe("QuoteFlow", () => {
       screen.getByText("Is the machine at your yard or in the field?"),
     ).toBeInTheDocument();
 
+    // Non-CNC job summary keeps location and photos.
+    for (const line of [
+      "MATERIAL · TBD",
+      "TIMELINE · Flexible",
+      "LOCATION · TBD",
+      "PHOTOS · 0",
+    ]) {
+      expect(screen.getByText(line)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/FILES ·/)).toBeNull();
+
     // AI-draft disclaimers.
     expect(
       screen.getByText("AI draft — not a final quote"),
@@ -412,6 +423,13 @@ describe("QuoteFlow", () => {
       await screen.findByText("AI draft — not a final quote"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Total man-hours/)).toBeInTheDocument();
+    // The job summary follows the CNC form: no location, files not photos.
+    expect(screen.getByText("MATERIAL · Stainless")).toBeInTheDocument();
+    expect(screen.getByText('THICKNESS · 1/4"')).toBeInTheDocument();
+    expect(screen.getByText("QUANTITY · 2")).toBeInTheDocument();
+    expect(screen.getByText("FILES · 1")).toBeInTheDocument();
+    expect(screen.queryByText(/LOCATION ·/)).toBeNull();
+    expect(screen.queryByText(/PHOTOS ·/)).toBeNull();
     const estimateArgs = h.action.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(estimateArgs).toMatchObject({
       type: "CNC plasma cutting / signs",

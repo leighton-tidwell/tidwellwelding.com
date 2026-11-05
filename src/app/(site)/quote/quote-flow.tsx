@@ -27,6 +27,7 @@ import {
   rejectFile,
   uploadAccept,
 } from "../../../../convex/uploadRules";
+import { fallbackDraft } from "../../../../convex/estimateFallback";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -104,6 +105,7 @@ type JobForm = {
   dimsPlaceholder: string;
   uploadLabel: string;
   uploadEmpty: string;
+  uploadCountLabel: string;
 };
 
 const DEFAULT_FORM: JobForm = {
@@ -117,6 +119,7 @@ const DEFAULT_FORM: JobForm = {
   dimsPlaceholder: "8 in crack · 3/4 in plate",
   uploadLabel: "Photos of the job",
   uploadEmpty: "Tap to attach. Two angles beat ten words.",
+  uploadCountLabel: "PHOTOS",
 };
 
 const CNC_FORM: JobForm = {
@@ -130,6 +133,7 @@ const CNC_FORM: JobForm = {
   dimsPlaceholder: "6 ft x 2 ft",
   uploadLabel: "Drawing, DXF/CAD file or photo",
   uploadEmpty: "Tap to attach. DXF, DWG, SVG, PDF, AI, EPS or a photo.",
+  uploadCountLabel: "FILES",
 };
 
 const jobFormFor = (type: string): JobForm =>
@@ -155,6 +159,23 @@ function jobArgs(f: JobFields) {
   };
 }
 
+/** "Your job" lines on the estimate step, filtered by the same form config. */
+function jobSummary(f: JobFields): string[] {
+  const form = jobFormFor(f.type);
+  const given = (k: keyof JobFields, label: string, value: string) =>
+    !form.hidden.includes(k) && value ? [`${label} · ${value}`] : [];
+  return [
+    `MATERIAL · ${(form.materials.includes(f.material) && f.material) || "TBD"}`,
+    ...given("thickness", "THICKNESS", f.thickness),
+    ...given("quantity", "QUANTITY", f.quantity),
+    `TIMELINE · ${f.timeline || "Flexible"}`,
+    ...(form.hidden.includes("location")
+      ? []
+      : [`LOCATION · ${f.location || "TBD"}`]),
+    `${form.uploadCountLabel} · ${f.photos.length}`,
+  ];
+}
+
 const TIMELINE_OPTIONS = [
   "Emergency. Right now.",
   "This week",
@@ -162,29 +183,12 @@ const TIMELINE_OPTIONS = [
   "Flexible",
 ];
 
-/** Static fallback ported verbatim from quote.dc.html. */
-function fallbackEstimate(jobType: string): Estimate {
-  const mobile =
-    jobType === "Mobile / on-site repair" || jobType === "Emergency";
-  const items: LineItem[] = [
-    { task: "Assess, prep and fit-up", crew: 1, hours: 2 },
-    { task: "Weld-out", crew: 1, hours: 4 },
-    { task: "Grind, dress and inspect", crew: 1, hours: 1 },
-  ];
-  if (mobile)
-    items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
-  return {
-    title: "Draft estimate",
-    summary:
-      "A working draft based on jobs like yours. Eric firms up the numbers on the callback.",
-    line_items: items,
-    hours_low: 6,
-    hours_high: 10,
-    confidence: "low",
-    dollarsWithheld: true,
-    questions: ["Exact sizes and material thickness", "Site access and power"],
-  };
-}
+/** Backend unreachable: the same draft the server falls back to, dollars
+ * withheld. */
+const fallbackEstimate = (jobType: string): Estimate => ({
+  ...fallbackDraft(jobType),
+  dollarsWithheld: true,
+});
 
 /** Callback slot generator ported verbatim from quote.dc.html. */
 function makeSlots() {
@@ -1430,10 +1434,9 @@ export default function QuoteFlow() {
                     textTransform: "uppercase",
                   }}
                 >
-                  <span>MATERIAL · {f.material || "TBD"}</span>
-                  <span>TIMELINE · {f.timeline || "Flexible"}</span>
-                  <span>LOCATION · {f.location || "TBD"}</span>
-                  <span>PHOTOS · {f.photos.length}</span>
+                  {jobSummary(f).map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
                 </div>
               </Card>
               <div>

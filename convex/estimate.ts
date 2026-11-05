@@ -4,9 +4,11 @@ import { ConvexError, v } from "convex/values";
 import { z } from "zod";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery } from "./_generated/server";
+import { fallbackDraft } from "./estimateFallback";
 import { loadSnapshotForPrompt } from "./market";
 import { assertSessionId, limitEstimateDraft } from "./rateLimits";
 import { verifyTurnstile } from "./turnstile";
+import { CNC_TYPE } from "./uploadRules";
 
 /** Shape of an AI draft estimate. Reused by quotes.ts to sanity-check the
  * estimate payload before rendering it into email. */
@@ -64,30 +66,14 @@ export function rejectOversize(
   }
 }
 
-/** Static fallback matching the prototype's fallbackEstimate shape. */
+/** Static fallback: the shared job-type draft plus the dollars Eric's email
+ * carries. Low confidence, so the customer never sees the dollars. */
 export function fallbackEstimate(jobType: string): Estimate {
-  const mobile =
-    jobType === "Mobile / on-site repair" || jobType === "Emergency";
-  const items = [
-    { task: "Assess, prep and fit-up", crew: 1, hours: 2 },
-    { task: "Weld-out", crew: 1, hours: 4 },
-    { task: "Grind, dress and inspect", crew: 1, hours: 1 },
-  ];
-  if (mobile)
-    items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
+  const cnc = jobType === CNC_TYPE;
   return {
-    title: "Draft estimate",
-    summary:
-      "A working draft based on jobs like yours. Eric firms up the numbers on the callback.",
-    line_items: items,
-    hours_low: 6,
-    hours_high: 10,
-    dollars_low: 750,
-    dollars_high: 1750,
-    // The static fallback is a guess by definition: hours show, dollars wait
-    // for Eric.
-    confidence: "low" as const,
-    questions: ["Exact sizes and material thickness", "Site access and power"],
+    ...fallbackDraft(jobType),
+    dollars_low: cnc ? 250 : 750,
+    dollars_high: cnc ? 750 : 1750,
   };
 }
 
@@ -141,7 +127,7 @@ function estimatorSystemPrompt(
     `Small shop fab parts $100-500 plus material. Industrial pipe $150-450 per weld. Multiply totals: stainless 1.25-1.75x, aluminum 1.5-2x, cast iron or unknown alloys 1.25-1.5x. Emergency or after-hours 1.5x; nights, weekends, holidays 2x.\n\n` +
     `CNC plasma cutting jobs are shop-only: no travel, no mobilization, crew 1. Price them from material, thickness, part or sign size and quantity, plus layout and design time for signs and machine time per piece. ` +
     `The table takes a 5x10 sheet and cuts carbon steel, stainless and aluminum; plate up to 3/8" cuts clean. Bill table time as labor hours at the same rate; there is no separate machine rate. ` +
-    `The cut path is not visible from a description, so run the dollar range wider. Line items for CNC cover layout or file prep, cutting, and cleanup.\n\n` +
+    `The cut path is not visible from a description, so run the dollar range wider. Line items for CNC cover layout or file prep, cutting, and cleanup. CNC questions cover the drawing or file, material and thickness, and size and quantity; never ask about site access or power.\n\n` +
     (marketSnapshot
       ? `Current material market snapshot (researched, use it to shape the material share of the total):\n${marketSnapshot}\n\n`
       : "") +
