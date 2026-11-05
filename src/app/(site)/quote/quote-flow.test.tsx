@@ -139,6 +139,8 @@ async function fillStep1(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Send the details" }));
 }
 
+const CNC = "CNC plasma cutting / signs";
+
 describe("QuoteFlow", () => {
   test("step 1 blocks advance and shows both validation messages", async () => {
     const user = userEvent.setup();
@@ -491,6 +493,103 @@ describe("QuoteFlow", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "big.jpg is over 10 MB.",
     );
+  });
+
+  test("switching away from CNC removes CAD files with a notice and keeps photos", async () => {
+    const user = userEvent.setup();
+    render(<QuoteFlow />);
+    await user.selectOptions(screen.getByLabelText(/^Job type/), CNC);
+    await user.upload(
+      screen.getByLabelText(/Drawing, DXF\/CAD file or photo/),
+      [
+        new File(["0\nSECTION"], "test-bracket.dxf", { type: "" }),
+        new File(["x"], "bracket.jpg", { type: "image/jpeg" }),
+      ],
+    );
+    expect(
+      screen.getByText("2 file(s): test-bracket.dxf, bracket.jpg"),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByLabelText(/^Job type/),
+      "Fabrication (new build)",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Removed test-bracket.dxf. Fabrication jobs take photos only.",
+    );
+    expect(screen.getByText("1 file(s): bracket.jpg")).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText(/What needs welding or building/),
+      "Steel bracket.",
+    );
+    await user.click(screen.getByRole("button", { name: "Send the details" }));
+    await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+    await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+    await user.click(screen.getByRole("button", { name: "Run the estimate" }));
+    expect(
+      await screen.findByText("AI draft — not a final quote"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("PHOTOS · 1")).toBeInTheDocument();
+
+    await user.click(
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    expect(await screen.findByText("Request sent.")).toBeInTheDocument();
+    const submitArgs = h.action.mock.calls[1]?.[1] as {
+      job: Record<string, unknown>;
+      files: unknown;
+    };
+    expect(h.mutation).toHaveBeenCalledTimes(1);
+    expect(submitArgs.files).toEqual([
+      { storageId: "stor-1", name: "bracket.jpg" },
+    ]);
+    expect(submitArgs.job.photoNames).toBeUndefined();
+  });
+
+  test("switching away from CNC with only a .dxf leaves no files", async () => {
+    const user = userEvent.setup();
+    render(<QuoteFlow />);
+    await user.selectOptions(screen.getByLabelText(/^Job type/), CNC);
+    await user.upload(
+      screen.getByLabelText(/Drawing, DXF\/CAD file or photo/),
+      new File(["0\nSECTION"], "test-bracket.dxf", { type: "" }),
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/^Job type/),
+      "Fabrication (new build)",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Removed test-bracket.dxf. Fabrication jobs take photos only.",
+    );
+    expect(screen.queryByText(/test-bracket\.dxf$/)).toBeNull();
+
+    await user.type(
+      screen.getByLabelText(/What needs welding or building/),
+      "Steel bracket.",
+    );
+    await user.click(screen.getByRole("button", { name: "Send the details" }));
+    await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+    await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+    await user.click(screen.getByRole("button", { name: "Run the estimate" }));
+    expect(
+      await screen.findByText("AI draft — not a final quote"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("PHOTOS · 0")).toBeInTheDocument();
+
+    await user.click(
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+    );
+    await user.click(screen.getByRole("button", { name: "Send the request" }));
+    expect(await screen.findByText("Request sent.")).toBeInTheDocument();
+    const submitArgs = h.action.mock.calls[1]?.[1] as {
+      job: Record<string, unknown>;
+      files: unknown;
+    };
+    expect(h.mutation).not.toHaveBeenCalled();
+    expect(submitArgs.files).toBeUndefined();
+    expect(submitArgs.job.photoNames).toBeUndefined();
   });
 
   test("other job types keep the full form without CNC fields", () => {

@@ -436,6 +436,20 @@ export default function QuoteFlow() {
     setErrs((prev) => ({ ...prev, [k]: "" }));
   };
 
+  /** Switching job type drops attached files the new type does not take. */
+  const setType = (type: string) => {
+    setF("type")(type);
+    const dropped = uploads.filter((file) => rejectFile(type, file));
+    if (!dropped.length) return;
+    const kept = uploads.filter((file) => !rejectFile(type, file));
+    setUploads(kept);
+    setJob((prev) => ({ ...prev, photos: kept.map((x) => x.name) }));
+    setErrs((prev) => ({
+      ...prev,
+      photos: `Removed ${dropped.map((x) => x.name).join(", ")}. ${type.replace(/ \(.*\)$/, "")} jobs take photos only.`,
+    }));
+  };
+
   const toStep2 = () => {
     const next: Record<string, string> = {};
     if (!f.type) next.type = "Pick a job type.";
@@ -677,7 +691,7 @@ export default function QuoteFlow() {
                   id="qf-type"
                   required
                   value={f.type}
-                  onChange={setF("type")}
+                  onChange={setType}
                   options={TYPE_OPTIONS}
                   placeholder="Pick one"
                   error={errs.type || ""}
