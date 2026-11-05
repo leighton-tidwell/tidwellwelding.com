@@ -280,6 +280,42 @@ describe("draftEstimate action", () => {
     expect(system).not.toContain("The customer was quoted");
   });
 
+  test("CNC details reach the model and the saved draft keeps the job type", async () => {
+    const t = setup();
+    generateTextMock.mockResolvedValue({
+      text: JSON.stringify(canonicalEstimate),
+    });
+    await t.action(api.estimate.draftEstimate, {
+      ...baseArgs(),
+      type: "CNC plasma cutting / signs",
+      thickness: '1/4"',
+      quantity: "12",
+    });
+    const call = generateTextMock.mock.calls[0][0];
+    expect(call.system).toContain("CNC plasma cutting jobs are shop-only");
+    expect(call.system).toContain("there is no separate machine rate");
+    expect(call.messages[0].content).toContain('Thickness: 1/4".');
+    expect(call.messages[0].content).toContain("Quantity: 12.");
+    const drafts = await t.run(async (ctx) =>
+      ctx.db.query("estimateDrafts").collect(),
+    );
+    expect(drafts.map((d) => d.jobType)).toEqual([
+      "CNC plasma cutting / signs",
+    ]);
+  });
+
+  test("no thickness or quantity lines when the form did not send them", async () => {
+    const t = setup();
+    generateTextMock.mockResolvedValue({
+      text: JSON.stringify(canonicalEstimate),
+    });
+    await t.action(api.estimate.draftEstimate, baseArgs());
+    const content: string =
+      generateTextMock.mock.calls[0][0].messages[0].content;
+    expect(content).not.toContain("Thickness:");
+    expect(content).not.toContain("Quantity:");
+  });
+
   test("writes a verifiedSessions row after success", async () => {
     const t = setup();
     generateTextMock.mockResolvedValue({
@@ -301,6 +337,8 @@ describe("draftEstimate action", () => {
     ["type", { type: "t".repeat(201) }],
     ["material", { material: "m".repeat(201) }],
     ["dims", { dims: "d".repeat(501) }],
+    ["thickness", { thickness: "t".repeat(101) }],
+    ["quantity", { quantity: "q".repeat(101) }],
     ["timeline", { timeline: "t".repeat(201) }],
     ["location", { location: "l".repeat(501) }],
     ["compQuote", { compQuote: "1".repeat(101) }],

@@ -12,6 +12,7 @@ import {
 import { buildCallbackIcs } from "./ics";
 import { estimateSchema, rejectOversize, type Estimate } from "./estimate";
 import { assertSessionId, limitQuoteSubmit } from "./rateLimits";
+import { MAX_UPLOAD_FILES, rejectFile } from "./uploadRules";
 import { verifyTurnstile } from "./turnstile";
 
 const OWNER_EMAIL = "eric@tidwellwelding.com";
@@ -28,11 +29,22 @@ const jobValidator = v.object({
   material: v.optional(v.string()),
   desc: v.string(),
   dims: v.optional(v.string()),
+  thickness: v.optional(v.string()),
+  quantity: v.optional(v.string()),
   timeline: v.optional(v.string()),
   location: v.optional(v.string()),
   compQuote: v.optional(v.string()),
   photoNames: v.optional(v.array(v.string())),
 });
+
+/** A file as it sits on the quote row. */
+const storedFileValidator = v.object({
+  storageId: v.id("_storage"),
+  name: v.string(),
+  contentType: v.string(),
+  size: v.number(),
+});
+type StoredFile = typeof storedFileValidator.type;
 
 function makeRequestId(): string {
   return (
@@ -57,6 +69,7 @@ export const insertQuote = internalMutation({
     phone: v.string(),
     email: v.optional(v.string()),
     job: jobValidator,
+    files: v.optional(v.array(storedFileValidator)),
     estimate: v.optional(v.any()),
     slot: v.string(),
   },
@@ -78,6 +91,10 @@ export const submitQuote = action({
     phone: v.string(),
     email: v.optional(v.string()),
     job: jobValidator,
+    // Uploaded via uploads.generateUploadUrl; checked and described here.
+    files: v.optional(
+      v.array(v.object({ storageId: v.id("_storage"), name: v.string() })),
+    ),
     estimate: v.optional(v.any()),
     slot: v.string(),
     sessionId: v.string(),
@@ -107,6 +124,8 @@ export const submitQuote = action({
       [args.job.material, 200],
       [args.job.desc, 4000],
       [args.job.dims, 500],
+      [args.job.thickness, 100],
+      [args.job.quantity, 100],
       [args.job.timeline, 200],
       [args.job.location, 600],
       [args.job.compQuote, 100],
@@ -142,17 +161,60 @@ export const submitQuote = action({
 
     await limitQuoteSubmit(ctx, args.sessionId);
 
+    // Uploaded files: photos for every job, drawings and CAD files for CNC.
+    // One bad file refuses the set, and every refused upload is deleted so
+    // nothing lingers in storage.
+    const uploads = args.files ?? [];
+    const files: StoredFile[] = [];
+    const fileLinks: { name: string; url: string }[] = [];
+    if (uploads.length) {
+      let problem =
+        uploads.length > MAX_UPLOAD_FILES
+          ? `Send ${MAX_UPLOAD_FILES} files or fewer.`
+          : null;
+      for (const upload of uploads) {
+        if (problem) break;
+        const name = clip(upload.name, 200);
+        const meta = await ctx.runQuery(internal.uploads.fileMeta, {
+          storageId: upload.storageId,
+        });
+        const url = meta ? await ctx.storage.getUrl(upload.storageId) : null;
+        if (!meta || !url || !name) {
+          problem = "A file did not upload. Try again.";
+          break;
+        }
+        problem = rejectFile(args.job.type, {
+          name,
+          type: meta.contentType,
+          size: meta.size,
+        });
+        files.push({
+          storageId: upload.storageId,
+          name,
+          contentType: meta.contentType,
+          size: meta.size,
+        });
+        fileLinks.push({ name, url });
+      }
+      if (problem) {
+        await ctx.runMutation(internal.uploads.discardFiles, {
+          storageIds: uploads.map((f) => f.storageId),
+        });
+        throw new ConvexError(problem);
+      }
+    }
+
     const requestId =
       args.requestId && /^Q-\d{4}-\d{3,4}$/.test(args.requestId)
         ? args.requestId
         : makeRequestId();
 
-    // Prefer the server-side draft (it keeps the dollars a low-confidence
-    // customer never saw); fall back to validating whatever the client sent.
+    // Prefer the server-side draft for this job type (it keeps the dollars a
+    // low-confidence customer never saw); fall back to validating whatever the client sent.
     let estimate: Estimate | undefined;
     const serverDraft = await ctx.runQuery(
       internal.estimate.latestDraftForSession,
-      { sessionId: args.sessionId },
+      { sessionId: args.sessionId, jobType: args.job.type },
     );
     if (serverDraft) {
       const parsed = estimateSchema.safeParse(serverDraft);
@@ -182,6 +244,8 @@ export const submitQuote = action({
         material: clipOpt(args.job.material, 80),
         desc: clip(args.job.desc, 4000),
         dims: clipOpt(args.job.dims, 200),
+        thickness: clipOpt(args.job.thickness, 40),
+        quantity: clipOpt(args.job.quantity, 40),
         timeline: clipOpt(args.job.timeline, 80),
         location: clipOpt(args.job.location, 300),
         compQuote: clipOpt(args.job.compQuote, 40),
@@ -194,7 +258,12 @@ export const submitQuote = action({
       slot: clip(args.slot, 80),
     };
 
-    await ctx.runMutation(internal.quotes.insertQuote, payload);
+    await ctx.runMutation(internal.quotes.insertQuote, {
+      ...payload,
+      files: files.length ? files : undefined,
+    });
+    // Download links go in Eric's email only; the row keeps the storage ids.
+    if (fileLinks.length) payload.files = fileLinks;
 
     if (!process.env.RESEND_API_KEY) {
       console.warn("RESEND_API_KEY is unset. Skipping quote emails.");

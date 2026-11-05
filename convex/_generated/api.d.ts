@@ -27,6 +27,8 @@ import type * as rateLimits from "../rateLimits.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
 import type * as turnstile from "../turnstile.js";
+import type * as uploadRules from "../uploadRules.js";
+import type * as uploads from "../uploads.js";
 
 import type {
   ApiFromModules,
@@ -54,6 +56,8 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   settings: typeof settings;
   turnstile: typeof turnstile;
+  uploadRules: typeof uploadRules;
+  uploads: typeof uploads;
 }>;
 
 /**

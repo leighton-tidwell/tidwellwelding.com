@@ -10,6 +10,7 @@ import {
 import { useConvex } from "convex/react";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import {
   Badge,
   Button,
@@ -20,6 +21,12 @@ import {
   Select,
 } from "@/components/ds";
 import { getSessionId } from "@/lib/session";
+import {
+  CNC_TYPE,
+  MAX_UPLOAD_FILES,
+  rejectFile,
+  uploadAccept,
+} from "../../../../convex/uploadRules";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -48,6 +55,8 @@ type JobFields = {
   material: string;
   desc: string;
   dims: string;
+  thickness: string;
+  quantity: string;
   timeline: string;
   location: string;
   compQuote: string;
@@ -63,24 +72,6 @@ type ContactFields = {
 };
 
 const STEP_NAMES = ["The job", "Contact", "Estimate & slot", "Done"];
-
-const CNC_TYPE = "CNC plasma cutting / signs";
-
-/** CNC work is priced from the drawing, not labor hours: no AI draft. */
-const CNC_ESTIMATE: Estimate = {
-  title: "Quoted from the drawing",
-  summary:
-    "Eric prices CNC cutting and sign work from the file, drawing or sketch. Pick a callback slot and he will go over it with you.",
-  line_items: [],
-  hours_low: 0,
-  hours_high: 0,
-  dollarsWithheld: true,
-  questions: [
-    "The DXF file, drawing or sketch with sizes",
-    "Material and thickness",
-    "How many pieces",
-  ],
-};
 
 const TYPE_OPTIONS = [
   "Fabrication (new build)",
@@ -100,6 +91,69 @@ const MATERIAL_OPTIONS = [
   "Chrome-moly",
   "Not sure",
 ];
+
+/** Step-1 copy and field visibility per job type. CNC is shop work cut from
+ * a drawing, so it asks fewer, different questions. */
+type JobForm = {
+  hidden: (keyof JobFields)[];
+  materials: string[];
+  descLabel: string;
+  descPlaceholder: string;
+  descHint: string;
+  dimsLabel: string;
+  dimsPlaceholder: string;
+  uploadLabel: string;
+  uploadEmpty: string;
+};
+
+const DEFAULT_FORM: JobForm = {
+  hidden: ["thickness", "quantity"],
+  materials: MATERIAL_OPTIONS,
+  descLabel: "What needs welding or building",
+  descPlaceholder:
+    "Cracked bucket ear on a 320 excavator. Crack runs about 8 in along the pin boss.",
+  descHint: "Sizes, counts and what broke. Write it like a text message.",
+  dimsLabel: "Rough dimensions",
+  dimsPlaceholder: "8 in crack · 3/4 in plate",
+  uploadLabel: "Photos of the job",
+  uploadEmpty: "Tap to attach. Two angles beat ten words.",
+};
+
+const CNC_FORM: JobForm = {
+  hidden: ["location", "compQuote", "compFile"],
+  materials: ["Carbon steel", "Stainless", "Aluminum"],
+  descLabel: "What do you need cut?",
+  descPlaceholder: "Ranch entry sign with our brand in the middle.",
+  descHint:
+    "For a sign, give the words and the logo. For a part, the shape and holes.",
+  dimsLabel: "Size",
+  dimsPlaceholder: "6 ft x 2 ft",
+  uploadLabel: "Drawing, DXF/CAD file or photo",
+  uploadEmpty: "Tap to attach. DXF, DWG, SVG, PDF, AI, EPS or a photo.",
+};
+
+const jobFormFor = (type: string): JobForm =>
+  type === CNC_TYPE ? CNC_FORM : DEFAULT_FORM;
+
+/** Job fields as the backend takes them. Fields the form hides for this job
+ * type never leave the browser, even if typed before the type changed. */
+function jobArgs(f: JobFields) {
+  const form = jobFormFor(f.type);
+  const shown = (k: keyof JobFields, value: string) =>
+    form.hidden.includes(k) ? undefined : value || undefined;
+  return {
+    type: f.type,
+    material: form.materials.includes(f.material) ? f.material : undefined,
+    desc: f.desc,
+    dims: f.dims || undefined,
+    thickness: shown("thickness", f.thickness),
+    quantity: shown("quantity", f.quantity),
+    timeline: f.timeline || undefined,
+    location: shown("location", f.location),
+    compQuote: shown("compQuote", f.compQuote),
+    photoNames: f.photos.length ? f.photos : undefined,
+  };
+}
 
 const TIMELINE_OPTIONS = [
   "Emergency. Right now.",
@@ -205,6 +259,12 @@ const fileLabelText: CSSProperties = {
   letterSpacing: "0.16em",
   textTransform: "uppercase",
   color: "rgba(255,255,255,.7)",
+};
+
+const fileErrorText: CSSProperties = {
+  fontFamily: BODY,
+  fontSize: 13,
+  color: "#ff6b6b",
 };
 
 const fileDropText: CSSProperties = {
@@ -314,6 +374,8 @@ export default function QuoteFlow() {
     material: "",
     desc: "",
     dims: "",
+    thickness: "",
+    quantity: "",
     timeline: "",
     location: "",
     compQuote: "",
@@ -326,6 +388,7 @@ export default function QuoteFlow() {
     phone: "",
     email: "",
   });
+  const [uploads, setUploads] = useState<File[]>([]);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [est, setEst] = useState<Estimate | null>(null);
   const [estBusy, setEstBusy] = useState(false);
@@ -383,10 +446,6 @@ export default function QuoteFlow() {
   };
 
   const runEstimate = async () => {
-    if (f.type === CNC_TYPE) {
-      setEst(CNC_ESTIMATE);
-      return;
-    }
     setEstBusy(true);
     setEst(null);
     const started = Date.now();
@@ -394,14 +453,7 @@ export default function QuoteFlow() {
     try {
       if (!convex) throw new Error("Convex client unavailable");
       result = await convex.action(api.estimate.draftEstimate, {
-        type: f.type,
-        material: f.material || undefined,
-        desc: f.desc,
-        dims: f.dims || undefined,
-        timeline: f.timeline || undefined,
-        location: f.location || undefined,
-        compQuote: f.compQuote || undefined,
-        photoNames: f.photos.length ? f.photos : undefined,
+        ...jobArgs(f),
         sessionId: getSessionId(),
         turnstileToken: turnstileToken || "dev",
       });
@@ -435,10 +487,54 @@ export default function QuoteFlow() {
 
   const backTo1 = () => setStep(1);
 
+  /** Keep the picks that fit this job type; say why the rest were dropped. */
+  const pickFiles = (picked: File[]) => {
+    const problems = picked
+      .map((file) => rejectFile(f.type, file))
+      .filter((p): p is string => !!p);
+    let kept = picked.filter((file) => !rejectFile(f.type, file));
+    if (kept.length > MAX_UPLOAD_FILES) {
+      problems.push(`Send ${MAX_UPLOAD_FILES} files or fewer.`);
+      kept = kept.slice(0, MAX_UPLOAD_FILES);
+    }
+    setUploads(kept);
+    setJob((prev) => ({ ...prev, photos: kept.map((x) => x.name) }));
+    setErrs((prev) => ({ ...prev, photos: problems.join(" ") }));
+  };
+
+  /** Push each picked file to Convex storage. Files that fail (or no longer
+   * fit after a job type change) fall back to name-only. */
+  const uploadFiles = async () => {
+    const sent: { storageId: Id<"_storage">; name: string }[] = [];
+    const notSent: string[] = [];
+    for (const file of uploads) {
+      try {
+        if (!convex || rejectFile(f.type, file)) throw new Error("skip");
+        const url = await convex.mutation(api.uploads.generateUploadUrl, {
+          sessionId: getSessionId(),
+        });
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!res.ok) throw new Error("upload failed");
+        const { storageId } = (await res.json()) as {
+          storageId: Id<"_storage">;
+        };
+        sent.push({ storageId, name: file.name });
+      } catch {
+        notSent.push(file.name);
+      }
+    }
+    return { sent, notSent };
+  };
+
   const submit = async () => {
     if (!slot || submitting) return;
     setSubmitting(true);
     let finalId = reqId;
+    const { sent, notSent } = await uploadFiles();
     try {
       if (convex) {
         const res = await convex.action(api.quotes.submitQuote, {
@@ -448,16 +544,11 @@ export default function QuoteFlow() {
           phone: c.phone,
           email: c.email || undefined,
           job: {
-            type: f.type,
-            material: f.material || undefined,
-            desc: f.desc,
-            dims: f.dims || undefined,
-            timeline: f.timeline || undefined,
-            location: f.location || undefined,
-            compQuote: f.compQuote || undefined,
-            photoNames: f.photos.length ? f.photos : undefined,
+            ...jobArgs(f),
+            photoNames: notSent.length ? notSent : undefined,
           },
-          estimate: f.type === CNC_TYPE ? undefined : (est ?? undefined),
+          files: sent.length ? sent : undefined,
+          estimate: est ?? undefined,
           slot,
           sessionId: getSessionId(),
           turnstileToken: turnstileToken || "dev",
@@ -490,13 +581,14 @@ export default function QuoteFlow() {
     window.scrollTo(0, 0);
   };
 
+  const form = jobFormFor(f.type);
+  const shows = (k: keyof JobFields) => !form.hidden.includes(k);
   const isEmergency =
     f.timeline === "Emergency. Right now." || f.type === "Emergency";
-  const isCnc = f.type === CNC_TYPE;
   const estReady = !!est && !estBusy;
   const photoLabel = f.photos.length
     ? f.photos.length + " file(s): " + f.photos.join(", ")
-    : "Tap to attach. Two angles beat ten words.";
+    : form.uploadEmpty;
   const compFileLabel = f.compFile || "Tap to attach the other shop's quote.";
 
   return (
@@ -590,28 +682,45 @@ export default function QuoteFlow() {
                   label="Material"
                   value={f.material}
                   onChange={setF("material")}
-                  options={MATERIAL_OPTIONS}
+                  options={form.materials}
                   placeholder="If you know it"
                 />
               </div>
               <Input
-                label="What needs welding or building"
+                label={form.descLabel}
                 id="qf-desc"
                 required
                 multiline
                 rows={4}
                 value={f.desc}
                 onChange={setF("desc")}
-                placeholder="Cracked bucket ear on a 320 excavator. Crack runs about 8 in along the pin boss."
-                hint="Sizes, counts and what broke. Write it like a text message."
+                placeholder={form.descPlaceholder}
+                hint={form.descHint}
                 error={errs.desc || ""}
               />
+              {shows("thickness") ? (
+                <div className="qf-grid-2">
+                  <Input
+                    label="Thickness"
+                    value={f.thickness}
+                    onChange={setF("thickness")}
+                    placeholder='1/4"'
+                  />
+                  <Input
+                    label="Quantity"
+                    value={f.quantity}
+                    onChange={setF("quantity")}
+                    placeholder="1"
+                    inputMode="numeric"
+                  />
+                </div>
+              ) : null}
               <div className="qf-grid-2">
                 <Input
-                  label="Rough dimensions"
+                  label={form.dimsLabel}
                   value={f.dims}
                   onChange={setF("dims")}
-                  placeholder="8 in crack · 3/4 in plate"
+                  placeholder={form.dimsPlaceholder}
                 />
                 <Select
                   label="Timeline"
@@ -662,24 +771,26 @@ export default function QuoteFlow() {
                   </span>
                 </a>
               ) : null}
-              <div className="qf-grid-2">
-                <Input
-                  label="Where the work sits"
-                  value={f.location}
-                  onChange={setF("location")}
-                  placeholder="Shop drop-off, or an address / town"
-                  hint="Site access notes help: gates, power, overhead lines."
-                />
-                <Input
-                  label="Quote you already got (optional)"
-                  value={f.compQuote}
-                  onChange={setF("compQuote")}
-                  adornment="$"
-                  placeholder="4,800"
-                  inputMode="decimal"
-                  hint="We'll beat it. Attach the paperwork below if you have it."
-                />
-              </div>
+              {shows("location") ? (
+                <div className="qf-grid-2">
+                  <Input
+                    label="Where the work sits"
+                    value={f.location}
+                    onChange={setF("location")}
+                    placeholder="Shop drop-off, or an address / town"
+                    hint="Site access notes help: gates, power, overhead lines."
+                  />
+                  <Input
+                    label="Quote you already got (optional)"
+                    value={f.compQuote}
+                    onChange={setF("compQuote")}
+                    adornment="$"
+                    placeholder="4,800"
+                    inputMode="decimal"
+                    hint="We'll beat it. Attach the paperwork below if you have it."
+                  />
+                </div>
+              ) : null}
               <div className="qf-grid-2">
                 <label
                   className="qf-file"
@@ -690,52 +801,56 @@ export default function QuoteFlow() {
                     cursor: "pointer",
                   }}
                 >
-                  <span style={fileLabelText}>Photos or video of the job</span>
+                  <span style={fileLabelText}>{form.uploadLabel}</span>
                   <span className="qf-file__drop" style={fileDropText}>
                     {photoLabel}
                   </span>
                   <input
                     type="file"
                     multiple
-                    accept="image/*,video/*"
+                    accept={uploadAccept(f.type)}
                     onChange={(e) =>
-                      setJob((prev) => ({
-                        ...prev,
-                        photos: Array.from(e.target.files ?? []).map(
-                          (x) => x.name,
-                        ),
-                      }))
+                      pickFiles(Array.from(e.target.files ?? []))
                     }
                     style={hiddenFileInput}
                   />
+                  {errs.photos ? (
+                    <span role="alert" style={fileErrorText}>
+                      {errs.photos}
+                    </span>
+                  ) : null}
                 </label>
-                <label
-                  className="qf-file"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    cursor: "pointer",
-                  }}
-                >
-                  <span style={fileLabelText}>Competitor quote (optional)</span>
-                  <span className="qf-file__drop" style={fileDropText}>
-                    {compFileLabel}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) =>
-                      setJob((prev) => ({
-                        ...prev,
-                        compFile: e.target.files?.[0]
-                          ? e.target.files[0].name
-                          : "",
-                      }))
-                    }
-                    style={hiddenFileInput}
-                  />
-                </label>
+                {shows("compFile") ? (
+                  <label
+                    className="qf-file"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span style={fileLabelText}>
+                      Competitor quote (optional)
+                    </span>
+                    <span className="qf-file__drop" style={fileDropText}>
+                      {compFileLabel}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) =>
+                        setJob((prev) => ({
+                          ...prev,
+                          compFile: e.target.files?.[0]
+                            ? e.target.files[0].name
+                            : "",
+                        }))
+                      }
+                      style={hiddenFileInput}
+                    />
+                  </label>
+                ) : null}
               </div>
               <div
                 style={{
@@ -766,24 +881,26 @@ export default function QuoteFlow() {
                   this.
                 </p>
               </Card>
-              <Card
-                eyebrow="THE STANDING OFFER"
-                title="We beat quotes"
-                rule={false}
-              >
-                <p
-                  style={{
-                    fontFamily: BODY,
-                    fontSize: 14,
-                    lineHeight: 1.55,
-                    color: "rgba(255,255,255,.68)",
-                    margin: 0,
-                  }}
+              {shows("compQuote") ? (
+                <Card
+                  eyebrow="THE STANDING OFFER"
+                  title="We beat quotes"
+                  rule={false}
                 >
-                  Quotes are free. Put the other shop&apos;s number in the box
-                  and ours comes in under it.
-                </p>
-              </Card>
+                  <p
+                    style={{
+                      fontFamily: BODY,
+                      fontSize: 14,
+                      lineHeight: 1.55,
+                      color: "rgba(255,255,255,.68)",
+                      margin: 0,
+                    }}
+                  >
+                    Quotes are free. Put the other shop&apos;s number in the box
+                    and ours comes in under it.
+                  </p>
+                </Card>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -957,11 +1074,9 @@ export default function QuoteFlow() {
                           {est.title}
                         </h2>
                       </div>
-                      {isCnc ? null : (
-                        <Badge variant="warn" dot>
-                          AI draft — not a final quote
-                        </Badge>
-                      )}
+                      <Badge variant="warn" dot>
+                        AI draft — not a final quote
+                      </Badge>
                     </div>
                     <p
                       style={{
@@ -974,111 +1089,109 @@ export default function QuoteFlow() {
                     >
                       {est.summary}
                     </p>
-                    {isCnc ? null : (
-                      <div style={{ border: "1px solid rgba(255,255,255,.1)" }}>
+                    <div style={{ border: "1px solid rgba(255,255,255,.1)" }}>
+                      <div
+                        className="qf-li-row"
+                        style={{
+                          padding: "10px 16px",
+                          borderBottom: "1px solid rgba(255,255,255,.1)",
+                          fontFamily: MONO,
+                          fontSize: 10,
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase",
+                          color: "rgba(255,255,255,.5)",
+                          background: "#101214",
+                        }}
+                      >
+                        <span>Task</span>
+                        <span style={{ textAlign: "right" }}>Crew</span>
+                        <span style={{ textAlign: "right" }}>Hours</span>
+                      </div>
+                      {est.line_items.map((li, i) => (
                         <div
+                          key={i}
                           className="qf-li-row"
                           style={{
-                            padding: "10px 16px",
-                            borderBottom: "1px solid rgba(255,255,255,.1)",
-                            fontFamily: MONO,
-                            fontSize: 10,
-                            letterSpacing: "0.18em",
-                            textTransform: "uppercase",
-                            color: "rgba(255,255,255,.5)",
-                            background: "#101214",
+                            padding: "12px 16px",
+                            borderBottom: "1px solid rgba(255,255,255,.06)",
+                            fontFamily: BODY,
+                            fontSize: 14,
+                            color: "rgba(255,255,255,.82)",
                           }}
                         >
-                          <span>Task</span>
-                          <span style={{ textAlign: "right" }}>Crew</span>
-                          <span style={{ textAlign: "right" }}>Hours</span>
-                        </div>
-                        {est.line_items.map((li, i) => (
-                          <div
-                            key={i}
-                            className="qf-li-row"
+                          <span>{li.task}</span>
+                          <span
                             style={{
-                              padding: "12px 16px",
-                              borderBottom: "1px solid rgba(255,255,255,.06)",
-                              fontFamily: BODY,
-                              fontSize: 14,
-                              color: "rgba(255,255,255,.82)",
+                              textAlign: "right",
+                              fontFamily: MONO,
+                              fontSize: 13,
                             }}
                           >
-                            <span>{li.task}</span>
-                            <span
-                              style={{
-                                textAlign: "right",
-                                fontFamily: MONO,
-                                fontSize: 13,
-                              }}
-                            >
-                              {li.crew}
-                            </span>
-                            <span
-                              style={{
-                                textAlign: "right",
-                                fontFamily: MONO,
-                                fontSize: 13,
-                              }}
-                            >
-                              {li.hours}
-                            </span>
-                          </div>
-                        ))}
-                        <div
+                            {li.crew}
+                          </span>
+                          <span
+                            style={{
+                              textAlign: "right",
+                              fontFamily: MONO,
+                              fontSize: 13,
+                            }}
+                          >
+                            {li.hours}
+                          </span>
+                        </div>
+                      ))}
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr auto",
+                          padding: "14px 16px",
+                          background: "#101214",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <span
                           style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr auto",
-                            padding: "14px 16px",
-                            background: "#101214",
-                            alignItems: "center",
-                            gap: 8,
+                            fontFamily: MONO,
+                            fontSize: 11,
+                            letterSpacing: "0.16em",
+                            textTransform: "uppercase",
+                            color: "rgba(255,255,255,.6)",
                           }}
                         >
+                          Total man-hours {est.hours_low}–{est.hours_high}
+                        </span>
+                        {est.dollarsWithheld ||
+                        est.dollars_low === undefined ||
+                        est.dollars_high === undefined ? (
                           <span
                             style={{
                               fontFamily: MONO,
-                              fontSize: 11,
-                              letterSpacing: "0.16em",
+                              fontSize: 12,
+                              letterSpacing: "0.14em",
                               textTransform: "uppercase",
-                              color: "rgba(255,255,255,.6)",
+                              color: "#ffb020",
+                              textAlign: "right",
                             }}
                           >
-                            Total man-hours {est.hours_low}–{est.hours_high}
+                            Eric sets the number on the call
                           </span>
-                          {est.dollarsWithheld ||
-                          est.dollars_low === undefined ||
-                          est.dollars_high === undefined ? (
-                            <span
-                              style={{
-                                fontFamily: MONO,
-                                fontSize: 12,
-                                letterSpacing: "0.14em",
-                                textTransform: "uppercase",
-                                color: "#ffb020",
-                                textAlign: "right",
-                              }}
-                            >
-                              Eric sets the number on the call
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                fontFamily: DISPLAY,
-                                fontWeight: 900,
-                                fontStyle: "oblique 10deg",
-                                fontSize: 32,
-                                color: "#ffffff",
-                              }}
-                            >
-                              {fmt(est.dollars_low)} – {fmt(est.dollars_high)}
-                            </span>
-                          )}
-                        </div>
+                        ) : (
+                          <span
+                            style={{
+                              fontFamily: DISPLAY,
+                              fontWeight: 900,
+                              fontStyle: "oblique 10deg",
+                              fontSize: 32,
+                              color: "#ffffff",
+                            }}
+                          >
+                            {fmt(est.dollars_low)} – {fmt(est.dollars_high)}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {est.dollarsWithheld && !isCnc ? (
+                    </div>
+                    {est.dollarsWithheld ? (
                       <div
                         style={{
                           display: "flex",
@@ -1119,7 +1232,7 @@ export default function QuoteFlow() {
                         </a>
                       </div>
                     ) : null}
-                    {f.compQuote ? (
+                    {shows("compQuote") && f.compQuote ? (
                       <div
                         style={{
                           display: "flex",
@@ -1186,23 +1299,21 @@ export default function QuoteFlow() {
                         </div>
                       </div>
                     ) : null}
-                    {isCnc ? null : (
-                      <div
-                        style={{
-                          border: "1px solid rgba(255,176,32,.4)",
-                          background: "rgba(255,176,32,.04)",
-                          padding: "12px 14px",
-                          fontFamily: BODY,
-                          fontSize: 13,
-                          lineHeight: 1.5,
-                          color: "rgba(255,255,255,.75)",
-                        }}
-                      >
-                        An AI drafted these numbers from your description. They
-                        are not the final quote and can change once Eric sees
-                        the job. He confirms every number before work starts.
-                      </div>
-                    )}
+                    <div
+                      style={{
+                        border: "1px solid rgba(255,176,32,.4)",
+                        background: "rgba(255,176,32,.04)",
+                        padding: "12px 14px",
+                        fontFamily: BODY,
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        color: "rgba(255,255,255,.75)",
+                      }}
+                    >
+                      An AI drafted these numbers from your description. They
+                      are not the final quote and can change once Eric sees the
+                      job. He confirms every number before work starts.
+                    </div>
                   </div>
 
                   <div

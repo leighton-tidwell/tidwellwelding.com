@@ -347,6 +347,215 @@ describe("requestId and stored row", () => {
     expect(droppedRow!.estimate).toBeUndefined();
   });
 
+  describe("server-side estimate drafts are keyed by job type", () => {
+    const draft: Estimate = {
+      title: "Bucket ear repair",
+      summary: "Gouge and reweld the ear. Dress it after.",
+      line_items: [{ task: "Weld-out", crew: 1, hours: 6 }],
+      hours_low: 6,
+      hours_high: 9,
+      dollars_low: 1250,
+      dollars_high: 2500,
+      confidence: "low",
+      questions: [],
+    };
+
+    async function seedDraft(
+      t: ReturnType<typeof setup>,
+      sessionId: string,
+      jobType: string | undefined,
+    ) {
+      await t.run(async (ctx) => {
+        await ctx.db.insert("estimateDrafts", {
+          sessionId,
+          ...(jobType === undefined ? {} : { jobType }),
+          estimate: draft,
+          createdAt: Date.now(),
+        });
+      });
+    }
+
+    async function storedEstimate(
+      t: ReturnType<typeof setup>,
+      requestId: string,
+    ) {
+      const row = await t.run(async (ctx) =>
+        ctx.db
+          .query("quotes")
+          .withIndex("by_requestId", (q) => q.eq("requestId", requestId))
+          .unique(),
+      );
+      return row!.estimate;
+    }
+
+    test("a draft for another job type is not attached", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      await seedDraft(t, SESSION, "Heavy equipment repair");
+      const res = await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        job: { type: "CNC plasma cutting / signs", desc: "Ranch sign." },
+      });
+      expect(await storedEstimate(t, res.requestId)).toBeUndefined();
+    });
+
+    test("a draft for the same job type is attached", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      await seedDraft(t, SESSION, "Fabrication");
+      const res = await t.action(api.quotes.submitQuote, baseArgs());
+      expect(await storedEstimate(t, res.requestId)).toEqual(draft);
+    });
+
+    test("a legacy draft with no job type is not attached", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      await seedDraft(t, SESSION, undefined);
+      const res = await t.action(api.quotes.submitQuote, baseArgs());
+      expect(await storedEstimate(t, res.requestId)).toBeUndefined();
+    });
+  });
+
+  test("thickness and quantity are stored and reach the owner email", async () => {
+    vi.stubEnv("RESEND_API_KEY", "test-resend-key-not-real");
+    vi.stubEnv("RESEND_TEST_MODE", "false");
+    const t = setup();
+    await markSessionVerified(t);
+    const res = await t.action(api.quotes.submitQuote, {
+      ...baseArgs(),
+      job: {
+        type: "CNC plasma cutting / signs",
+        desc: "Ranch entry sign.",
+        thickness: '3/16"',
+        quantity: "4",
+      },
+    });
+    const row = await t.run(async (ctx) =>
+      ctx.db
+        .query("quotes")
+        .withIndex("by_requestId", (q) => q.eq("requestId", res.requestId))
+        .unique(),
+    );
+    expect(row!.job).toMatchObject({ thickness: '3/16"', quantity: "4" });
+    const ownerCall = sdkSendMock.mock.calls[0][0];
+    expect(ownerCall.text).toContain('Thickness: 3/16"');
+    expect(ownerCall.text).toContain("Quantity: 4");
+  });
+
+  describe("uploaded files", () => {
+    async function storeBlob(
+      t: ReturnType<typeof setup>,
+      bytes: number,
+      type: string,
+    ) {
+      return await t.run(async (ctx) =>
+        ctx.storage.store(new Blob([new Uint8Array(bytes)], { type })),
+      );
+    }
+
+    async function blobExists(t: ReturnType<typeof setup>, id: string) {
+      return await t.run(
+        async (ctx) => (await ctx.db.system.get(id as never)) !== null,
+      );
+    }
+
+    test("a .dxf is accepted for CNC, saved on the quote and linked in the owner email", async () => {
+      vi.stubEnv("RESEND_API_KEY", "test-resend-key-not-real");
+      vi.stubEnv("RESEND_TEST_MODE", "false");
+      const t = setup();
+      await markSessionVerified(t);
+      const dxf = await storeBlob(t, 2048, "application/octet-stream");
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      const res = await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        job: { type: "CNC plasma cutting / signs", desc: "Ranch sign." },
+        files: [
+          { storageId: dxf, name: "sign.dxf" },
+          { storageId: photo, name: "sketch.jpg" },
+        ],
+      });
+      const row = await t.run(async (ctx) =>
+        ctx.db
+          .query("quotes")
+          .withIndex("by_requestId", (q) => q.eq("requestId", res.requestId))
+          .unique(),
+      );
+      // convex-test records no content type; production storage does.
+      expect(row!.files).toEqual([
+        {
+          storageId: dxf,
+          name: "sign.dxf",
+          contentType: expect.any(String),
+          size: 2048,
+        },
+        {
+          storageId: photo,
+          name: "sketch.jpg",
+          contentType: expect.any(String),
+          size: 1024,
+        },
+      ]);
+      const ownerCall = sdkSendMock.mock.calls[0][0];
+      const links = [
+        ...String(ownerCall.html).matchAll(
+          /<a href="([^"]+)"[^>]*>(sign\.dxf|sketch\.jpg)<\/a>/g,
+        ),
+      ];
+      expect(links.map((m) => m[2])).toEqual(["sign.dxf", "sketch.jpg"]);
+      expect(ownerCall.text).toMatch(/File: sign\.dxf <\S+>/);
+      expect(ownerCall.text).toMatch(/File: sketch\.jpg <\S+>/);
+      // The customer copy carries no file links.
+      expect(String(sdkSendMock.mock.calls[1][0].html)).not.toContain(
+        "sign.dxf",
+      );
+    });
+
+    test("generateUploadUrl hands out a URL and refuses a junk session", async () => {
+      const t = setup();
+      const url = await t.mutation(api.uploads.generateUploadUrl, {
+        sessionId: SESSION,
+      });
+      expect(typeof url).toBe("string");
+      await expectConvexError(
+        t.mutation(api.uploads.generateUploadUrl, { sessionId: "bad!" }),
+        "Session invalid",
+      );
+    });
+
+    test("a .dxf on a non-CNC job is refused and deleted", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const dxf = await storeBlob(t, 2048, "application/octet-stream");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          files: [{ storageId: dxf, name: "sign.dxf" }],
+        }),
+        "sign.dxf is not a file type this job takes.",
+      );
+      expect(await blobExists(t, dxf)).toBe(false);
+    });
+
+    test("an oversized photo is refused and every upload in the set is deleted", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const ok = await storeBlob(t, 1024, "image/jpeg");
+      const big = await storeBlob(t, 10 * 1024 * 1024 + 1, "image/jpeg");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          files: [
+            { storageId: ok, name: "ok.jpg" },
+            { storageId: big, name: "big.jpg" },
+          ],
+        }),
+        "big.jpg is over 10 MB.",
+      );
+      expect(await blobExists(t, ok)).toBe(false);
+      expect(await blobExists(t, big)).toBe(false);
+    });
+  });
+
   test("long fields are clipped to the stored caps", async () => {
     const t = setup();
     await markSessionVerified(t);
