@@ -81,11 +81,18 @@ const CONTENT: ServicePageContent = {
     },
   ],
   media: [
-    // Shop photo stands in until the CNC plasma videos are ready; swap it then.
     {
-      kind: "image",
-      src: "/media/gate-fabrication.webp",
-      alt: "Grinding a carbon steel frame in the Granbury shop, sparks flying",
+      kind: "video",
+      src: "/media/cnc-table-torch.mp4",
+      poster: "/media/cnc-table-torch-poster.jpg",
+      label:
+        "Torch carriage moving over the 5x10 CNC plasma table in the Granbury shop",
+    },
+    {
+      kind: "video",
+      src: "/media/cnc-table-gantry.mp4",
+      poster: "/media/cnc-table-gantry-poster.jpg",
+      label: "Gantry on the 5x10 CNC plasma table",
     },
   ],
   chips: [

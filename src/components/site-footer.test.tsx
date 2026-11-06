@@ -38,12 +38,12 @@ const ALLOWED_HREF_PREFIXES = [
 
 const EXPECTED_SERVICE_LINKS: Array<[string, string]> = [
   ["Fabrication", "/services/fabrication"],
+  ["CNC plasma cutting", "/services/cnc-plasma-cutting"],
   ["Staircases & handrail", "/services/structural"],
   ["Pipe welding", "/services/pipe"],
   ["Heavy equipment repair", "/services/equipment"],
   ["Mobile welding", "/services/mobile"],
   ["Emergency & on-call", "/services/emergency"],
-  ["CNC plasma cutting", "/services/cnc-plasma-cutting"],
 ];
 
 const EXPECTED_SERVICE_AREA_LINKS: Array<[string, string]> = [

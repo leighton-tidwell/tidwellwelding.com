@@ -35,7 +35,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
     url: "/services",
     title: "Services: the capability sheet",
     description:
-      "Seven service lines out of Granbury, TX. Fabrication, structural, pipe, equipment, mobile, emergency, CNC plasma.",
+      "Seven service lines out of Granbury, TX. Fabrication, CNC plasma, structural, pipe, equipment, mobile, emergency.",
     keywords: [
       "services",
       "capability sheet",
@@ -63,6 +63,25 @@ export const SEARCH_INDEX: SearchEntry[] = [
       "stainless",
       "aluminum",
       "metal fabrication",
+    ],
+  },
+  {
+    url: "/services/cnc-plasma-cutting",
+    title: "CNC plasma cutting",
+    description:
+      "Custom metal signs and cut parts off a 5x10 table. Steel, stainless, aluminum.",
+    keywords: [
+      "cnc",
+      "plasma",
+      "plasma cutting",
+      "cnc plasma",
+      "signs",
+      "metal signs",
+      "ranch sign",
+      "entry sign",
+      "brand sign",
+      "dxf",
+      "cut parts",
     ],
   },
   {
@@ -156,29 +175,16 @@ export const SEARCH_INDEX: SearchEntry[] = [
     ],
   },
   {
-    url: "/services/cnc-plasma-cutting",
-    title: "CNC plasma cutting",
-    description:
-      "Custom metal signs and cut parts off a 5x10 table. Steel, stainless, aluminum.",
-    keywords: [
-      "cnc",
-      "plasma",
-      "plasma cutting",
-      "cnc plasma",
-      "signs",
-      "metal signs",
-      "ranch sign",
-      "entry sign",
-      "brand sign",
-      "dxf",
-      "cut parts",
-    ],
-  },
-  {
     url: "/services#fabrication",
     title: "Fabrication · services overview",
     description: "The fabrication section on the services page.",
     keywords: ["fabrication", "custom builds", "services"],
+  },
+  {
+    url: "/services#cnc-plasma-cutting",
+    title: "CNC plasma cutting · services overview",
+    description: "The CNC plasma section on the services page.",
+    keywords: ["cnc", "plasma", "signs", "services"],
   },
   {
     url: "/services#structural",
@@ -209,12 +215,6 @@ export const SEARCH_INDEX: SearchEntry[] = [
     title: "Emergency & on-call · services overview",
     description: "The emergency section on the services page.",
     keywords: ["emergency", "24/7", "services"],
-  },
-  {
-    url: "/services#cnc-plasma-cutting",
-    title: "CNC plasma cutting · services overview",
-    description: "The CNC plasma section on the services page.",
-    keywords: ["cnc", "plasma", "signs", "services"],
   },
   {
     url: "/work",

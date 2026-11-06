@@ -50,40 +50,40 @@ const SERVICES = [
     href: "/services#fabrication",
   },
   {
-    eyebrow: "SERVICE 02 — STRUCTURAL",
+    eyebrow: "SERVICE 02 — CNC PLASMA",
+    title: "CNC plasma cutting",
+    body: "Custom metal signs and cut parts off a 5x10 table. Steel, stainless, aluminum.",
+    href: "/services#cnc-plasma-cutting",
+  },
+  {
+    eyebrow: "SERVICE 03 — STRUCTURAL",
     title: "Staircases & handrail",
     body: "Commercial staircase packages, handrail runs, structural steel. Plumb, square, inspection-ready.",
     href: "/services#structural",
   },
   {
-    eyebrow: "SERVICE 03 — PIPE",
+    eyebrow: "SERVICE 04 — PIPE",
     title: "Pipe welding",
     body: "Process pipe, pipeline and station work. Carbon, stainless, chrome-moly, Inconel.",
     href: "/services#pipe",
   },
   {
-    eyebrow: "SERVICE 04 — EQUIPMENT",
+    eyebrow: "SERVICE 05 — EQUIPMENT",
     title: "Heavy equipment repair",
     body: "Buckets, booms, frames, frac tanks, hot oil beds. Repairs that hold under load.",
     href: "/services#equipment",
   },
   {
-    eyebrow: "SERVICE 05 — MOBILE",
+    eyebrow: "SERVICE 06 — MOBILE",
     title: "Mobile welding",
     body: "A rigged truck that meets you anywhere in the DFW–Stephenville area.",
     href: "/services#mobile",
   },
   {
-    eyebrow: "SERVICE 06 — EMERGENCY",
+    eyebrow: "SERVICE 07 — EMERGENCY",
     title: "Emergency & on-call",
     body: "24/7. Nights, weekends, holidays. Eric drops what he's doing and comes to you.",
     href: "/services#emergency",
-  },
-  {
-    eyebrow: "SERVICE 07 — CNC PLASMA",
-    title: "CNC plasma cutting",
-    body: "Custom metal signs and cut parts off a 5x10 table. Steel, stainless, aluminum.",
-    href: "/services#cnc-plasma-cutting",
   },
 ];
 

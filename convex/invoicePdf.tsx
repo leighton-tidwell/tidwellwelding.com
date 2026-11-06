@@ -16,6 +16,7 @@ import {
   PHONE_DISPLAY,
   SITE_URL,
 } from "../src/lib/business";
+import { formatPhone } from "./emailTemplates";
 import {
   computeInvoiceTotals,
   formatMoney,
@@ -98,6 +99,26 @@ const HAIRLINE = "#C8C8C8";
  */
 const MAX_FILLER_ROWS = 12;
 
+/**
+ * About as many characters as fit on one line of a meta cell. A longer email
+ * wraps at its "@" instead of mid-word, where the engine would add a hyphen
+ * that reads as part of the address.
+ */
+const CONTACT_LINE_CHARS = 32;
+
+const keepContactWhole = (word: string) =>
+  word.length <= CONTACT_LINE_CHARS
+    ? [word]
+    : (word.match(new RegExp(`.{1,${CONTACT_LINE_CHARS}}`, "g")) ?? [word]);
+
+function contactLinesFor(phone?: string, email?: string): string[] {
+  const lines = phone ? [formatPhone(phone)] : [];
+  if (!email) return lines;
+  const at = email.indexOf("@");
+  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [...lines, email];
+  return [...lines, email.slice(0, at), email.slice(at)];
+}
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: 40,
@@ -127,12 +148,12 @@ const styles = StyleSheet.create({
 
   // Meta grid ---------------------------------------------------------------
   metaRow: { flexDirection: "row", gap: 16 },
-  metaCol: { flex: 1 },
   metaLine: {
+    flex: 1,
     flexDirection: "row",
     borderBottomWidth: 0.6,
     borderColor: HAIRLINE,
-    height: 21,
+    minHeight: 21,
     alignItems: "center",
     overflow: "hidden",
   },
@@ -146,6 +167,9 @@ const styles = StyleSheet.create({
   metaLabelText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: GREY },
   metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 5 },
   metaValueText: { fontSize: 8.5, maxLines: 1, textOverflow: "ellipsis" },
+  // Phone and email each get their own line and never truncate: a cut-off
+  // email address is useless on an invoice.
+  metaValueFull: { fontSize: 8.5 },
 
   // Line item table ---------------------------------------------------------
   table: { marginTop: 12, borderWidth: 0.6, borderColor: HAIRLINE },
@@ -294,14 +318,29 @@ function formatQty(qty: number): string {
   return Number.isInteger(qty) ? String(qty) : String(qty);
 }
 
-function MetaLine({ label, value }: { label: string; value: string }) {
+/** A string is one truncated line; an array prints every entry in full. */
+type MetaValue = string | string[];
+
+function MetaLine({ label, value }: { label: string; value: MetaValue }) {
   return (
     <View style={styles.metaLine}>
       <View style={styles.metaLabel}>
         <Text style={styles.metaLabelText}>{label}</Text>
       </View>
       <View style={styles.metaValue}>
-        <Text style={styles.metaValueText}>{value}</Text>
+        {typeof value === "string" ? (
+          <Text style={styles.metaValueText}>{value}</Text>
+        ) : (
+          value.map((line) => (
+            <Text
+              key={line}
+              style={styles.metaValueFull}
+              hyphenationCallback={keepContactWhole}
+            >
+              {line}
+            </Text>
+          ))
+        )}
       </View>
     </View>
   );
@@ -316,16 +355,14 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   });
 
   const { customer } = input;
-  const contactLine = [customer.phone, customer.email]
-    .filter(Boolean)
-    .join(" · ");
+  const contactLines = contactLinesFor(customer.phone, customer.email);
 
-  const leftFields: Array<[string, string]> = [
+  const leftFields: Array<[string, MetaValue]> = [
     ["BILL TO", customer.company ?? customer.name],
     // Blank rather than echoing the company: this row names a person, and
     // repeating the business name reads as a data-entry mistake.
     ["CONTACT", customer.contact ?? ""],
-    ["PHONE / EMAIL", contactLine],
+    ["PHONE / EMAIL", contactLines],
     ["JOB / PO #", input.jobPo ?? ""],
   ];
   const rightFields: Array<[string, string]> = [
@@ -378,17 +415,18 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
 
         <View style={styles.rule} />
 
-        <View style={styles.metaRow}>
-          <View style={styles.metaCol}>
-            {leftFields.map(([label, value]) => (
-              <MetaLine key={label} label={label} value={value} />
-            ))}
-          </View>
-          <View style={styles.metaCol}>
-            {rightFields.map(([label, value]) => (
-              <MetaLine key={label} label={label} value={value} />
-            ))}
-          </View>
+        {/* Paired by row, not by column, so a taller left cell (two contact
+            lines) stretches its right-hand neighbour and the rules line up. */}
+        <View>
+          {leftFields.map(([label, value], i) => {
+            const right = rightFields[i];
+            return (
+              <View key={label} style={styles.metaRow}>
+                <MetaLine label={label} value={value} />
+                {right && <MetaLine label={right[0]} value={right[1]} />}
+              </View>
+            );
+          })}
         </View>
 
         <View style={styles.table}>
