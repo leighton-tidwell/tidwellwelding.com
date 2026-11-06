@@ -183,7 +183,7 @@ describe("FaqBot", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     await screen.findByText("Short answer.");
-    const sent = client.action.mock.calls[0][1] as { text: string };
+    const sent = client.action.mock.calls[0]![1] as { text: string };
     expect(sent.text).toHaveLength(500);
   });
 

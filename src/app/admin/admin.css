@@ -528,3 +528,112 @@
   display: grid;
   gap: 8px;
 }
+
+/* --- Quotes inbox -------------------------------------------------------- */
+
+/* Quote statuses come from the submit path as free-form strings; "new" is what
+ * every fresh request carries, so it gets the live accent. Anything else falls
+ * back to the bare pill above. */
+.admin-status--new {
+  color: var(--arc-blue);
+}
+
+/* Label-over-value pairs. Stacked on a phone, two up once there is room —
+ * same breakpoint as .admin-grid-2 so the cards line up. */
+.admin-fields {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (min-width: 640px) {
+  .admin-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-field {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-field__label {
+  font-size: var(--text-3xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--steel-300);
+}
+
+.admin-field__value {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* The customer's own words. Whitespace is preserved: they often type a list. */
+.admin-quote-desc {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-quote-range {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+
+.admin-quote-lines {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-quote-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-files {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* One attachment: name and size, then its own download button. Stacked on a
+ * phone so the button stays a full-width tap target. */
+.admin-file {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+@media (min-width: 640px) {
+  .admin-file {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.admin-file__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* "Worth asking" follows the line-item list directly; without this the heading
+ * sits flush against the last row and reads as part of it. */
+.admin-quote-lines + .admin-card__title {
+  margin-top: 18px;
+}

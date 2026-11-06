@@ -72,6 +72,7 @@ export default function LineItemEditor({
    * job negotiated at a different rate is typed once, not once per line. */
   const handleUnitChange = (index: number, unit: LineUnit) => {
     const line = lines[index];
+    if (!line) throw new Error(`No line at index ${index}`);
     if (unit !== "hr" || line.rate.trim() !== "") {
       update(index, { unit });
       return;

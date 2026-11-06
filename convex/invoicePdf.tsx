@@ -21,6 +21,7 @@ import {
   formatMoney,
   formatRate,
   type InvoiceLine,
+  lineAmountCents,
 } from "./invoiceMath";
 
 /**
@@ -433,7 +434,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
               </View>
               <View style={styles.cAmount}>
                 <Text style={styles.cellCentre}>
-                  {formatMoney(totals.lineAmountsCents[i])}
+                  {formatMoney(lineAmountCents(line))}
                 </Text>
               </View>
             </View>

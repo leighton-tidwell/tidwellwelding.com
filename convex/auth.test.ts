@@ -136,9 +136,9 @@ describe("no public registration path exists", () => {
       "issuePasswordReset",
     ]) {
       expect(mod[name], `${name} must be exported`).toBeDefined();
-      expect(mod[name].isInternal, `${name} must be internal`).toBe(true);
+      expect(mod[name]!.isInternal, `${name} must be internal`).toBe(true);
       expect(
-        mod[name].isPublic,
+        mod[name]!.isPublic,
         `${name} must NOT be reachable from a browser`,
       ).toBeFalsy();
     }
@@ -180,7 +180,7 @@ describe("issueSetupToken", () => {
       ctx.db.query("setupTokens").collect(),
     );
     expect(rows).toHaveLength(1);
-    const row = rows[0];
+    const row = rows[0]!;
     expect(row.userId).toBe(userId);
     expect(row.usedAt).toBeUndefined();
     // The plaintext must be nowhere in the stored row.
@@ -380,7 +380,7 @@ describe("setPassword happy path and replay", () => {
     const row = await t.run(async (ctx) =>
       ctx.db.query("setupTokens").collect(),
     );
-    expect(row[0].usedAt).toBeGreaterThan(0);
+    expect(row[0]!.usedAt).toBeGreaterThan(0);
   });
 
   test("a used setup link cannot be redeemed a second time", async () => {
@@ -418,7 +418,7 @@ describe("setPassword refuses every other path", () => {
     const t = setup();
     const { userId, token } = await userWithToken(t);
     await t.run(async (ctx) => {
-      const row = (await ctx.db.query("setupTokens").collect())[0];
+      const row = (await ctx.db.query("setupTokens").collect())[0]!;
       await ctx.db.patch(row._id, { expiresAt: Date.now() - 1000 });
     });
     await expectThrows(
@@ -437,7 +437,7 @@ describe("setPassword refuses every other path", () => {
       await ctx.db.patch(userId, { passwordSetAt: Date.now() });
     });
     const row = await t.run(
-      async (ctx) => (await ctx.db.query("setupTokens").collect())[0],
+      async (ctx) => (await ctx.db.query("setupTokens").collect())[0]!,
     );
     expect(row.usedAt).toBeUndefined();
     expect(row.expiresAt).toBeGreaterThan(Date.now());
@@ -461,7 +461,7 @@ describe("setPassword refuses every other path", () => {
     expect(user!.passwordHash).toBeUndefined();
     expect(user!.passwordSetAt).toBeUndefined();
     const row = await t.run(
-      async (ctx) => (await ctx.db.query("setupTokens").collect())[0],
+      async (ctx) => (await ctx.db.query("setupTokens").collect())[0]!,
     );
     expect(row.usedAt).toBeUndefined();
   });
@@ -612,7 +612,7 @@ describe("requireAdmin and logout", () => {
     const t = setup();
     const { token } = await loggedIn(t);
     await t.run(async (ctx) => {
-      const s = (await ctx.db.query("adminSessions").collect())[0];
+      const s = (await ctx.db.query("adminSessions").collect())[0]!;
       await ctx.db.patch(s._id, { expiresAt: Date.now() - 1 });
     });
     await expectThrows(
@@ -701,6 +701,72 @@ describe("issuePasswordReset (the only escape hatch)", () => {
       t.mutation(api.auth.login, { email: EMAIL, password: GOOD_PASSWORD }),
       "Email or password is incorrect.",
     );
+  });
+
+  test("the old password stops working immediately, before any new one is set", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    await t.mutation(internal.auth.issuePasswordReset, { userId });
+
+    await expectLoginFailure(
+      t.mutation(api.auth.login, { email: EMAIL, password: GOOD_PASSWORD }),
+      "Email or password is incorrect.",
+    );
+    const sessions = await t.run(async (ctx) =>
+      ctx.db.query("adminSessions").collect(),
+    );
+    expect(sessions).toHaveLength(0);
+  });
+
+  test("wipes the stored credential, not just passwordSetAt", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    await t.mutation(internal.auth.issuePasswordReset, { userId });
+
+    const user = await t.run(async (ctx) => ctx.db.get(userId));
+    expect(user!.passwordHash).toBeUndefined();
+    expect(user!.passwordSalt).toBeUndefined();
+    expect(user!.passwordSetAt).toBeUndefined();
+  });
+
+  test("login denies when passwordSetAt is unset, even if a valid hash and salt remain", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    // Simulate a credential left behind (e.g. a reset from before the hash was
+    // wiped): hash and salt intact, passwordSetAt cleared.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userId, { passwordSetAt: undefined });
+    });
+
+    await expectLoginFailure(
+      t.mutation(api.auth.login, { email: EMAIL, password: GOOD_PASSWORD }),
+      "Email or password is incorrect.",
+    );
+    const sessions = await t.run(async (ctx) =>
+      ctx.db.query("adminSessions").collect(),
+    );
+    expect(sessions).toHaveLength(0);
   });
 
   test("the superseded setup link cannot be used after a reset", async () => {

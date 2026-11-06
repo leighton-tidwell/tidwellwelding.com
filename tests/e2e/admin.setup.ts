@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, test as setup } from "@playwright/test";
 
 /**
- * Provisions a disposable admin account on the DEV Convex deployment and walks
+ * Provisions a disposable admin account on the local Convex backend and walks
  * the real one-time setup link, so the rest of the suite has credentials and
  * the burn-on-use rule is exercised against the live backend rather than a mock.
  *
@@ -20,7 +20,7 @@ function convexRun(fn: string, args: Record<string, unknown>): string {
   });
   // `convex run` prints the JSON return value on the last non-empty line.
   const lines = out.trim().split("\n").filter(Boolean);
-  return JSON.parse(lines[lines.length - 1]) as string;
+  return JSON.parse(lines[lines.length - 1]!) as string;
 }
 
 setup(

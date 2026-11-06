@@ -37,11 +37,57 @@ export default defineSchema({
     estimate: v.optional(v.any()),
     slot: v.string(),
     status: v.string(),
+    // Set when the operator saves this request as a customer. Optional because
+    // every row written before the quotes inbox could link the two has none.
+    customerId: v.optional(v.id("customers")),
     createdAt: v.number(),
   })
     .index("by_createdAt", ["createdAt"])
     .index("by_status", ["status", "createdAt"])
     .index("by_requestId", ["requestId"]),
+
+  /**
+   * Submissions that did not persist as quotes: verification refused, a cap
+   * rejected, the rate limiter, anything. Recorded only when there is a way
+   * to reach the person (a 10-digit phone or a valid email), so a lost lead
+   * is still callable and the failure rate is measurable.
+   *
+   * A table of its own, never a status on `quotes`: nothing that lists the
+   * owner's real requests can start showing unverified attempts as though
+   * they were confirmed. Every field but the reason is optional — the attempt
+   * failed, so any of them may be missing or malformed. Values are clipped
+   * before they are written. Rows are pruned 90 days after they land.
+   */
+  failedQuotes: defineTable({
+    requestId: v.optional(v.string()),
+    name: v.optional(v.string()),
+    company: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    job: v.optional(
+      v.object({
+        type: v.optional(v.string()),
+        material: v.optional(v.string()),
+        desc: v.optional(v.string()),
+        dims: v.optional(v.string()),
+        thickness: v.optional(v.string()),
+        quantity: v.optional(v.string()),
+        timeline: v.optional(v.string()),
+        location: v.optional(v.string()),
+        compQuote: v.optional(v.string()),
+        photoNames: v.optional(v.array(v.string())),
+      }),
+    ),
+    slot: v.optional(v.string()),
+    sessionId: v.optional(v.string()),
+    /** The message the visitor was shown, or the error text when there was
+     * none. Says which check rejected the attempt. */
+    reason: v.string(),
+    /** Whether a Turnstile token was sent at all, which separates "clicked
+     * before the widget solved" from "token rejected". */
+    tokenPresent: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_createdAt", ["createdAt"]),
 
   contactMessages: defineTable({
     name: v.string(),
@@ -157,6 +203,10 @@ export default defineSchema({
       v.literal("void"),
     ),
     customerId: v.id("customers"),
+    // The quote request this invoice was raised from, when it came from one.
+    // Optional: an invoice started from the Invoices tab has no quote behind
+    // it, and neither does any invoice written before this link existed.
+    quoteId: v.optional(v.id("quotes")),
     jobPo: v.optional(v.string()),
     issuedAt: v.number(),
     dueAt: v.optional(v.number()),
@@ -189,5 +239,6 @@ export default defineSchema({
     .index("by_number", ["number"])
     .index("by_status", ["status", "createdAt"])
     .index("by_customer", ["customerId", "createdAt"])
+    .index("by_quote", ["quoteId"])
     .index("by_createdAt", ["createdAt"]),
 });
