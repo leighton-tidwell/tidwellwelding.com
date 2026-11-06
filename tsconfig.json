@@ -30,11 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "convex/**/*.test.ts",
-    "node_modules",
-    "tests"
-  ]
+  "exclude": ["node_modules"]
 }
