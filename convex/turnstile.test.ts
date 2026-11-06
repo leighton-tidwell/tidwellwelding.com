@@ -81,7 +81,7 @@ describe("secret configured", () => {
     await expect(verifyTurnstile(FAKE_TOKEN)).resolves.toBe(true);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(SITEVERIFY_URL);
     expect(init.method).toBe("POST");
     const body = new URLSearchParams(init.body);

@@ -435,7 +435,7 @@ describe("requestId and stored row", () => {
         .unique(),
     );
     expect(row!.job).toMatchObject({ thickness: '3/16"', quantity: "4" });
-    const ownerCall = sdkSendMock.mock.calls[0][0];
+    const ownerCall = sdkSendMock.mock.calls[0]![0];
     expect(ownerCall.text).toContain('Thickness: 3/16"');
     expect(ownerCall.text).toContain("Quantity: 4");
   });
@@ -493,7 +493,7 @@ describe("requestId and stored row", () => {
           size: 1024,
         },
       ]);
-      const ownerCall = sdkSendMock.mock.calls[0][0];
+      const ownerCall = sdkSendMock.mock.calls[0]![0];
       const links = [
         ...String(ownerCall.html).matchAll(
           /<a href="([^"]+)"[^>]*>(sign\.dxf|sketch\.jpg)<\/a>/g,
@@ -503,7 +503,7 @@ describe("requestId and stored row", () => {
       expect(ownerCall.text).toMatch(/File: sign\.dxf <\S+>/);
       expect(ownerCall.text).toMatch(/File: sketch\.jpg <\S+>/);
       // The customer copy carries no file links.
-      expect(String(sdkSendMock.mock.calls[1][0].html)).not.toContain(
+      expect(String(sdkSendMock.mock.calls[1]![0].html)).not.toContain(
         "sign.dxf",
       );
     });
@@ -589,7 +589,7 @@ describe("requestId and stored row", () => {
           kind: "competitor",
         },
       ]);
-      const owner = sdkSendMock.mock.calls[0][0];
+      const owner = sdkSendMock.mock.calls[0]![0];
       expect(String(owner.html)).toMatch(
         /Competitor quote<\/td>.*<a href="[^"]+"[^>]*>other-shop\.pdf<\/a>/,
       );
@@ -598,7 +598,7 @@ describe("requestId and stored row", () => {
       // Kept out of the main files list.
       expect(owner.text).not.toMatch(/File: other-shop\.pdf/);
       expect(owner.text).toMatch(/File: gate\.jpg <\S+>/);
-      const customer = sdkSendMock.mock.calls[1][0];
+      const customer = sdkSendMock.mock.calls[1]![0];
       expect(String(customer.html)).not.toContain("Competitor quote");
       expect(String(customer.html)).not.toContain("other-shop.pdf");
     });
@@ -663,7 +663,7 @@ describe("email sending (Resend component and SDK mocked)", () => {
     expect(sendEmailManuallyMock).toHaveBeenCalledTimes(2);
     expect(sdkSendMock).toHaveBeenCalledTimes(2);
 
-    const ownerCall = sdkSendMock.mock.calls[0][0];
+    const ownerCall = sdkSendMock.mock.calls[0]![0];
     expect(ownerCall.to).toBe(OWNER_EMAIL);
     expect(ownerCall.from).toBe("TSWS Website <quotes@tidwellwelding.com>");
     expect(ownerCall.subject).toContain(res.requestId);
@@ -674,7 +674,7 @@ describe("email sending (Resend component and SDK mocked)", () => {
     // The component wrapper's tracking id rides along for idempotency.
     expect(ownerCall.headers).toEqual({ "Idempotency-Key": "mock-email-id" });
 
-    const customerCall = sdkSendMock.mock.calls[1][0];
+    const customerCall = sdkSendMock.mock.calls[1]![0];
     expect(customerCall.to).toBe(CUSTOMER_EMAIL);
     expect(customerCall.subject).toBe(
       `Request ${res.requestId} received — Tidwell Specialty Welding`,
@@ -688,8 +688,8 @@ describe("email sending (Resend component and SDK mocked)", () => {
     await markSessionVerified(t);
     await t.action(api.quotes.submitQuote, baseArgs());
     expect(sdkSendMock).toHaveBeenCalledTimes(2);
-    expect(sdkSendMock.mock.calls[0][0].to).toBe("delivered@resend.dev");
-    expect(sdkSendMock.mock.calls[1][0].to).toBe("delivered@resend.dev");
+    expect(sdkSendMock.mock.calls[0]![0].to).toBe("delivered@resend.dev");
+    expect(sdkSendMock.mock.calls[1]![0].to).toBe("delivered@resend.dev");
   });
 
   test("no customer email and no replyTo when the submitter gave no address", async () => {
@@ -699,7 +699,7 @@ describe("email sending (Resend component and SDK mocked)", () => {
     await t.action(api.quotes.submitQuote, rest);
 
     expect(sdkSendMock).toHaveBeenCalledTimes(1);
-    const ownerCall = sdkSendMock.mock.calls[0][0];
+    const ownerCall = sdkSendMock.mock.calls[0]![0];
     expect(ownerCall.to).toBe(OWNER_EMAIL);
     expect(ownerCall.replyTo).toBeUndefined();
   });

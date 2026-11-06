@@ -212,7 +212,7 @@ describe("sendMessage replies", () => {
     expect(bot.contact).toBe(false);
 
     // The model saw the system prompt and the user's trimmed message.
-    const callArgs = generateTextMock.mock.calls[0][0];
+    const callArgs = generateTextMock.mock.calls[0]![0];
     expect(callArgs.system).toContain("FAQ assistant on tidwellwelding.com");
     expect(callArgs.messages.at(-1)).toEqual({
       role: "user",
@@ -344,7 +344,7 @@ describe("sendMessage replies", () => {
         .collect(),
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].expiresAt).toBeGreaterThan(Date.now());
+    expect(rows[0]!.expiresAt).toBeGreaterThan(Date.now());
   });
 });
 

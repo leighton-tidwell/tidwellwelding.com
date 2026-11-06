@@ -136,9 +136,9 @@ describe("no public registration path exists", () => {
       "issuePasswordReset",
     ]) {
       expect(mod[name], `${name} must be exported`).toBeDefined();
-      expect(mod[name].isInternal, `${name} must be internal`).toBe(true);
+      expect(mod[name]!.isInternal, `${name} must be internal`).toBe(true);
       expect(
-        mod[name].isPublic,
+        mod[name]!.isPublic,
         `${name} must NOT be reachable from a browser`,
       ).toBeFalsy();
     }
@@ -180,7 +180,7 @@ describe("issueSetupToken", () => {
       ctx.db.query("setupTokens").collect(),
     );
     expect(rows).toHaveLength(1);
-    const row = rows[0];
+    const row = rows[0]!;
     expect(row.userId).toBe(userId);
     expect(row.usedAt).toBeUndefined();
     // The plaintext must be nowhere in the stored row.
@@ -380,7 +380,7 @@ describe("setPassword happy path and replay", () => {
     const row = await t.run(async (ctx) =>
       ctx.db.query("setupTokens").collect(),
     );
-    expect(row[0].usedAt).toBeGreaterThan(0);
+    expect(row[0]!.usedAt).toBeGreaterThan(0);
   });
 
   test("a used setup link cannot be redeemed a second time", async () => {
@@ -418,7 +418,7 @@ describe("setPassword refuses every other path", () => {
     const t = setup();
     const { userId, token } = await userWithToken(t);
     await t.run(async (ctx) => {
-      const row = (await ctx.db.query("setupTokens").collect())[0];
+      const row = (await ctx.db.query("setupTokens").collect())[0]!;
       await ctx.db.patch(row._id, { expiresAt: Date.now() - 1000 });
     });
     await expectThrows(
@@ -437,7 +437,7 @@ describe("setPassword refuses every other path", () => {
       await ctx.db.patch(userId, { passwordSetAt: Date.now() });
     });
     const row = await t.run(
-      async (ctx) => (await ctx.db.query("setupTokens").collect())[0],
+      async (ctx) => (await ctx.db.query("setupTokens").collect())[0]!,
     );
     expect(row.usedAt).toBeUndefined();
     expect(row.expiresAt).toBeGreaterThan(Date.now());
@@ -461,7 +461,7 @@ describe("setPassword refuses every other path", () => {
     expect(user!.passwordHash).toBeUndefined();
     expect(user!.passwordSetAt).toBeUndefined();
     const row = await t.run(
-      async (ctx) => (await ctx.db.query("setupTokens").collect())[0],
+      async (ctx) => (await ctx.db.query("setupTokens").collect())[0]!,
     );
     expect(row.usedAt).toBeUndefined();
   });
@@ -612,7 +612,7 @@ describe("requireAdmin and logout", () => {
     const t = setup();
     const { token } = await loggedIn(t);
     await t.run(async (ctx) => {
-      const s = (await ctx.db.query("adminSessions").collect())[0];
+      const s = (await ctx.db.query("adminSessions").collect())[0]!;
       await ctx.db.patch(s._id, { expiresAt: Date.now() - 1 });
     });
     await expectThrows(
