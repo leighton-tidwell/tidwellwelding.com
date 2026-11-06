@@ -72,6 +72,9 @@ e2e: up ## End-to-end tests (Playwright) against the local stack
 pr-size: ## Fail if this branch is over 500 lines / 10 files without an explainer
 	node scripts/check-pr-size.mjs
 
-ci: lint typecheck test pr-size e2e ## Every check the PR pipeline runs, in its order
+fail-first: ## Fail if a new unit test also passes against main's code
+	node scripts/check-fail-first.mjs
 
-.PHONY: help install up dev down reset seed logs lint fix typecheck test e2e pr-size ci
+ci: lint typecheck test fail-first pr-size e2e ## Every check the PR pipeline runs, in its order
+
+.PHONY: help install up dev down reset seed logs lint fix typecheck test e2e pr-size fail-first ci

@@ -233,7 +233,7 @@ test.describe("invoicing, end to end", () => {
     for (let i = 0; i < lines.length; i += 1) {
       if (i > 0) await page.getByRole("button", { name: "Add line" }).click();
       const row = page.getByRole("group", { name: `Line item ${i + 1}` });
-      const [qty, unit, description, rate] = lines[i];
+      const [qty, unit, description, rate] = lines[i]!;
       await row.getByLabel("Qty").fill(qty);
       await row.getByLabel("Unit").selectOption(unit);
       await row.getByLabel("Description of work / materials").fill(description);

@@ -24,6 +24,7 @@ Next.js 16 on Cloudflare Workers (OpenNext), Convex backend. A merge to `main` d
 - Server secrets live on the Convex deployment. Don't read or write `.env*` files.
 - Business details (name, email, phone, address) come from `src/lib/business.ts`. Never re-type them.
 - Every lint suppression or config exception says why, in a comment next to it.
+- A new unit test must fail against `main` and pass against your change; `make fail-first` checks it.
 - PRs: use the template, stay under 500 lines and 10 files or fill in the Explainer, and claim only checks you ran. `gh pr create --body` does not pick the template up on its own — read it and follow it.
 - The chat prompt in `convex/chat.ts` holds an intentional easter egg. Leave it.
 
