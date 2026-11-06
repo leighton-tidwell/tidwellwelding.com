@@ -9,11 +9,14 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
+import QuoteDetail from "./quote-detail";
 import { useAdminSession } from "./use-admin-session";
 import "./admin.css";
 
 type View =
   | { name: "invoices" }
+  | { name: "quotes" }
+  | { name: "quote"; id: Id<"quotes"> }
   | { name: "customers" }
   | { name: "customer"; id: Id<"customers"> }
   | { name: "invoice"; id: Id<"invoices"> };
@@ -138,6 +141,17 @@ function Console({
             Invoices
           </Button>
           <Button
+            variant={
+              view.name === "quotes" || view.name === "quote"
+                ? "primary"
+                : "secondary"
+            }
+            size="sm"
+            onClick={() => setView({ name: "quotes" })}
+          >
+            Quotes
+          </Button>
+          <Button
             variant={view.name === "customers" ? "primary" : "secondary"}
             size="sm"
             onClick={() => setView({ name: "customers" })}
@@ -152,6 +166,21 @@ function Console({
           <InvoiceList
             token={token}
             onOpen={(id) => setView({ name: "invoice", id })}
+          />
+        )}
+        {view.name === "quotes" && (
+          <QuoteList
+            token={token}
+            onOpen={(id) => setView({ name: "quote", id })}
+          />
+        )}
+        {view.name === "quote" && (
+          <QuoteInbox
+            token={token}
+            id={view.id}
+            onBack={() => setView({ name: "quotes" })}
+            onOpenCustomer={(id) => setView({ name: "customer", id })}
+            onOpenInvoice={(id) => setView({ name: "invoice", id })}
           />
         )}
         {view.name === "customers" && (
@@ -173,6 +202,7 @@ function Console({
             token={token}
             id={view.id}
             onBack={() => setView({ name: "invoices" })}
+            onOpenQuote={(id) => setView({ name: "quote", id })}
           />
         )}
       </main>
@@ -347,6 +377,230 @@ function InvoiceList({
         </>
       )}
     </>
+  );
+}
+
+/* --------------------------------------------------------------- quotes --- */
+
+function QuoteList({
+  token,
+  onOpen,
+}: {
+  token: string;
+  onOpen: (id: Id<"quotes">) => void;
+}) {
+  const quotes = useQuery(api.adminQuotes.list, { token });
+  const [status, setStatus] = useState("");
+
+  // Statuses on quote rows are free-form strings set by the submit path, not a
+  // fixed union like invoices', so the chips are built from what is actually
+  // in the inbox instead of a hard-coded list that could go stale.
+  const statuses = useMemo(() => {
+    const tally = new Map<string, number>();
+    for (const quote of quotes ?? []) {
+      tally.set(quote.status, (tally.get(quote.status) ?? 0) + 1);
+    }
+    return [...tally.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [quotes]);
+
+  const shown = useMemo(
+    () =>
+      status === ""
+        ? (quotes ?? [])
+        : (quotes ?? []).filter((quote) => quote.status === status),
+    [quotes, status],
+  );
+
+  return (
+    <>
+      <div className="admin-head">
+        <div>
+          <p className="admin-eyebrow">Work coming in</p>
+          <h1 className="admin-title">Quotes</h1>
+        </div>
+      </div>
+
+      {quotes === undefined ? (
+        <p className="admin-note">Loading…</p>
+      ) : quotes.length === 0 ? (
+        <p className="admin-empty">No quote requests yet.</p>
+      ) : (
+        <>
+          {statuses.length > 1 ? (
+            // biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the flex row.
+            <div
+              className="admin-filters"
+              role="group"
+              aria-label="Filter quotes by status"
+            >
+              <button
+                type="button"
+                className={
+                  status === ""
+                    ? "admin-filter admin-filter--on"
+                    : "admin-filter"
+                }
+                aria-pressed={status === ""}
+                onClick={() => setStatus("")}
+              >
+                All<span className="admin-filter__count">{quotes.length}</span>
+              </button>
+              {statuses.map(([name, count]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className={
+                    status === name
+                      ? "admin-filter admin-filter--on"
+                      : "admin-filter"
+                  }
+                  aria-pressed={status === name}
+                  onClick={() => setStatus(name)}
+                >
+                  {name}
+                  <span className="admin-filter__count">{count}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="admin-list">
+            {shown.map((quote) => (
+              <button
+                key={quote._id}
+                type="button"
+                className="admin-row"
+                onClick={() => onOpen(quote._id)}
+              >
+                <span className="admin-row__main">
+                  <span className="admin-row__title">
+                    {quote.name}
+                    {quote.company ? ` · ${quote.company}` : ""}
+                  </span>
+                  <span className="admin-row__meta">
+                    {quote.jobType} ·{" "}
+                    {new Date(quote.createdAt).toLocaleDateString("en-US")} ·{" "}
+                    {quote.slot}
+                    {quote.fileCount > 0
+                      ? ` · ${quote.fileCount} file${quote.fileCount === 1 ? "" : "s"}`
+                      : ""}
+                  </span>
+                </span>
+                {quote.invoiceNumber !== undefined ? (
+                  <Badge>{quote.invoiceNumber}</Badge>
+                ) : null}
+                {quote.dollarsLow !== undefined &&
+                quote.dollarsHigh !== undefined ? (
+                  <span className="admin-row__amount">
+                    {formatMoney(quote.dollarsLow * 100)}–
+                    {formatMoney(quote.dollarsHigh * 100)}
+                  </span>
+                ) : null}
+                <StatusPill status={quote.status} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Loads one quote (with its download links) and hands it to the presentational
+ * detail view, which is where the layout and its tests live. The two mutations
+ * are driven from here so the detail view stays free of queries. */
+function QuoteInbox({
+  token,
+  id,
+  onBack,
+  onOpenCustomer,
+  onOpenInvoice,
+}: {
+  token: string;
+  id: Id<"quotes">;
+  onBack: () => void;
+  onOpenCustomer: (id: Id<"customers">) => void;
+  onOpenInvoice: (id: Id<"invoices">) => void;
+}) {
+  const quote = useQuery(api.adminQuotes.get, { token, id });
+  const createCustomer = useMutation(api.adminQuotes.createCustomerFromQuote);
+  const createInvoice = useMutation(api.adminQuotes.createInvoiceFromQuote);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [nameConflict, setNameConflict] = useState<{
+    customerId: string;
+    customerName: string;
+  } | null>(null);
+
+  /** The mutation answers "nameTaken" without writing anything when the name
+   * is already in the book; that answer becomes the question on screen. */
+  const saveCustomer = useCallback(
+    async (choice?: { linkTo?: string; createAnyway?: boolean }) => {
+      if (busy) return;
+      setBusy(true);
+      setError("");
+      try {
+        const result = await createCustomer({
+          token,
+          id,
+          ...(choice?.linkTo === undefined
+            ? {}
+            : { linkTo: choice.linkTo as Id<"customers"> }),
+          ...(choice?.createAnyway === true ? { createAnyway: true } : {}),
+        });
+        if (result.outcome === "nameTaken") {
+          setNameConflict({
+            customerId: result.customerId,
+            customerName: result.customerName,
+          });
+        } else {
+          setNameConflict(null);
+        }
+      } catch {
+        setError("Could not save that customer. Try again.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, createCustomer, token, id],
+  );
+
+  const raiseInvoice = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      onOpenInvoice(await createInvoice({ token, id }));
+    } catch {
+      setError("Could not raise an invoice from this quote.");
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, createInvoice, token, id, onOpenInvoice]);
+
+  if (quote === undefined) return <p className="admin-note">Loading…</p>;
+  if (quote === null) return <p className="admin-empty">That quote is gone.</p>;
+  return (
+    <QuoteDetail
+      quote={quote}
+      onBack={onBack}
+      actions={{
+        busy,
+        error,
+        nameConflict,
+        onCreateCustomer: () => void saveCustomer(),
+        onLinkExistingCustomer: () =>
+          void saveCustomer({ linkTo: nameConflict?.customerId }),
+        onCreateSeparateCustomer: () =>
+          void saveCustomer({ createAnyway: true }),
+        onCreateInvoice: () => void raiseInvoice(),
+        onOpenCustomer: (customerId) =>
+          onOpenCustomer(customerId as Id<"customers">),
+        onOpenInvoice: (invoiceId) =>
+          onOpenInvoice(invoiceId as Id<"invoices">),
+      }}
+    />
   );
 }
 
@@ -574,10 +828,12 @@ function InvoiceEditor({
   token,
   id,
   onBack,
+  onOpenQuote,
 }: {
   token: string;
   id: Id<"invoices">;
   onBack: () => void;
+  onOpenQuote: (id: Id<"quotes">) => void;
 }) {
   const invoice = useQuery(api.invoices.get, { token, id });
   const laborRate = useQuery(api.settings.getLaborRateAdmin, { token });
@@ -653,6 +909,10 @@ function InvoiceEditor({
   if (invoice === null)
     return <p className="admin-empty">That invoice is gone.</p>;
 
+  // Pulled out so the click handler closes over a value TypeScript has already
+  // narrowed, rather than re-reading a nullable field.
+  const fromQuote = invoice.quote;
+
   return (
     <>
       <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
@@ -679,6 +939,20 @@ function InvoiceEditor({
           }
         />
       </div>
+
+      {fromQuote === null ? null : (
+        <p className="admin-note">
+          Raised from quote request{" "}
+          <button
+            type="button"
+            className="admin-linkish"
+            onClick={() => onOpenQuote(fromQuote._id)}
+          >
+            {fromQuote.requestId}
+          </button>{" "}
+          · {fromQuote.name}
+        </p>
+      )}
 
       <div className="admin-card">
         <h2 className="admin-card__title">Job details</h2>
