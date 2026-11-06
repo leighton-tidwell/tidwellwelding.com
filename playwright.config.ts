@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // E2E runs against the DEV Convex deployment via .env.local (loaded by `next dev`).
 // Intentionally no TURNSTILE-related env here: dev mode passes without captcha.
 // E2E_PORT reuses an already-running dev server on another port (Next 16
-// allows only one dev server per project dir): E2E_PORT=3355 pnpm test:e2e
+// allows only one dev server per project dir): E2E_PORT=3355 make e2e
 const PORT = process.env.E2E_PORT ?? "3311";
 
 export default defineConfig({

@@ -1,6 +1,7 @@
 name: CI
 
-# Runs on every PR, no label needed. Merges to main deploy, so this is the gate.
+# Every PR, no label needed. Merges to main deploy, so this is the gate.
+# The steps live in the Makefile; this file only calls `make ci`.
 on:
   pull_request:
 
@@ -9,19 +10,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  ci:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # pr-size diffs against the merge base
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
+      - run: make install
+      - run: make ci
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
