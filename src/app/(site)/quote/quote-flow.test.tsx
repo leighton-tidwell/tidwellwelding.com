@@ -1056,15 +1056,28 @@ describe("QuoteFlow", () => {
     expect(
       screen.getByText(/Your reference is Q-2026-777/),
     ).toBeInTheDocument();
-    // ...and the notice names the failed file only, says Eric will ask, and
-    // offers the phone number as the faster route.
+    // ...and the notice names the failed file only and says Eric will ask.
     const notice = screen.getByText(/did not finish uploading/);
     expect(notice).toHaveTextContent("weld-bad.jpg");
     expect(notice).not.toHaveTextContent("weld-good.jpg");
     expect(notice).toHaveTextContent(/he will ask for them on the call/);
-    expect(notice.querySelector('a[href="tel:8178946357"]')?.textContent).toBe(
-      "(817) 894-6357",
-    );
+
+    // One tap sends Eric a text that already carries the reference and the
+    // file names, so nothing is typed and he can match the photos up.
+    const text = screen.getByRole("link", { name: "Text Eric the photos" });
+    const href = text.getAttribute("href") ?? "";
+    expect(href.startsWith("sms:+18178946357?&body=")).toBe(true);
+    const body = decodeURIComponent(href.split("?&body=")[1] ?? "");
+    expect(body).toContain("Q-2026-777");
+    expect(body).toContain("Jane Rig");
+    expect(body).toContain("weld-bad.jpg");
+    expect(body).not.toContain("weld-good.jpg");
+    expect(body).toMatch(/did not upload/);
+
+    // Calling is still offered, as the second action.
+    expect(
+      screen.getByRole("link", { name: "Call (817) 894-6357" }),
+    ).toHaveAttribute("href", "tel:8178946357");
   });
 
   test("other job types keep the full form without CNC fields", () => {

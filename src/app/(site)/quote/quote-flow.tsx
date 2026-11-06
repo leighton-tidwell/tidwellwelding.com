@@ -20,7 +20,7 @@ import {
   Input,
   Select,
 } from "@/components/ds";
-import { PHONE_DISPLAY, PHONE_TEL } from "@/lib/business";
+import { PHONE_DISPLAY, PHONE_E164, PHONE_TEL } from "@/lib/business";
 import { getSessionId } from "@/lib/session";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -889,6 +889,13 @@ export default function QuoteFlow() {
     setStep(4);
     window.scrollTo(0, 0);
   };
+
+  /** One tap from the confirmation to a text that already says which request
+   * it is about and which files are coming, so Eric can match them up without
+   * the visitor typing anything (issue #37). */
+  const smsHref = `sms:${PHONE_E164}?&body=${encodeURIComponent(
+    `Quote ${reqId} — ${c.name || "quote request"}. These files did not upload: ${notUploaded.join(", ")}. Attaching them here.`,
+  )}`;
 
   const form = jobFormFor(f.type);
   const shows = (k: keyof JobFields) => !form.hidden.includes(k);
@@ -1918,24 +1925,37 @@ export default function QuoteFlow() {
                     color="#ffb020"
                     strokeWidth={2.5}
                   />
-                  <p
+                  <div
                     style={{
-                      fontFamily: BODY,
-                      fontSize: 15,
-                      lineHeight: 1.55,
-                      color: "rgba(255,255,255,.82)",
-                      margin: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
                     }}
                   >
-                    These files did not finish uploading:{" "}
-                    {notUploaded.join(", ")}. Eric has your request and the file
-                    names, and he will ask for them on the call. To send them
-                    sooner, call{" "}
-                    <a href={PHONE_TEL} style={{ color: "#ffb020" }}>
-                      {PHONE_DISPLAY}
-                    </a>
-                    .
-                  </p>
+                    <p
+                      style={{
+                        fontFamily: BODY,
+                        fontSize: 15,
+                        lineHeight: 1.55,
+                        color: "rgba(255,255,255,.82)",
+                        margin: 0,
+                      }}
+                    >
+                      These files did not finish uploading:{" "}
+                      {notUploaded.join(", ")}. Eric has your request and the
+                      file names, and he will ask for them on the call. To send
+                      them now, text him the photos — the message is already
+                      written.
+                    </p>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <Button variant="secondary" href={smsHref}>
+                        Text Eric the photos
+                      </Button>
+                      <Button variant="ghost" href={PHONE_TEL}>
+                        Call {PHONE_DISPLAY}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
               <div
