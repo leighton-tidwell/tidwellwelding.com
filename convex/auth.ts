@@ -257,7 +257,16 @@ export const login = mutation({
       .query("adminUsers")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
-    if (!user?.passwordHash || !user.passwordSalt) return deny;
+    // passwordSetAt is the "this account has a live password" marker. Checking
+    // it here is defense in depth alongside issuePasswordReset wiping the hash:
+    // a credential left behind by any path must not authenticate.
+    if (
+      !user?.passwordHash ||
+      !user.passwordSalt ||
+      user.passwordSetAt === undefined
+    ) {
+      return deny;
+    }
 
     const attempt = await derivePasswordHash(password, user.passwordSalt);
     if (!constantTimeEquals(attempt, user.passwordHash)) return deny;
@@ -309,7 +318,8 @@ export const logout = mutation({
 
 /**
  * The only escape hatch: run this from the Convex CLI or dashboard if the
- * password is lost. Clears passwordSetAt, revokes every live session, and
+ * password is lost. Wipes the stored hash and salt and clears passwordSetAt
+ * (so the old password stops working at once), revokes every live session, and
  * mints a fresh one-time link. Deliberately internal — never reachable from
  * the browser.
  */
@@ -320,7 +330,13 @@ export const issuePasswordReset = internalMutation({
     const user = await ctx.db.get(userId);
     if (!user) throw new ConvexError("No such admin user.");
 
-    await ctx.db.patch(userId, { passwordSetAt: undefined });
+    // Wipe the credential itself, not just the marker: the old password must
+    // stop working the moment the reset is issued, not once a new one is set.
+    await ctx.db.patch(userId, {
+      passwordHash: undefined,
+      passwordSalt: undefined,
+      passwordSetAt: undefined,
+    });
 
     const sessions = await ctx.db
       .query("adminSessions")
