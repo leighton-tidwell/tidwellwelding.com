@@ -382,7 +382,7 @@ export default function QuoteDetail({
           <p className="admin-note">
             {unstoredNames.length > 0
               ? `This request listed ${unstoredNames.join(", ")}, but it came in before the site kept uploaded files. Ask for them again if you need them.`
-              : "No photos or drawings came with this request."}
+              : "No photos, video or drawings came with this request."}
           </p>
         ) : (
           <div className="admin-files">

@@ -125,8 +125,8 @@ const DEFAULT_FORM: JobForm = {
   descHint: "Sizes, counts and what broke. Write it like a text message.",
   dimsLabel: "Rough dimensions",
   dimsPlaceholder: "8 in crack · 3/4 in plate",
-  uploadLabel: "Photos of the job",
-  uploadEmpty: "Tap to attach. Two angles beat ten words.",
+  uploadLabel: "Photos or video of the job",
+  uploadEmpty: "Tap to attach. Two angles, or a short clip, beat ten words.",
   uploadCountLabel: "PHOTOS",
 };
 

@@ -822,8 +822,8 @@ describe("QuoteFlow", () => {
       screen.getByLabelText(/^Job type/),
       "Pipe welding",
     );
-    const input = screen.getByLabelText(/Photos of the job/);
-    expect(input).toHaveAttribute("accept", "image/*");
+    const input = screen.getByLabelText(/Photos or video of the job/);
+    expect(input).toHaveAttribute("accept", "image/*,video/*");
 
     await user.upload(input, new File(["0"], "sign.dxf", { type: "" }));
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -967,7 +967,7 @@ describe("QuoteFlow", () => {
       });
     await fillStep1Fields(user);
     await user.upload(
-      screen.getByLabelText(/Photos of the job/),
+      screen.getByLabelText(/Photos or video of the job/),
       new File(["x"], "gate.jpg", { type: "image/jpeg" }),
     );
     const comp = screen.getByLabelText(/Competitor quote/);
@@ -1038,7 +1038,7 @@ describe("QuoteFlow", () => {
       })
       .mockResolvedValueOnce({ ok: false, status: 500 });
     await fillStep1Fields(user);
-    await user.upload(screen.getByLabelText(/Photos of the job/), [
+    await user.upload(screen.getByLabelText(/Photos or video of the job/), [
       new File(["x"], "weld-good.jpg", { type: "image/jpeg" }),
       new File(["y"], "weld-bad.jpg", { type: "image/jpeg" }),
     ]);

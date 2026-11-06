@@ -756,6 +756,22 @@ describe("requestId and stored row", () => {
       expect(await blobExists(t, dxf)).toBe(false);
     });
 
+    // Issue #20: video was dropped for non-CNC jobs in #17 and is allowed
+    // again, so the server has to take it and store it like any other upload.
+    test("a phone clip is accepted on a non-CNC job and saved on the quote", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const clip = await storeBlob(t, 4096, "video/quicktime");
+      await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        files: [{ storageId: clip, name: "weld.mov" }],
+      });
+      expect(await blobExists(t, clip)).toBe(true);
+      const row = await t.run(async (ctx) => ctx.db.query("quotes").first());
+      expect(row?.files?.[0]?.name).toBe("weld.mov");
+      expect(row?.files?.[0]?.storageId).toBe(clip);
+    });
+
     test("an oversized photo is refused and every upload in the set is deleted", async () => {
       const t = setup();
       await markSessionVerified(t);
