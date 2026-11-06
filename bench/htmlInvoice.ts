@@ -19,6 +19,7 @@ import {
   computeInvoiceTotals,
   formatMoney,
   formatRate,
+  lineAmountCents,
 } from "../convex/invoiceMath";
 import type { InvoicePdfInput } from "../convex/invoicePdf";
 import {
@@ -283,12 +284,12 @@ export function invoiceHtml(
 
   const rows = input.lineItems
     .map(
-      (line, i) =>
+      (line) =>
         `<tr><td>${esc(String(line.qty))}</td>` +
         `<td class="desc">${esc(line.description)}</td>` +
         `<td>${esc(formatRate(line.rateCents, line.unit))}</td>` +
         `<td>${line.taxable ? "Yes" : "No"}</td>` +
-        `<td>${esc(formatMoney(totals.lineAmountsCents[i]))}</td></tr>`,
+        `<td>${esc(formatMoney(lineAmountCents(line)))}</td></tr>`,
     )
     .join("");
 

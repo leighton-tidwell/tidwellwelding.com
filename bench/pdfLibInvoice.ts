@@ -21,6 +21,7 @@ import {
   computeInvoiceTotals,
   formatMoney,
   formatRate,
+  lineAmountCents,
 } from "../convex/invoiceMath";
 import type { InvoicePdfInput } from "../convex/invoicePdf";
 import {
@@ -440,7 +441,7 @@ export async function renderInvoicePdfLib(
     ["PAYMENTS", signed(input.paymentsCents)],
   ];
 
-  const rows: Row[] = input.lineItems.map((line, i) => {
+  const rows: Row[] = input.lineItems.map((line) => {
     const desc = wrap(
       line.description,
       fonts.regular,
@@ -452,7 +453,7 @@ export async function renderInvoicePdfLib(
       desc,
       rate: formatRate(line.rateCents, line.unit),
       tax: line.taxable ? "Yes" : "No",
-      amount: formatMoney(totals.lineAmountsCents[i]),
+      amount: formatMoney(lineAmountCents(line)),
       height: Math.max(ROW_MIN_H, desc.length * LINE_H + CELL_PAD_Y * 2),
     };
   });

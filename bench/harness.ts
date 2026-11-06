@@ -54,10 +54,11 @@ export type Stats = {
 };
 
 function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 0) return Number.NaN;
   const pos = (sorted.length - 1) * q;
-  const lo = Math.floor(pos);
-  const hi = Math.ceil(pos);
-  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  const low = sorted[Math.floor(pos)] ?? Number.NaN;
+  const high = sorted[Math.ceil(pos)] ?? Number.NaN;
+  return low + (high - low) * (pos - Math.floor(pos));
 }
 
 /**
@@ -85,10 +86,10 @@ export async function measure(
   return {
     label,
     runs,
-    min: sorted[0],
+    min: sorted[0] ?? Number.NaN,
     median: quantile(sorted, 0.5),
     mean: times.reduce((a, b) => a + b, 0) / times.length,
-    max: sorted[sorted.length - 1],
+    max: sorted[sorted.length - 1] ?? Number.NaN,
     bytes,
     rssDeltaMb: (peakRss - rssBefore) / 1024 / 1024,
   };

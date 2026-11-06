@@ -36,17 +36,21 @@ function parseCMap(text: string): CMap {
   const map: CMap = new Map();
 
   for (const [, body] of text.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)) {
+    if (body === undefined) continue;
     for (const [, code, value] of body.matchAll(
       /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g,
     )) {
+      if (code === undefined || value === undefined) continue;
       map.set(parseInt(code, 16), utf16beToString(value));
     }
   }
 
   for (const [, body] of text.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) {
+    if (body === undefined) continue;
     for (const [, lo, hi, value] of body.matchAll(
       /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g,
     )) {
+      if (lo === undefined || hi === undefined || value === undefined) continue;
       const start = parseInt(lo, 16);
       const end = parseInt(hi, 16);
       const base = utf16beToString(value);
@@ -147,7 +151,7 @@ export async function extractRunsByPage(
       let run = "";
       if (tjArray !== undefined) {
         for (const [, hex] of tjArray.matchAll(/<([0-9A-Fa-f]*)>/g)) {
-          run += decode(hex, current);
+          if (hex !== undefined) run += decode(hex, current);
         }
       } else if (tjHex !== undefined) {
         run = decode(tjHex, current);

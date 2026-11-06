@@ -46,6 +46,8 @@ function deps(
     transport: async (): Promise<TransportResult> => {
       const next = responses[Math.min(state.calls, responses.length - 1)];
       state.calls += 1;
+      if (next === undefined)
+        throw new Error("fake transport: no response set");
       return next;
     },
     // The real in-process renderer: proves the fallback returns a real invoice.
