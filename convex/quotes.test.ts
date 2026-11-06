@@ -438,6 +438,83 @@ describe("requestId and stored row", () => {
     expect(res.requestId).toBe("Q-2031-777");
   });
 
+  // The generator draws from 900 ids per year, so by the birthday bound a
+  // collision is likelier than not at ~35 quotes. These two pin Math.random so
+  // the collision happens every run instead of 1-in-900: before insertQuote
+  // claimed the id transactionally, both submissions were filed under one id
+  // and the by_requestId lookup below threw "more than one result".
+  test("a second quote cannot take an id the generator just handed out", async () => {
+    const t = setup();
+    // Every draw returns the low end of whichever space is in use, so each
+    // 3-digit candidate is the same id the first quote already holds.
+    const random = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      const year = new Date().getFullYear();
+      await markSessionVerified(t, "collide-1");
+      const first = await t.action(
+        api.quotes.submitQuote,
+        baseArgs("collide-1"),
+      );
+      expect(first.requestId).toBe(`Q-${year}-100`);
+
+      await markSessionVerified(t, "collide-2");
+      const second = await t.action(
+        api.quotes.submitQuote,
+        baseArgs("collide-2"),
+      );
+      expect(second.requestId).not.toBe(first.requestId);
+      // The 3-digit space is exhausted for this draw, so the id widens.
+      expect(second.requestId).toBe(`Q-${year}-1000`);
+
+      const rows = await t.run(async (ctx) => ctx.db.query("quotes").collect());
+      expect(rows).toHaveLength(2);
+      // Both ids still resolve to exactly one row, which is what every
+      // by_requestId lookup assumes.
+      for (const requestId of [first.requestId, second.requestId]) {
+        const row = await t.run(async (ctx) =>
+          ctx.db
+            .query("quotes")
+            .withIndex("by_requestId", (q) => q.eq("requestId", requestId))
+            .unique(),
+        );
+        expect(row).not.toBeNull();
+      }
+    } finally {
+      random.mockRestore();
+    }
+  });
+
+  test("a client-supplied id that is already taken is replaced", async () => {
+    const t = setup();
+    const random = vi.spyOn(Math, "random").mockReturnValue(0);
+    try {
+      await markSessionVerified(t, "reuse-session-1");
+      const first = await t.action(api.quotes.submitQuote, {
+        ...baseArgs("reuse-session-1"),
+        requestId: "Q-2031-777",
+      });
+      expect(first.requestId).toBe("Q-2031-777");
+
+      await markSessionVerified(t, "reuse-session-2");
+      const second = await t.action(api.quotes.submitQuote, {
+        ...baseArgs("reuse-session-2"),
+        requestId: "Q-2031-777",
+      });
+      expect(second.requestId).not.toBe("Q-2031-777");
+      expect(second.requestId).toMatch(/^Q-\d{4}-\d{3,4}$/);
+
+      const row = await t.run(async (ctx) =>
+        ctx.db
+          .query("quotes")
+          .withIndex("by_requestId", (q) => q.eq("requestId", "Q-2031-777"))
+          .unique(),
+      );
+      expect(row).not.toBeNull();
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   test("a client-supplied id in the wrong format is replaced server-side", async () => {
     const t = setup();
     await markSessionVerified(t);
@@ -766,6 +843,54 @@ describe("requestId and stored row", () => {
       );
       expect(await blobExists(t, photo)).toBe(false);
       expect(await blobExists(t, dxf)).toBe(false);
+    });
+
+    // Issue #21: the browser uploads before it calls submitQuote, so every
+    // check that throws ahead of the insert used to leave the files behind.
+    test("a field the form refuses deletes the uploads, while an accepted submission keeps them", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      const bid = await storeBlob(t, 2048, "application/pdf");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          phone: "555-012",
+          files: [
+            { storageId: photo, name: "gate.jpg" },
+            { storageId: bid, name: "other-shop.pdf", kind: "competitor" },
+          ],
+        }),
+        "Enter a 10-digit number.",
+      );
+      expect(await blobExists(t, photo)).toBe(false);
+      expect(await blobExists(t, bid)).toBe(false);
+
+      // The same files on a submission that lands stay in storage, and the
+      // row that now owns them points at them.
+      const kept = await storeBlob(t, 1024, "image/jpeg");
+      await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        files: [{ storageId: kept, name: "gate.jpg" }],
+      });
+      expect(await blobExists(t, kept)).toBe(true);
+      const row = await t.run(async (ctx) => ctx.db.query("quotes").first());
+      expect(row?.files?.[0]?.storageId).toBe(kept);
+    });
+
+    test("a refused verification deletes the uploads", async () => {
+      // No markSessionVerified and no token: the gate the quote form hits
+      // most often in practice.
+      const t = setup();
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          files: [{ storageId: photo, name: "gate.jpg" }],
+        }),
+        "Verification failed.",
+      );
+      expect(await blobExists(t, photo)).toBe(false);
     });
   });
 

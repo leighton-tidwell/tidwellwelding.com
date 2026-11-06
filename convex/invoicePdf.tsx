@@ -553,11 +553,34 @@ export async function renderInvoicePdf(
   // Then take the most filler that still fits in that many pages. Each step is
   // a real render, so the answer accounts for wrapping, long descriptions and
   // every other thing an estimate gets wrong.
+  //
+  // Page count is monotone non-decreasing in the filler count: a blank row can
+  // only push later content further down the document, never pull it back. So
+  // the counts that fit form a prefix of 0..MAX_FILLER_ROWS and the largest one
+  // can be found without rendering every count in between.
+  //
+  // Probe the maximum first. On any invoice whose line items already fill a
+  // page, no filler count adds a page, so that settles it in one extra render
+  // -- the case that used to cost all MAX_FILLER_ROWS renders. Only when the
+  // maximum does spill do we bisect the range below it for the boundary.
+  const maxFiller = await renderPages({
+    ...input,
+    fillerRows: MAX_FILLER_ROWS,
+  });
+  if (maxFiller.pages <= bare.pages) return maxFiller.bytes;
+
   let best = bare;
-  for (let rows = 1; rows <= MAX_FILLER_ROWS; rows += 1) {
-    const candidate = await renderPages({ ...input, fillerRows: rows });
-    if (candidate.pages > bare.pages) break;
-    best = candidate;
+  let low = 1;
+  let high = MAX_FILLER_ROWS - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const candidate = await renderPages({ ...input, fillerRows: mid });
+    if (candidate.pages > bare.pages) {
+      high = mid - 1;
+    } else {
+      best = candidate;
+      low = mid + 1;
+    }
   }
 
   return best.bytes;

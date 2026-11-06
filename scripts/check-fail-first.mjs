@@ -24,9 +24,21 @@ const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const root = git("rev-parse", "--show-toplevel");
 const base = git("merge-base", "HEAD", process.env.BASE_REF ?? "origin/main");
 
-const changed = git("diff", "--name-only", "--diff-filter=AM", base, "HEAD")
-  .split("\n")
-  .filter((f) => /\.test\.tsx?$/.test(f));
+// Tests added, changed or moved on this branch, plus every test file this
+// branch touched on main's side (changed, renamed or deleted). A test counts
+// as new only if its name exists in none of those, so moving or splitting a
+// file doesn't make its old tests look new.
+const changed = [];
+const onMainFiles = new Set();
+for (const line of git("diff", "--name-status", "-M", base, "HEAD").split(
+  "\n",
+)) {
+  const [status = "", from, to] = line.split("\t");
+  const isTest = (f) => f && /\.test\.tsx?$/.test(f);
+  if (status[0] !== "A" && isTest(from)) onMainFiles.add(from);
+  const now = to ?? from;
+  if (status[0] !== "D" && isTest(now)) changed.push(now);
+}
 
 if (changed.length === 0) {
   console.log("fail-first: no new or changed unit tests");
@@ -73,15 +85,17 @@ try {
     path.join(baseDir, "node_modules"),
   );
 
-  const existing = changed.filter((f) => existsSync(path.join(baseDir, f)));
-  const onMainBefore = vitest(baseDir, existing, "main-before");
+  const testName = (key) => key.slice(key.indexOf(" > ") + 3);
+  const onMainBefore = new Set(
+    [...vitest(baseDir, [...onMainFiles], "main-before").keys()].map(testName),
+  );
 
   for (const f of changed) cpSync(path.join(root, f), path.join(baseDir, f));
   const onMain = vitest(baseDir, changed, "main-after");
   const onBranch = vitest(root, changed, "branch");
 
   const fresh = [...onBranch.keys()].filter(
-    (name) => !onMainBefore.has(name) && !name.endsWith(" > *"),
+    (name) => !onMainBefore.has(testName(name)) && !name.endsWith(" > *"),
   );
   const notFailingFirst = fresh.filter((name) => {
     const file = name.split(" > ")[0];

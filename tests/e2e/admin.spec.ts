@@ -10,6 +10,7 @@ test.describe.configure({ timeout: 180_000 });
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { ADMIN_URL } from "./admin-url";
 
 type Credentials = {
   email: string;
@@ -35,7 +36,7 @@ async function signIn(page: Page) {
   const { email, password } = credentials();
 
   if (cachedSessionToken) {
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
     await page.evaluate(
       ([key, token]) => window.sessionStorage.setItem(key, token),
       ["tsws_admin_session", cachedSessionToken] as const,
@@ -47,7 +48,7 @@ async function signIn(page: Page) {
     return;
   }
 
-  await page.goto("/admin", { timeout: 60_000 });
+  await page.goto(ADMIN_URL, { timeout: 60_000 });
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -73,7 +74,7 @@ test.describe("access control", () => {
   test("the sign-in screen shows no data before authenticating", async ({
     page,
   }) => {
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
 
     await expect(
       page.getByRole("heading", { name: "Shop admin" }),
@@ -89,7 +90,7 @@ test.describe("access control", () => {
     page,
   }) => {
     const { email } = credentials();
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
 
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("definitely-not-the-password");
@@ -108,7 +109,7 @@ test.describe("access control", () => {
   test("an unknown email fails the same way, revealing nothing", async ({
     page,
   }) => {
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
 
     await page.getByLabel("Email").fill("nobody@example.com");
     await page.getByLabel("Password").fill("some-long-password");
@@ -509,7 +510,7 @@ test.describe("on a phone", () => {
 
 test.describe("accessibility", () => {
   test("the sign-in screen has no axe violations", async ({ page }) => {
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
       .analyze();
