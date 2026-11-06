@@ -194,11 +194,10 @@ const SERVICES: Service[] = [
     fullLabel: "Full CNC plasma page",
     note: "Shop · Granbury",
     media: (
-      // Shop photo stands in until the CNC plasma videos are ready.
       <img
         className={styles.mediaEl}
-        src="/media/gate-fabrication.webp"
-        alt="Grinding a carbon steel frame in the Granbury shop, sparks flying"
+        src="/media/cnc-table-torch-poster.jpg"
+        alt="Torch carriage on the 5x10 CNC plasma table in the Granbury shop"
       />
     ),
   },
