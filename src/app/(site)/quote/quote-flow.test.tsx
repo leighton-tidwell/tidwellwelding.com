@@ -330,7 +330,7 @@ describe("QuoteFlow", () => {
 
     const slots = container.querySelectorAll<HTMLButtonElement>(".qf-slot");
     expect(slots.length).toBe(10);
-    await user.click(slots[0]);
+    await user.click(slots[0]!);
     expect(slots[0]).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/^Slot: /)).toBeInTheDocument();
     expect(submitBtn).toBeEnabled();
@@ -787,7 +787,7 @@ describe("QuoteFlow", () => {
     expect(estimateArgs.location).toBeUndefined();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -877,7 +877,7 @@ describe("QuoteFlow", () => {
     expect(screen.getByText("PHOTOS · 1")).toBeInTheDocument();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -923,7 +923,7 @@ describe("QuoteFlow", () => {
     expect(screen.getByText("PHOTOS · 0")).toBeInTheDocument();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -943,7 +943,7 @@ describe("QuoteFlow", () => {
     await user.click(screen.getByRole("button", { name: "Run the estimate" }));
     await screen.findByText("AI draft — not a final quote");
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();

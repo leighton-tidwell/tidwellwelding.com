@@ -58,3 +58,6 @@ next-env.d.ts
 # generated per-PR preview config
 wrangler.preview.jsonc
 tests/e2e/.admin-credentials.json
+
+# local stack logs (make dev / make logs)
+/.logs/

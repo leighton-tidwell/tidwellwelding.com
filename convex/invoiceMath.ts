@@ -68,8 +68,8 @@ export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotals {
   const lineAmountsCents = lines.map(lineAmountCents);
   const subtotalCents = lineAmountsCents.reduce((sum, cents) => sum + cents, 0);
 
-  const rawTaxableCents = lines.reduce(
-    (sum, line, i) => (line.taxable ? sum + lineAmountsCents[i] : sum),
+  const rawTaxableCents = lineAmountsCents.reduce(
+    (sum, cents, i) => (lines[i]?.taxable ? sum + cents : sum),
     0,
   );
 

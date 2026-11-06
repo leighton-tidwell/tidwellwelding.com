@@ -484,7 +484,8 @@ function StepAlert({
 
 function focusFirstInvalid(order: string[], next: Record<string, string>) {
   const first = order.find((key) => next[key]);
-  if (first) document.getElementById(ERR_FIELD_IDS[first])?.focus();
+  const id = first && ERR_FIELD_IDS[first];
+  if (id) document.getElementById(id)?.focus();
 }
 
 const css = `

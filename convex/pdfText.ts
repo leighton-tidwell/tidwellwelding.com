@@ -74,9 +74,9 @@ export async function extractTextRuns(bytes: Uint8Array): Promise<string[]> {
     if (!/T[jJ]/.test(stream)) continue;
 
     // TJ takes an array mixing strings and kerning numbers.
-    for (const [, body] of stream.matchAll(/\[([^\]]*)\]\s*TJ/g)) {
+    for (const [, body = ""] of stream.matchAll(/\[([^\]]*)\]\s*TJ/g)) {
       let run = "";
-      for (const [, hex, literal] of body.matchAll(
+      for (const [, hex, literal = ""] of body.matchAll(
         /<([0-9A-Fa-f]*)>|\(((?:[^()\\]|\\.)*)\)/g,
       )) {
         run += hex !== undefined ? hexToString(hex) : unescapeLiteral(literal);
@@ -85,7 +85,7 @@ export async function extractTextRuns(bytes: Uint8Array): Promise<string[]> {
     }
 
     // Tj takes a single string.
-    for (const [, hex, literal] of stream.matchAll(
+    for (const [, hex, literal = ""] of stream.matchAll(
       /(?:<([0-9A-Fa-f]*)>|\(((?:[^()\\]|\\.)*)\))\s*Tj/g,
     )) {
       const run =

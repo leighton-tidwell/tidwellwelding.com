@@ -156,7 +156,7 @@ export const sendMessage = action({
       { role: "user" as const, content: text },
     ];
     // Anthropic requires the first message to be from the user.
-    while (history.length && history[0].role !== "user") history.shift();
+    while (history.length && history[0]?.role !== "user") history.shift();
 
     let reply = FALLBACK_REPLY;
     let contact = true;

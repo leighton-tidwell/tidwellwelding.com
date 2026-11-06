@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * @live — the full quote happy path. Step 3 triggers ONE real Anthropic call
- * through the dev Convex deployment (api.estimate.draftEstimate); if the
- * backend or model is unreachable the client falls back to the static
- * estimate, and both paths render the same estimate table. The submit writes
- * a real row to the DEV quotes table (name prefixed "E2E TEST" so it is easy
- * to spot) and may send a dev-test-mode email — acceptable.
+ * @live — the full quote happy path against the local stack. Step 3 calls the
+ * estimator, which talks to the Anthropic fake (local/fakes.mjs); the submit
+ * writes a quote row and sends the owner email through the Resend fake, which
+ * this test then reads back.
  */
+const FAKES = `http://127.0.0.1:${process.env.FAKES_PORT ?? "4010"}`;
+
 test("quote happy path: job → contact → estimate → slot → confirmation", {
   tag: "@live",
 }, async ({ page }) => {
@@ -69,9 +69,25 @@ test("quote happy path: job → contact → estimate → slot → confirmation",
   await expect(
     page.getByRole("heading", { name: "Request sent." }),
   ).toBeVisible({ timeout: 60_000 });
-  await expect(
-    page.getByText(/Your reference is Q-\d{4}-\d{3,4}\./),
-  ).toBeVisible();
+  const reference = page.getByText(/Your reference is Q-\d{4}-\d{3,4}\./);
+  await expect(reference).toBeVisible();
+  const requestId = (await reference.textContent())?.match(
+    /Q-\d{4}-\d{3,4}/,
+  )?.[0];
+
+  // The owner email really went out, with the callback invite attached.
+  await expect
+    .poll(async () => {
+      const emails = (await (await fetch(`${FAKES}/emails`)).json()) as {
+        subject: string;
+        attachments?: { filename: string }[];
+      }[];
+      const owner = emails.find((e) =>
+        e.subject.startsWith(`Quote request ${requestId}`),
+      );
+      return owner?.attachments?.map((a) => a.filename.endsWith(".ics"));
+    })
+    .toEqual([true]);
   await expect(
     page.getByText(
       "A copy went to eric@tidwellwelding.com. Check your email for the recap.",

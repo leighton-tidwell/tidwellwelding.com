@@ -38,7 +38,7 @@ function setup(
 
 /** Query inside one line's group so a multi-row form is never ambiguous. */
 function row(index: number) {
-  return within(screen.getAllByRole("group", { name: /line item/i })[index]);
+  return within(screen.getAllByRole("group", { name: /line item/i })[index]!);
 }
 
 describe("LineItemEditor — adding and removing work", () => {
@@ -48,8 +48,8 @@ describe("LineItemEditor — adding and removing work", () => {
     await user.click(screen.getByRole("button", { name: /add line/i }));
 
     expect(lastChange()).toHaveLength(2);
-    expect(lastChange()[1].description).toBe("");
-    expect(lastChange()[1].rate).toBe("");
+    expect(lastChange()[1]!.description).toBe("");
+    expect(lastChange()[1]!.rate).toBe("");
   });
 
   test("removing a line drops the one that was clicked, not the last one", async () => {
@@ -77,8 +77,8 @@ describe("LineItemEditor — the hourly rate prefill", () => {
 
     await user.selectOptions(row(0).getByLabelText(/unit/i), "hr");
 
-    expect(lastChange()[0].unit).toBe("hr");
-    expect(lastChange()[0].rate).toBe("175");
+    expect(lastChange()[0]!.unit).toBe("hr");
+    expect(lastChange()[0]!.rate).toBe("175");
   });
 
   test("choosing hours never overwrites a rate already typed", async () => {
@@ -86,7 +86,7 @@ describe("LineItemEditor — the hourly rate prefill", () => {
 
     await user.selectOptions(row(0).getByLabelText(/unit/i), "hr");
 
-    expect(lastChange()[0].rate).toBe("250");
+    expect(lastChange()[0]!.rate).toBe("250");
   });
 
   test("a rate agreed for this job carries to the next hourly line", async () => {
@@ -99,7 +99,7 @@ describe("LineItemEditor — the hourly rate prefill", () => {
 
     await user.selectOptions(row(1).getByLabelText(/unit/i), "hr");
 
-    expect(lastChange()[1].rate).toBe("200");
+    expect(lastChange()[1]!.rate).toBe("200");
   });
 
   test("with no configured rate, choosing hours leaves the field empty", async () => {
@@ -109,7 +109,7 @@ describe("LineItemEditor — the hourly rate prefill", () => {
 
     await user.selectOptions(row(0).getByLabelText(/unit/i), "hr");
 
-    expect(lastChange()[0].rate).toBe("");
+    expect(lastChange()[0]!.rate).toBe("");
   });
 });
 
@@ -120,8 +120,8 @@ describe("LineItemEditor — the tax toggle", () => {
 
     await user.click(row(0).getByRole("checkbox", { name: /tax/i }));
 
-    expect(lastChange()[0].taxable).toBe(false);
-    expect(lastChange()[1].taxable).toBe(true);
+    expect(lastChange()[0]!.taxable).toBe(false);
+    expect(lastChange()[1]!.taxable).toBe(true);
   });
 });
 
