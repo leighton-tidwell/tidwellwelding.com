@@ -4,7 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 test.describe.configure({ timeout: 180_000 });
 
 /**
- * These specs drive the real dev Convex deployment. The owner account and its
+ * These specs drive the local Convex backend. A disposable owner account and its
  * password are created by tests/e2e/admin.setup.ts before the suite runs, which
  * writes the credentials to tests/e2e/.admin-credentials.json.
  */
@@ -317,7 +317,7 @@ test.describe("invoicing, end to end", () => {
       timeout: 15_000,
     });
     const paidNumber = await page.locator("h1.admin-title").textContent();
-    await page.getByLabel("Status").selectOption("paid");
+    await page.getByLabel("Status", { exact: true }).selectOption("paid");
 
     await page.getByRole("button", { name: "All invoices" }).click();
     await page.getByLabel("Customer").selectOption({ label: name });
@@ -452,7 +452,7 @@ test.describe("invoicing, end to end", () => {
     await page.getByLabel("Customer").selectOption({ label: name });
     await page.getByRole("button", { name: "Create invoice" }).click();
 
-    await page.getByLabel("Status").selectOption("paid");
+    await page.getByLabel("Status", { exact: true }).selectOption("paid");
     await page.getByRole("button", { name: "All invoices" }).click();
     await expect(page.getByText("paid").first()).toBeVisible({
       timeout: 15_000,

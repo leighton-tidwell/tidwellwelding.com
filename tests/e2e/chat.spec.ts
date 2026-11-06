@@ -4,10 +4,9 @@ const FALLBACK_TEXT =
   "Can't reach the assistant right now. Call or email Eric direct — he answers.";
 
 /**
- * @live — "Ask the shop" sends ONE real Anthropic call through the dev
- * Convex deployment (api.chat.sendMessage). The over-length check below is
- * client-side only (the input's maxLength cap) and never sends, so this file
- * stays at exactly one AI call.
+ * @live — "Ask the shop" sends one message through api.chat.sendMessage to the
+ * Anthropic fake (local/fakes.mjs). The over-length check below is client-side
+ * only (the input's maxLength cap) and never sends.
  */
 test("Ask the shop answers the service-area question without dollar figures", {
   tag: "@live",
