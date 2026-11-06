@@ -5,12 +5,11 @@ import {
   Font,
   Image,
   Page,
+  renderToBuffer,
   StyleSheet,
   Text,
   View,
-  renderToBuffer,
 } from "@react-pdf/renderer";
-import React from "react";
 import {
   EMAIL,
   LEGAL_NAME,
@@ -360,9 +359,6 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
       <Page size="LETTER" style={styles.page}>
         <View style={styles.header} fixed={false}>
           {input.logoPngBytes ? (
-            /* react-pdf's Image is a PDF drawing primitive, not an HTML img:
-               its props type has no alt, so the a11y rule does not apply. */
-            // eslint-disable-next-line jsx-a11y/alt-text
             <Image style={styles.logo} src={Buffer.from(input.logoPngBytes)} />
           ) : (
             <View style={styles.logo} />
@@ -417,6 +413,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
           </View>
 
           {input.lineItems.map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static PDF render, rows never reorder.
             <View style={styles.tRow} key={`line-${i}`} wrap={false}>
               <View style={styles.cQty}>
                 <Text style={styles.cellCentre}>{formatQty(line.qty)}</Text>
@@ -443,6 +440,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
           ))}
 
           {Array.from({ length: fillerCount }, (_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: blank filler rows; position is the identity.
             <View style={styles.tRow} key={`filler-${i}`} wrap={false}>
               <View style={styles.cQty}>
                 <Text style={styles.cellCentre}> </Text>
@@ -470,6 +468,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
             </View>
             <View style={styles.notesBody}>
               {Array.from({ length: noteLineCount }, (_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed ruled lines; position is the identity.
                 <View style={styles.notesLine} key={`note-${i}`}>
                   {i === 0 && noteText ? (
                     <Text style={styles.notesText}>{noteText}</Text>

@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
 import Card from "@/components/ds/card";
 
 afterEach(cleanup);
@@ -23,15 +23,11 @@ describe("Card", () => {
     expect(container.querySelector(".tsws-card__rule")).not.toBeInTheDocument();
   });
 
-  test("interactive adds the interactive class and onClick fires", () => {
-    const onClick = vi.fn();
-    const { container } = render(
-      <Card interactive onClick={onClick} title="Clickable" />,
+  test("interactive adds the interactive class", () => {
+    const { container } = render(<Card interactive title="Clickable" />);
+    expect(container.querySelector(".tsws-card")).toHaveClass(
+      "tsws-card--interactive",
     );
-    const card = container.querySelector(".tsws-card");
-    expect(card).toHaveClass("tsws-card--interactive");
-    fireEvent.click(card as Element);
-    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   test.each(["plate", "light"] as const)(

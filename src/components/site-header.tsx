@@ -36,6 +36,7 @@ export default function SiteHeader() {
   }
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: catches Escape bubbling up from the open menu sheet.
     <header
       className={open ? "site-header site-header--open" : "site-header"}
       onKeyDown={(e) => {

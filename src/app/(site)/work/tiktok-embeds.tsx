@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Real TikTok embeds on purpose: viewers can like, comment, and follow
 // @__tdaddy__ from the card. The official embed.js renders the interactive

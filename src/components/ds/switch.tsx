@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  useState,
   type ChangeEvent,
   type CSSProperties,
   type ReactNode,
+  useState,
 } from "react";
 
 export type SwitchProps = {
@@ -47,6 +47,7 @@ export default function Switch({
     <label className={classes} style={style}>
       <input
         type="checkbox"
+        // biome-ignore lint/a11y/useAriaPropsForRole: the native checkbox already exposes checked state.
         role="switch"
         checked={checked}
         defaultChecked={checked === undefined ? defaultChecked : undefined}

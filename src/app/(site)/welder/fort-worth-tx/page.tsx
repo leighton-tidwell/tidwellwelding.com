@@ -1,5 +1,5 @@
-import { Fragment } from "react";
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import TownPage, { CopyLink, type TownContent } from "../town-page";
 
 const TITLE =

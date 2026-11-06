@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { usePathname } from "next/navigation";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useConvex } from "convex/react";
 import { ConvexError } from "convex/values";
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import { usePathname } from "next/navigation";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import HazardBar from "@/components/ds/hazard-bar";
 import Icon from "@/components/ds/icon";
 import { getSessionId } from "@/lib/session";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const MAX_INPUT_CHARS = 500;
 
@@ -81,6 +81,7 @@ export default function FaqBot() {
     });
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run to scroll to the bottom whenever messages, the typing row or the panel change.
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -155,6 +156,7 @@ export default function FaqBot() {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: catches Escape bubbling up from any control inside the bot.
     <div onKeyDown={(e) => e.key === "Escape" && open && close()}>
       <style>{FAQBOT_CSS}</style>
       {!open && (
@@ -193,10 +195,12 @@ export default function FaqBot() {
             ref={listRef}
             role="log"
             aria-live="polite"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be keyboard-focusable (axe scrollable-region-focusable).
             tabIndex={0}
           >
             {msgs.map((m, i) => (
               <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: the transcript is append-only.
                 key={i}
                 className="faqbot-msg"
                 style={{

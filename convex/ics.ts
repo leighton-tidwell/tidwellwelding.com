@@ -107,7 +107,7 @@ export function buildCallbackIcs(input: {
     `DTEND;TZID=America/Chicago:${icsLocal(year, month, day, endH)}`,
     `SUMMARY:${esc(summary)}`,
     `DESCRIPTION:${esc(description)}`,
-    `LOCATION:${esc("Phone: " + input.phone)}`,
+    `LOCATION:${esc(`Phone: ${input.phone}`)}`,
     "ORGANIZER;CN=TSWS Website:mailto:quotes@tidwellwelding.com",
     `ATTENDEE;CN=Eric Tidwell;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${input.attendeeEmail}`,
     "STATUS:CONFIRMED",

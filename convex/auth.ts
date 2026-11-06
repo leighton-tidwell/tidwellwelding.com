@@ -5,8 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import {
   internalMutation,
   mutation,
-  query,
   type QueryCtx,
+  query,
 } from "./_generated/server";
 
 // 10 attempts per 15 minutes per email address.
@@ -94,9 +94,9 @@ async function derivePasswordHash(
     false,
     ["deriveBits"],
   );
-  const salt = Uint8Array.from(
-    saltHex.match(/.{2}/g)!.map((h) => Number.parseInt(h, 16)),
-  );
+  const saltBytes = saltHex.match(/.{2}/g);
+  if (!saltBytes) throw new Error("Password salt is empty");
+  const salt = Uint8Array.from(saltBytes.map((h) => Number.parseInt(h, 16)));
   const bits = await globalThis.crypto.subtle.deriveBits(
     {
       name: "PBKDF2",
@@ -257,7 +257,7 @@ export const login = mutation({
       .query("adminUsers")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
-    if (!user || !user.passwordHash || !user.passwordSalt) return deny;
+    if (!user?.passwordHash || !user.passwordSalt) return deny;
 
     const attempt = await derivePasswordHash(password, user.passwordSalt);
     if (!constantTimeEquals(attempt, user.passwordHash)) return deny;

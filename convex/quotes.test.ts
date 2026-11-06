@@ -1,6 +1,6 @@
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
-import { convexTest } from "convex-test";
 import { ConvexError } from "convex/values";
+import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Estimate } from "./estimate";
@@ -20,14 +20,12 @@ const modules = import.meta.glob([
 const sendEmailManuallyMock = vi.hoisted(() => vi.fn());
 vi.mock("@convex-dev/resend", () => ({
   Resend: class {
-    constructor(_component: unknown, _options: unknown) {}
     sendEmailManually = sendEmailManuallyMock;
   },
 }));
 const sdkSendMock = vi.hoisted(() => vi.fn());
 vi.mock("resend", () => ({
   Resend: class {
-    constructor(_apiKey?: string) {}
     emails = { send: sdkSendMock };
   },
 }));

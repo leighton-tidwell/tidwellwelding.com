@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  useState,
   type ChangeEvent,
   type CSSProperties,
   type ReactNode,
+  useState,
 } from "react";
 
 export type CheckboxProps = {
@@ -58,6 +58,7 @@ export default function Checkbox({
       />
       <span className="tsws-check__box" aria-hidden="true">
         <svg
+          aria-hidden="true"
           className="tsws-check__tick"
           viewBox="0 0 24 24"
           fill="none"

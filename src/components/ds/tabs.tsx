@@ -1,14 +1,14 @@
 "use client";
 
 import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useId,
   useRef,
   useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type ReactNode,
 } from "react";
 
 export type TabItem = {

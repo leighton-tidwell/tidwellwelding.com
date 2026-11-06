@@ -1,15 +1,15 @@
 import { describe, expect, test } from "vitest";
 import {
+  type LineUnit,
+  formatMoney as serverFormatMoney,
+  formatRate as serverFormatRate,
+  parseMoneyToCents as serverParse,
+} from "../../convex/invoiceMath";
+import {
   formatMoney as clientFormatMoney,
   formatRate as clientFormatRate,
   parseMoneyToCents as clientParse,
 } from "./invoice-format";
-import {
-  formatMoney as serverFormatMoney,
-  formatRate as serverFormatRate,
-  parseMoneyToCents as serverParse,
-  type LineUnit,
-} from "../../convex/invoiceMath";
 
 /**
  * The browser cannot import from convex/, so the formatting helpers are

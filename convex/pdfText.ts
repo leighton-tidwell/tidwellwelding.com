@@ -1,4 +1,4 @@
-import { PDFDocument, PDFRawStream, decodePDFRawStream } from "pdf-lib";
+import { decodePDFRawStream, PDFDocument, PDFRawStream } from "pdf-lib";
 
 /**
  * Pull the visible text out of a rendered PDF.

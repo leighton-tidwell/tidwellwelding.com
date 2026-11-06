@@ -12,10 +12,13 @@ export function esc(input: string): string {
 
 /** Strip control characters and newlines so user text is safe in a subject. */
 export function headerSafe(input: string, max = 80): string {
-  return input
-    .replace(/[\u0000-\u001f\u007f]+/g, " ")
-    .trim()
-    .slice(0, max);
+  return (
+    input
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point.
+      .replace(/[\u0000-\u001f\u007f]+/g, " ")
+      .trim()
+      .slice(0, max)
+  );
 }
 
 export function isEmail(input: string): boolean {
@@ -35,7 +38,7 @@ export function formatPhone(phone: string): string {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-const money = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
+const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 export type QuotePayload = {
   requestId: string;
@@ -79,11 +82,11 @@ function jobFields(q: QuotePayload): Field[] {
   if (j.timeline) out.push({ label: "Timeline", value: j.timeline });
   if (j.location) out.push({ label: "Location", value: j.location });
   if (j.compQuote)
-    out.push({ label: "Quote they got", value: "$" + j.compQuote });
+    out.push({ label: "Quote they got", value: `$${j.compQuote}` });
   if (j.photoNames?.length) {
     out.push({
       label: "Photos named",
-      value: j.photoNames.join(", ") + " (names only, files not uploaded)",
+      value: `${j.photoNames.join(", ")} (names only, files not uploaded)`,
     });
   }
   out.push({ label: "Callback slot", value: q.slot });
@@ -159,7 +162,7 @@ function estimateText(est: Estimate, showDollars = true): string {
   const totals = showDollars
     ? `Total man-hours ${est.hours_low}-${est.hours_high} | ${money(est.dollars_low)} - ${money(est.dollars_high)}`
     : `Total man-hours ${est.hours_low}-${est.hours_high} | Eric sets the number on the call.`;
-  return `${est.title}\n${est.summary}\n${rows}\n` + totals + questions;
+  return `${est.title}\n${est.summary}\n${rows}\n${totals}${questions}`;
 }
 
 const sectionLabel = (label: string) =>
@@ -221,7 +224,7 @@ export function buildCustomerEmail(input: QuotePayload): {
   // description so the form cannot relay long arbitrary text to third parties.
   const shortDesc =
     input.job.desc.length > 300
-      ? input.job.desc.slice(0, 300).trimEnd() + "…"
+      ? `${input.job.desc.slice(0, 300).trimEnd()}…`
       : input.job.desc;
   const q: QuotePayload = {
     ...input,

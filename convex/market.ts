@@ -3,10 +3,10 @@ import { generateText } from "ai";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import {
+  type ActionCtx,
   internalAction,
   internalMutation,
   internalQuery,
-  type ActionCtx,
 } from "./_generated/server";
 
 // One researched snapshot feeds every quote for a day. The refresh itself is
