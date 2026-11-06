@@ -703,6 +703,72 @@ describe("issuePasswordReset (the only escape hatch)", () => {
     );
   });
 
+  test("the old password stops working immediately, before any new one is set", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    await t.mutation(internal.auth.issuePasswordReset, { userId });
+
+    await expectLoginFailure(
+      t.mutation(api.auth.login, { email: EMAIL, password: GOOD_PASSWORD }),
+      "Email or password is incorrect.",
+    );
+    const sessions = await t.run(async (ctx) =>
+      ctx.db.query("adminSessions").collect(),
+    );
+    expect(sessions).toHaveLength(0);
+  });
+
+  test("wipes the stored credential, not just passwordSetAt", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    await t.mutation(internal.auth.issuePasswordReset, { userId });
+
+    const user = await t.run(async (ctx) => ctx.db.get(userId));
+    expect(user!.passwordHash).toBeUndefined();
+    expect(user!.passwordSalt).toBeUndefined();
+    expect(user!.passwordSetAt).toBeUndefined();
+  });
+
+  test("login denies when passwordSetAt is unset, even if a valid hash and salt remain", async () => {
+    const t = setup();
+    const userId = await t.mutation(internal.auth.createAdminUser, {
+      email: EMAIL,
+    });
+    const first = await t.mutation(internal.auth.issueSetupToken, { userId });
+    await t.mutation(api.auth.setPassword, {
+      token: first,
+      password: GOOD_PASSWORD,
+    });
+    // Simulate a credential left behind (e.g. a reset from before the hash was
+    // wiped): hash and salt intact, passwordSetAt cleared.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(userId, { passwordSetAt: undefined });
+    });
+
+    await expectLoginFailure(
+      t.mutation(api.auth.login, { email: EMAIL, password: GOOD_PASSWORD }),
+      "Email or password is incorrect.",
+    );
+    const sessions = await t.run(async (ctx) =>
+      ctx.db.query("adminSessions").collect(),
+    );
+    expect(sessions).toHaveLength(0);
+  });
+
   test("the superseded setup link cannot be used after a reset", async () => {
     const t = setup();
     const userId = await t.mutation(internal.auth.createAdminUser, {
