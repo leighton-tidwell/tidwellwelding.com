@@ -1038,7 +1038,7 @@ describe("QuoteFlow", () => {
       })
       .mockResolvedValueOnce({ ok: false, status: 500 });
     await fillStep1Fields(user);
-    await user.upload(screen.getByLabelText(/Photos of the job/), [
+    await user.upload(screen.getByLabelText(/Photos or video of the job/), [
       new File(["x"], "weld-good.jpg", { type: "image/jpeg" }),
       new File(["y"], "weld-bad.jpg", { type: "image/jpeg" }),
     ]);
