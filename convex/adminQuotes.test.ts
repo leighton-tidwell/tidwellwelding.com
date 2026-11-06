@@ -64,7 +64,9 @@ async function insertQuote(
   t: ReturnType<typeof convexTest>,
   overrides: Record<string, unknown> = {},
 ) {
-  return await t.mutation(internal.quotes.insertQuote, {
+  // insertQuote returns the row id and the request id it claimed; these tests
+  // address rows by id.
+  const { id } = await t.mutation(internal.quotes.insertQuote, {
     requestId: "Q-2026-101",
     name: "Marisol Serrano",
     phone: "(817) 555-0142",
@@ -72,6 +74,7 @@ async function insertQuote(
     slot: "Thursday morning",
     ...overrides,
   });
+  return id;
 }
 
 describe("adminQuotes — authorization", () => {
