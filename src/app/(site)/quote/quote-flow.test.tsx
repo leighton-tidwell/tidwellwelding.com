@@ -1,4 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterAll,
@@ -32,6 +38,10 @@ const h = vi.hoisted(() => {
   return {
     action: vi.fn(),
     mutation: vi.fn(),
+    // The real widget takes a few seconds to solve. Most tests want the
+    // token immediately; the gating tests set this false and call solve().
+    autoSolve: true,
+    solve: () => {},
   };
 });
 
@@ -48,8 +58,9 @@ vi.mock("@marsidev/react-turnstile", async () => {
   return {
     Turnstile: ({ onSuccess }: { onSuccess?: (token: string) => void }) => {
       React.useEffect(() => {
-        onSuccess?.("test-turnstile-token");
-      }, []);
+        h.solve = () => onSuccess?.("test-turnstile-token");
+        if (h.autoSolve) onSuccess?.("test-turnstile-token");
+      }, [onSuccess]);
       return <div data-testid="turnstile-stub" />;
     },
   };
@@ -127,7 +138,24 @@ beforeEach(() => {
   );
   store = mockLocalStorage();
   window.scrollTo = vi.fn();
+  h.autoSolve = true;
+  h.solve = () => {};
 });
+
+/** A rejection shaped like the ConvexError the backend throws: the
+ * customer-ready message rides on `data`. */
+const convexError = (message: string) =>
+  Object.assign(new Error(`Uncaught ConvexError: ${message}`), {
+    data: message,
+  });
+
+/** Estimate resolves, submit rejects with `err`. */
+function submitRejects(err: unknown) {
+  h.action.mockImplementation(async (_ref: unknown, args: object) => {
+    if ("slot" in args) throw err;
+    return MOCK_ESTIMATE;
+  });
+}
 
 async function fillStep1(user: ReturnType<typeof userEvent.setup>) {
   await fillStep1Fields(user);
@@ -302,7 +330,7 @@ describe("QuoteFlow", () => {
 
     const slots = container.querySelectorAll<HTMLButtonElement>(".qf-slot");
     expect(slots.length).toBe(10);
-    await user.click(slots[0]);
+    await user.click(slots[0]!);
     expect(slots[0]).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/^Slot: /)).toBeInTheDocument();
     expect(submitBtn).toBeEnabled();
@@ -379,6 +407,319 @@ describe("QuoteFlow", () => {
     expect(
       screen.getByRole("button", { name: "Send the request" }),
     ).toBeDisabled();
+    // A transport failure carries no customer-ready message, so the draft
+    // stands in — but it is labelled as generic, not passed off as an AI
+    // draft of this job.
+    expect(
+      screen.getByText(/We could not reach the estimator/),
+    ).toBeInTheDocument();
+  });
+
+  describe("verification gating (issue #6)", () => {
+    test("Run the estimate stays off until the check clears, and never sends a placeholder token", async () => {
+      h.autoSolve = false;
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await fillStep1(user);
+      await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+      await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+
+      // Pending: the action is off and says why.
+      const pending = screen.getByRole("button", {
+        name: "Waiting on the check",
+      });
+      expect(pending).toBeDisabled();
+      expect(
+        screen.getByText(/Running a quick check that you are human/),
+      ).toBeInTheDocument();
+      await user.click(pending);
+      expect(h.action).not.toHaveBeenCalled();
+      expect(screen.getByText("Where do we send the numbers")).toBeVisible();
+
+      // Token lands: the action turns on and the estimate carries the real
+      // token, never the literal "dev".
+      act(() => {
+        h.solve();
+      });
+      expect(
+        screen.getByText("Check cleared. Ready to run the estimate."),
+      ).toBeInTheDocument();
+      const run = screen.getByRole("button", { name: "Run the estimate" });
+      expect(run).toBeEnabled();
+      await user.click(run);
+
+      expect(
+        await screen.findByText(
+          "AI draft — not a final quote",
+          {},
+          { timeout: 4000 },
+        ),
+      ).toBeInTheDocument();
+      const estArgs = h.action.mock.calls[0]?.[1] as Record<string, unknown>;
+      expect(estArgs.turnstileToken).toBe("test-turnstile-token");
+      expect(
+        h.action.mock.calls.some(
+          ([, args]) =>
+            (args as Record<string, unknown>).turnstileToken === "dev",
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe("server failures reach a screen (issue #6)", () => {
+    /** Step 1 → 2 → 3 with the estimate settled. */
+    async function toEstimate(user: ReturnType<typeof userEvent.setup>) {
+      await fillStep1(user);
+      await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+      await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+      await user.click(
+        screen.getByRole("button", { name: "Run the estimate" }),
+      );
+      await screen.findByText(
+        "AI draft — not a final quote",
+        {},
+        { timeout: 4000 },
+      );
+      await user.click(
+        document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
+      );
+    }
+
+    test("a rejected submission never renders the confirmation screen", async () => {
+      submitRejects(
+        convexError("Slow down. Call Eric instead: (817) 894-6357."),
+      );
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await toEstimate(user);
+
+      await user.click(
+        screen.getByRole("button", { name: "Send the request" }),
+      );
+
+      // Still on step 3 with the backend's own words and a way out.
+      expect(
+        await screen.findByText(
+          "Slow down. Call Eric instead: (817) 894-6357.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Request sent.")).toBeNull();
+      expect(screen.getByText("Pick a callback slot")).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Call Eric: (817) 894-6357" }),
+      ).toHaveAttribute("href", "tel:8178946357");
+      // Nothing persisted, so nothing goes in local history either.
+      expect(store.get("tsws_quotes")).toBeUndefined();
+      expect(
+        screen.getByRole("button", { name: "Try sending again" }),
+      ).toBeEnabled();
+    });
+
+    test("a message this build has never seen still shows verbatim", async () => {
+      submitRejects(convexError("Shop closed for inventory. Try Monday."));
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await toEstimate(user);
+
+      await user.click(
+        screen.getByRole("button", { name: "Send the request" }),
+      );
+
+      expect(
+        await screen.findByText("Shop closed for inventory. Try Monday."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Request sent.")).toBeNull();
+    });
+
+    test("a transport failure on submit says nothing was saved, then a retry can land", async () => {
+      submitRejects(new Error("network down"));
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await toEstimate(user);
+
+      await user.click(
+        screen.getByRole("button", { name: "Send the request" }),
+      );
+      expect(
+        await screen.findByText(/We could not send your request/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Request sent.")).toBeNull();
+
+      // The same request goes through on the retry.
+      h.action.mockImplementation(async (_ref: unknown, args: object) =>
+        "slot" in args ? { ok: true, requestId: "Q-2026-778" } : MOCK_ESTIMATE,
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Try sending again" }),
+      );
+      expect(await screen.findByText("Request sent.")).toBeInTheDocument();
+      expect(screen.getByText(/Your reference is Q-2026-778/)).toBeVisible();
+      expect(JSON.parse(store.get("tsws_quotes") ?? "[]")).toHaveLength(1);
+    });
+
+    test("a rejected estimate shows the reason instead of a draft, and retries", async () => {
+      h.action.mockRejectedValueOnce(
+        convexError("Verification failed. Reload the page and try again."),
+      );
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await fillStep1(user);
+      await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+      await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+      await user.click(
+        screen.getByRole("button", { name: "Run the estimate" }),
+      );
+
+      expect(
+        await screen.findByText(
+          "We could not draft the numbers",
+          {},
+          { timeout: 4000 },
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Verification failed. Reload the page and try again."),
+      ).toBeInTheDocument();
+      // No fake draft, and no way to send a request that would be rejected.
+      expect(screen.queryByText("AI draft — not a final quote")).toBeNull();
+      expect(screen.queryByText("Pick a callback slot")).toBeNull();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "We could not draft the numbers.",
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "Try the estimate again" }),
+      );
+      expect(
+        await screen.findByText(
+          "AI draft — not a final quote",
+          {},
+          { timeout: 4000 },
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("We could not draft the numbers")).toBeNull();
+    });
+
+    test("a rejection naming a field the form checks marks that field", async () => {
+      h.action.mockRejectedValueOnce(
+        convexError("Describe the job in a sentence or two."),
+      );
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await fillStep1(user);
+      await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+      await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+      await user.click(
+        screen.getByRole("button", { name: "Run the estimate" }),
+      );
+      expect(
+        await screen.findByText(
+          "Describe the job in a sentence or two.",
+          {},
+          { timeout: 4000 },
+        ),
+      ).toBeInTheDocument();
+
+      // Back on the job step, the named field carries the message.
+      await user.click(screen.getByRole("button", { name: "Edit the job" }));
+      const desc = screen.getByLabelText(/What needs welding or building/);
+      expect(desc).toHaveAttribute("aria-invalid", "true");
+      expect(
+        screen.getByText("Describe the job in a sentence or two."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("client-side checks mirror the server caps (issue #6)", () => {
+    test("length-capped fields carry maxLength so the cap cannot be typed past", async () => {
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      const caps: [RegExp, number][] = [
+        [/What needs welding or building/, 4000],
+        [/Rough dimensions/, 500],
+        [/Where the work sits/, 500],
+        [/Quote you already got/, 100],
+      ];
+      for (const [label, max] of caps) {
+        expect(screen.getByLabelText(label)).toHaveAttribute(
+          "maxlength",
+          String(max),
+        );
+      }
+
+      await fillStep1(user);
+      for (const [label, max] of [
+        [/^Name/, 300],
+        [/^Company/, 300],
+        [/^Phone/, 100],
+        [/^Email/, 300],
+      ] as [RegExp, number][]) {
+        expect(screen.getByLabelText(label)).toHaveAttribute(
+          "maxlength",
+          String(max),
+        );
+      }
+    });
+
+    test("a malformed email blocks the estimate instead of failing server-side", async () => {
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await fillStep1(user);
+      await user.type(screen.getByLabelText(/^Name/), "Jane Rig");
+      await user.type(screen.getByLabelText(/^Phone/), "8175550100");
+      await user.type(screen.getByLabelText(/^Email/), "jane@company");
+
+      await user.click(
+        screen.getByRole("button", { name: "Run the estimate" }),
+      );
+
+      expect(
+        screen.getByText("Enter a valid email or leave it blank."),
+      ).toBeInTheDocument();
+      expect(h.action).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/^Email/)).toHaveFocus();
+
+      // A valid address clears it and the estimate runs.
+      await user.clear(screen.getByLabelText(/^Email/));
+      await user.type(screen.getByLabelText(/^Email/), "jane@company.com");
+      await user.click(
+        screen.getByRole("button", { name: "Run the estimate" }),
+      );
+      expect(
+        await screen.findByText(
+          "AI draft — not a final quote",
+          {},
+          { timeout: 4000 },
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("an over-cap description is caught on the client", async () => {
+      const user = userEvent.setup();
+      render(<QuoteFlow />);
+      await user.selectOptions(
+        screen.getByLabelText(/^Job type/),
+        "Pipe welding",
+      );
+      // maxLength keeps typing and pasting inside the cap, so drive the value
+      // the way an autofill or a browser extension would: straight in.
+      fireEvent.change(
+        screen.getByLabelText(/What needs welding or building/),
+        {
+          target: { value: "x".repeat(4001) },
+        },
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Send the details" }),
+      );
+
+      expect(
+        screen.getByText("Keep this under 4,000 characters."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Where do we send the numbers"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   test("CNC plasma / signs gets the short form and the normal AI estimate", async () => {
@@ -446,7 +787,7 @@ describe("QuoteFlow", () => {
     expect(estimateArgs.location).toBeUndefined();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -536,7 +877,7 @@ describe("QuoteFlow", () => {
     expect(screen.getByText("PHOTOS · 1")).toBeInTheDocument();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -582,7 +923,7 @@ describe("QuoteFlow", () => {
     expect(screen.getByText("PHOTOS · 0")).toBeInTheDocument();
 
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();
@@ -602,7 +943,7 @@ describe("QuoteFlow", () => {
     await user.click(screen.getByRole("button", { name: "Run the estimate" }));
     await screen.findByText("AI draft — not a final quote");
     await user.click(
-      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+      document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
     );
     await user.click(screen.getByRole("button", { name: "Send the request" }));
     expect(await screen.findByText("Request sent.")).toBeInTheDocument();

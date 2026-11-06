@@ -116,7 +116,7 @@ describe("the reference invoice", () => {
 
     for (const line of REFERENCE.lineItems) {
       // Wrapping inserts line breaks, so compare on a distinctive fragment.
-      const fragment = line.description.split(",")[0].split(" - ")[0];
+      const fragment = line.description.split(",")[0]!.split(" - ")[0];
       expect(text, `missing: ${line.description}`).toContain(fragment);
     }
     expect(text).toContain("$2,999.00");

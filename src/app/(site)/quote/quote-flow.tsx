@@ -4,6 +4,8 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { useConvex } from "convex/react";
 import {
   type CSSProperties,
+  type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -18,9 +20,13 @@ import {
   Input,
   Select,
 } from "@/components/ds";
+import { PHONE_DISPLAY, PHONE_TEL } from "@/lib/business";
 import { getSessionId } from "@/lib/session";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+// Runtime-pure helper (its only convex import is a type), so the browser
+// bundle gets the same email rule the server enforces.
+import { isEmail } from "../../../../convex/emailTemplates";
 import { fallbackDraft } from "../../../../convex/estimateFallback";
 import {
   CNC_TYPE,
@@ -185,6 +191,90 @@ const TIMELINE_OPTIONS = [
   "Flexible",
 ];
 
+/**
+ * Server caps mirrored on the client so the visitor sees the limit on the
+ * field instead of a rejected submission. Keep these in step with the
+ * `rejectOversize` tables in convex/quotes.ts and convex/estimate.ts.
+ * `location` takes the stricter of the two server caps (500 in
+ * draftEstimate, 600 in submitQuote) so one value clears both endpoints.
+ */
+const MAX = {
+  desc: 4000,
+  name: 300,
+  company: 300,
+  phone: 100,
+  email: 300,
+  dims: 500,
+  thickness: 100,
+  quantity: 100,
+  location: 500,
+  compQuote: 100,
+  photoName: 300,
+} as const;
+
+const tooLong = (max: number) =>
+  `Keep this under ${max.toLocaleString("en-US")} characters.`;
+
+/** Messages the form checks for itself. Worded exactly as the backend throws
+ * them, so a server rejection that repeats one can be placed on its field. */
+const MSG = {
+  type: "Pick a job type.",
+  desc: "Describe the job in a sentence or two.",
+  name: "Enter your name.",
+  phone: "Enter a 10-digit number.",
+  email: "Enter a valid email or leave it blank.",
+} as const;
+
+/** message → field, inverted from MSG so there is one source for the pair.
+ * This only decides *where* a failure is shown; every message reaches a
+ * screen either way, so a message this build has never seen still displays. */
+const FIELD_FOR_MESSAGE: Record<string, string> = Object.fromEntries(
+  Object.entries(MSG).map(([field, message]) => [message, field]),
+);
+
+const VERIFY_PENDING =
+  "Finish the verification check below, then run the estimate.";
+
+const ESTIMATOR_UNREACHABLE =
+  `We could not reach the estimator, so the numbers below are typical for this ` +
+  `kind of job rather than a draft from your description. Eric sets the real ` +
+  `number on the call.`;
+
+const SUBMIT_FAILED =
+  `We could not send your request, and nothing was saved. Try again, or call ` +
+  `Eric and he will take the details.`;
+
+/**
+ * The customer-ready message a ConvexError carries, or null for anything
+ * else (a network failure, a thrown Error). Convex puts an application
+ * error's payload on `data`; every ConvexError the backend throws carries a
+ * plain string written to be shown to the visitor.
+ */
+function convexErrorMessage(err: unknown): string | null {
+  const data = (err as { data?: unknown } | null | undefined)?.data;
+  if (typeof data === "string") return data.trim() || null;
+  if (data && typeof data === "object") {
+    const message = (data as { message?: unknown }).message;
+    if (typeof message === "string") return message.trim() || null;
+  }
+  return null;
+}
+
+/**
+ * What to show the visitor for a failed call: the backend's own message when
+ * it sent one, else `fallback`. `field` is set only when the message is one
+ * the form also checks, so the field can be marked for the trip back to edit
+ * it; everything else shows as a step-level message, which is the default.
+ */
+function failureMessage(
+  err: unknown,
+  fallback: string,
+): { message: string; field?: string } {
+  const message = convexErrorMessage(err);
+  if (!message) return { message: fallback };
+  return { message, field: FIELD_FOR_MESSAGE[message] };
+}
+
 /** Backend unreachable: the same draft the server falls back to, dollars
  * withheld. */
 const fallbackEstimate = (jobType: string): Estimate => ({
@@ -313,13 +403,89 @@ const hiddenFileInput: CSSProperties = {
 const ERR_FIELD_IDS: Record<string, string> = {
   type: "qf-type",
   desc: "qf-desc",
+  thickness: "qf-thickness",
+  quantity: "qf-quantity",
+  dims: "qf-dims",
+  location: "qf-location",
+  compQuote: "qf-comp-quote",
   name: "qf-name",
+  company: "qf-company",
   phone: "qf-phone",
+  email: "qf-email",
 };
+
+const stepAlert: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 10,
+  border: "1px solid rgba(224,22,37,.55)",
+  background: "rgba(224,22,37,.07)",
+  padding: "14px 16px",
+};
+
+const callLink: CSSProperties = {
+  fontFamily: MONO,
+  fontSize: 12,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: "#ffffff",
+  textDecoration: "none",
+  border: "1px solid rgba(255,255,255,.2)",
+  padding: "8px 12px",
+};
+
+/**
+ * A failure the visitor has to act on: the reason, verbatim, plus the phone
+ * number so a dead end is still a lead. `tone="warn"` is the softer panel
+ * used when the flow carried on anyway.
+ */
+function StepAlert({
+  message,
+  tone = "error",
+  children,
+}: {
+  message: string;
+  tone?: "error" | "warn";
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      role="alert"
+      style={
+        tone === "warn"
+          ? {
+              ...stepAlert,
+              border: "1px solid rgba(255,176,32,.4)",
+              background: "rgba(255,176,32,.04)",
+            }
+          : stepAlert
+      }
+    >
+      <span
+        style={{
+          fontFamily: BODY,
+          fontSize: 14,
+          lineHeight: 1.55,
+          color: "rgba(255,255,255,.86)",
+        }}
+      >
+        {message}
+      </span>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {children}
+        <a href={PHONE_TEL} style={callLink}>
+          Call Eric: {PHONE_DISPLAY}
+        </a>
+      </div>
+    </div>
+  );
+}
 
 function focusFirstInvalid(order: string[], next: Record<string, string>) {
   const first = order.find((key) => next[key]);
-  if (first) document.getElementById(ERR_FIELD_IDS[first])?.focus();
+  const id = first && ERR_FIELD_IDS[first];
+  if (id) document.getElementById(id)?.focus();
 }
 
 const css = `
@@ -403,8 +569,32 @@ export default function QuoteFlow() {
   const [reqId, setReqId] = useState(makeRequestId);
   const [submitting, setSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  /** Why the estimate call failed. With an estimate alongside it, the draft
+   * is the static fallback and this says so; without one, nothing drafted. */
+  const [estErr, setEstErr] = useState("");
+  /** Set only when a submission did not persist. Step 4 never renders while
+   * this is set. */
+  const [submitErr, setSubmitErr] = useState("");
 
   const slots = useMemo(() => makeSlots(), []);
+
+  /**
+   * Stable identity, and a no-op when there is nothing to clear: the widget
+   * re-subscribes whenever this callback changes, so a fresh object from
+   * either state setter here would re-render it, re-fire the success handler
+   * and loop forever.
+   */
+  const onVerified = useCallback((token: string) => {
+    setTurnstileToken(token);
+    // Drops the "finish the check" notice once the check clears.
+    setErrs((prev) => (prev.form ? { ...prev, form: "" } : prev));
+  }, []);
+
+  /** The widget mounts on step 2 and takes a few seconds to solve. Until it
+   * hands over a token the server will reject the estimate, so the action
+   * that spends it stays off. Without a site key there is no widget and the
+   * deployment is in Turnstile dev mode, so nothing is pending. */
+  const verifyPending = !!TURNSTILE_SITE_KEY && !turnstileToken;
 
   // 2.4.3: step transitions unmount the activating button; move focus to the
   // new step's heading (or the drafting panel) so keyboard/SR users land there.
@@ -425,10 +615,10 @@ export default function QuoteFlow() {
   // When the drafting panel unmounts, focus would drop to <body>; catch it on
   // the estimate heading instead. Never steals focus the user placed elsewhere.
   useEffect(() => {
-    if (!est || estBusy) return;
+    if (estBusy || (!est && !estErr)) return;
     const active = document.activeElement;
     if (!active || active === document.body) estHeadingRef.current?.focus();
-  }, [est, estBusy]);
+  }, [est, estBusy, estErr]);
 
   const setF = (k: keyof JobFields) => (value: string) => {
     setJob((prev) => ({ ...prev, [k]: value }));
@@ -455,11 +645,35 @@ export default function QuoteFlow() {
 
   const toStep2 = () => {
     const next: Record<string, string> = {};
-    if (!f.type) next.type = "Pick a job type.";
-    if (!f.desc.trim()) next.desc = "Describe the job in a sentence or two.";
+    const hidden = jobFormFor(f.type).hidden;
+    /** Only fields this job type actually sends are worth checking. */
+    const cap = (k: keyof JobFields & keyof typeof MAX, value: string) => {
+      if (!hidden.includes(k) && value.length > MAX[k]) {
+        next[k] = tooLong(MAX[k]);
+      }
+    };
+    if (!f.type) next.type = MSG.type;
+    if (!f.desc.trim()) next.desc = MSG.desc;
+    else cap("desc", f.desc);
+    cap("thickness", f.thickness);
+    cap("quantity", f.quantity);
+    cap("dims", f.dims);
+    cap("location", f.location);
+    cap("compQuote", f.compQuote);
     if (Object.keys(next).length) {
       setErrs(next);
-      focusFirstInvalid(["type", "desc"], next);
+      focusFirstInvalid(
+        [
+          "type",
+          "desc",
+          "thickness",
+          "quantity",
+          "dims",
+          "location",
+          "compQuote",
+        ],
+        next,
+      );
       return;
     }
     setStep(2);
@@ -469,17 +683,35 @@ export default function QuoteFlow() {
   const runEstimate = async () => {
     setEstBusy(true);
     setEst(null);
+    setEstErr("");
+    setSubmitErr("");
     const started = Date.now();
-    let result: Estimate;
+    let result: Estimate | null = null;
+    let failure = "";
     try {
       if (!convex) throw new Error("Convex client unavailable");
       result = await convex.action(api.estimate.draftEstimate, {
         ...jobArgs(f),
         sessionId: getSessionId(),
-        turnstileToken: turnstileToken || "dev",
+        // No token means the widget has not cleared, and the server is right
+        // to reject it. Never substitute a placeholder.
+        turnstileToken: turnstileToken || undefined,
       });
-    } catch {
-      result = fallbackEstimate(f.type);
+    } catch (err) {
+      const { message, field } = failureMessage(err, "");
+      if (message) {
+        // The backend rejected the request and said why. Show that reason
+        // rather than a draft that implies the request went through, and
+        // mark the field it names for the trip back to edit it.
+        failure = message;
+        if (field) setErrs((prev) => ({ ...prev, [field]: message }));
+      } else {
+        // No customer-ready reason: the estimator was unreachable. The static
+        // draft still gives hours with the dollars withheld, but say plainly
+        // that it did not come from this job description.
+        result = fallbackEstimate(f.type);
+        failure = ESTIMATOR_UNREACHABLE;
+      }
     }
     // Keep the drafting panel visible long enough to read when the
     // fallback answers instantly.
@@ -488,17 +720,27 @@ export default function QuoteFlow() {
       await new Promise((resolve) => setTimeout(resolve, 700 - elapsed));
     }
     setEst(result);
+    setEstErr(failure);
     setEstBusy(false);
   };
 
   const toStep3 = () => {
     const next: Record<string, string> = {};
-    if (!c.name.trim()) next.name = "Enter your name.";
-    if (c.phone.replace(/\D/g, "").length !== 10)
-      next.phone = "Enter a 10-digit number.";
+    if (!c.name.trim()) next.name = MSG.name;
+    else if (c.name.length > MAX.name) next.name = tooLong(MAX.name);
+    if (c.company.length > MAX.company) next.company = tooLong(MAX.company);
+    if (c.phone.replace(/\D/g, "").length !== 10) next.phone = MSG.phone;
+    else if (c.phone.length > MAX.phone) next.phone = tooLong(MAX.phone);
+    if (c.email.trim()) {
+      if (c.email.length > MAX.email) next.email = tooLong(MAX.email);
+      else if (!isEmail(c.email.trim())) next.email = MSG.email;
+    }
+    // The button is disabled while the check is pending; this also catches a
+    // token that expired between the last render and the click.
+    if (verifyPending) next.form = VERIFY_PENDING;
     if (Object.keys(next).length) {
       setErrs(next);
-      focusFirstInvalid(["name", "phone"], next);
+      focusFirstInvalid(["name", "company", "phone", "email"], next);
       return;
     }
     setStep(3);
@@ -514,6 +756,14 @@ export default function QuoteFlow() {
       .map((file) => rejectFile(f.type, file))
       .filter((p): p is string => !!p);
     let kept = picked.filter((file) => !rejectFile(f.type, file));
+    // The server rejects the whole request over a long file name, so drop
+    // those here with the reason.
+    if (kept.some((file) => file.name.length > MAX.photoName)) {
+      problems.push(
+        `Rename files with names over ${MAX.photoName} characters before attaching them.`,
+      );
+      kept = kept.filter((file) => file.name.length <= MAX.photoName);
+    }
     if (kept.length > MAX_UPLOAD_FILES) {
       problems.push(`Send ${MAX_UPLOAD_FILES} files or fewer.`);
       kept = kept.slice(0, MAX_UPLOAD_FILES);
@@ -580,31 +830,38 @@ export default function QuoteFlow() {
   const submit = async () => {
     if (!slot || submitting) return;
     setSubmitting(true);
+    setSubmitErr("");
     let finalId = reqId;
     const { sent, notSent } = await uploadFiles();
     try {
-      if (convex) {
-        const res = await convex.action(api.quotes.submitQuote, {
-          requestId: reqId,
-          name: c.name,
-          company: c.company || undefined,
-          phone: c.phone,
-          email: c.email || undefined,
-          job: {
-            ...jobArgs(f),
-            photoNames: notSent.length ? notSent : undefined,
-          },
-          files: sent.length ? sent : undefined,
-          estimate: est ?? undefined,
-          slot,
-          sessionId: getSessionId(),
-          turnstileToken: turnstileToken || "dev",
-        });
-        if (res?.requestId) finalId = res.requestId;
-      }
-    } catch {
-      // Backend unreachable or unverified: keep the provisional id so the
-      // request still lands in local history for the owner.
+      if (!convex) throw new Error("Convex client unavailable");
+      const res = await convex.action(api.quotes.submitQuote, {
+        requestId: reqId,
+        name: c.name,
+        company: c.company || undefined,
+        phone: c.phone,
+        email: c.email || undefined,
+        job: {
+          ...jobArgs(f),
+          photoNames: notSent.length ? notSent : undefined,
+        },
+        files: sent.length ? sent : undefined,
+        estimate: est ?? undefined,
+        slot,
+        sessionId: getSessionId(),
+        // Either a fresh token or the session the estimate step verified.
+        turnstileToken: turnstileToken || undefined,
+      });
+      if (res?.requestId) finalId = res.requestId;
+    } catch (err) {
+      // Nothing persisted and no email reached Eric. The confirmation screen
+      // would be a lie, so stay on step 3 with the reason, a retry and the
+      // phone number.
+      const { message, field } = failureMessage(err, SUBMIT_FAILED);
+      if (field) setErrs((prev) => ({ ...prev, [field]: message }));
+      setSubmitErr(message);
+      setSubmitting(false);
+      return;
     }
     try {
       const key = "tsws_quotes";
@@ -743,31 +1000,41 @@ export default function QuoteFlow() {
                 onChange={setF("desc")}
                 placeholder={form.descPlaceholder}
                 hint={form.descHint}
+                maxLength={MAX.desc}
                 error={errs.desc || ""}
               />
               {shows("thickness") ? (
                 <div className="qf-grid-2">
                   <Input
                     label="Thickness"
+                    id="qf-thickness"
                     value={f.thickness}
                     onChange={setF("thickness")}
                     placeholder='1/4"'
+                    maxLength={MAX.thickness}
+                    error={errs.thickness || ""}
                   />
                   <Input
                     label="Quantity"
+                    id="qf-quantity"
                     value={f.quantity}
                     onChange={setF("quantity")}
                     placeholder="1"
                     inputMode="numeric"
+                    maxLength={MAX.quantity}
+                    error={errs.quantity || ""}
                   />
                 </div>
               ) : null}
               <div className="qf-grid-2">
                 <Input
                   label={form.dimsLabel}
+                  id="qf-dims"
                   value={f.dims}
                   onChange={setF("dims")}
                   placeholder={form.dimsPlaceholder}
+                  maxLength={MAX.dims}
+                  error={errs.dims || ""}
                 />
                 <Select
                   label="Timeline"
@@ -822,19 +1089,25 @@ export default function QuoteFlow() {
                 <div className="qf-grid-2">
                   <Input
                     label="Where the work sits"
+                    id="qf-location"
                     value={f.location}
                     onChange={setF("location")}
                     placeholder="Shop drop-off, or an address / town"
                     hint="Site access notes help: gates, power, overhead lines."
+                    maxLength={MAX.location}
+                    error={errs.location || ""}
                   />
                   <Input
                     label="Quote you already got (optional)"
+                    id="qf-comp-quote"
                     value={f.compQuote}
                     onChange={setF("compQuote")}
                     adornment="$"
                     placeholder="4,800"
                     inputMode="decimal"
                     hint="We'll beat it. Attach the paperwork below if you have it."
+                    maxLength={MAX.compQuote}
+                    error={errs.compQuote || ""}
                   />
                 </div>
               ) : null}
@@ -980,13 +1253,17 @@ export default function QuoteFlow() {
                 value={c.name}
                 onChange={setC("name")}
                 autoComplete="name"
+                maxLength={MAX.name}
                 error={errs.name || ""}
               />
               <Input
                 label="Company (optional)"
+                id="qf-company"
                 value={c.company}
                 onChange={setC("company")}
                 autoComplete="organization"
+                maxLength={MAX.company}
+                error={errs.company || ""}
               />
             </div>
             <div className="qf-grid-2">
@@ -1000,33 +1277,62 @@ export default function QuoteFlow() {
                 value={c.phone}
                 onChange={setC("phone")}
                 placeholder="(817) 555-0100"
+                maxLength={MAX.phone}
                 error={errs.phone || ""}
               />
               <Input
                 label="Email"
+                id="qf-email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
                 value={c.email}
                 onChange={setC("email")}
                 placeholder="you@company.com"
+                maxLength={MAX.email}
+                error={errs.email || ""}
               />
             </div>
             {TURNSTILE_SITE_KEY ? (
-              <Turnstile
-                siteKey={TURNSTILE_SITE_KEY}
-                options={{ theme: "dark" }}
-                onSuccess={setTurnstileToken}
-                onExpire={() => setTurnstileToken("")}
-                onError={() => setTurnstileToken("")}
-              />
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <Turnstile
+                  siteKey={TURNSTILE_SITE_KEY}
+                  options={{ theme: "dark" }}
+                  onSuccess={onVerified}
+                  onExpire={() => setTurnstileToken("")}
+                  onError={() => setTurnstileToken("")}
+                />
+                {/* Says why the button is off; announced when it turns on. */}
+                <span
+                  role="status"
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: verifyPending ? "#ffb020" : "rgba(255,255,255,.5)",
+                  }}
+                >
+                  {verifyPending
+                    ? "Running a quick check that you are human. The button turns on when it clears."
+                    : "Check cleared. Ready to run the estimate."}
+                </span>
+              </div>
             ) : null}
+            {errs.form ? <StepAlert message={errs.form} /> : null}
             <div className="qf-actions">
               <Button variant="ghost" onClick={backTo1}>
                 Back to the job
               </Button>
-              <Button variant="primary" size="lg" onClick={toStep3}>
-                Run the estimate
+              <Button
+                variant="primary"
+                size="lg"
+                disabled={verifyPending}
+                onClick={toStep3}
+              >
+                {verifyPending ? "Waiting on the check" : "Run the estimate"}
               </Button>
             </div>
           </div>
@@ -1041,7 +1347,9 @@ export default function QuoteFlow() {
                   ? "Drafting your numbers."
                   : estReady
                     ? "Estimate ready."
-                    : ""}
+                    : estErr
+                      ? "We could not draft the numbers."
+                      : ""}
               </div>
               {estBusy ? (
                 <div
@@ -1088,8 +1396,47 @@ export default function QuoteFlow() {
                 </div>
               ) : null}
 
+              {/* The estimate failed outright: no draft, and the reason the
+                  backend gave, verbatim. The flow stops here rather than
+                  carrying on to a request that would be rejected too. */}
+              {!estBusy && !est && estErr ? (
+                <div
+                  className="qf-pad"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 16,
+                    ...panelChamfer,
+                  }}
+                >
+                  <div>
+                    <div style={stepKicker}>Step 3 of 4 · {reqId}</div>
+                    <h2
+                      className="qf-h2 qf-focus-target"
+                      style={h2Style}
+                      tabIndex={-1}
+                      ref={estHeadingRef}
+                    >
+                      We could not draft the numbers
+                    </h2>
+                  </div>
+                  <StepAlert message={estErr}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => void runEstimate()}
+                    >
+                      Try the estimate again
+                    </Button>
+                  </StepAlert>
+                </div>
+              ) : null}
+
               {estReady && est ? (
                 <>
+                  {/* Static draft stood in for the estimator. Say so above the
+                      numbers instead of passing them off as a draft of this
+                      job. */}
+                  {estErr ? <StepAlert message={estErr} tone="warn" /> : null}
                   <div
                     className="qf-pad"
                     style={{
@@ -1434,6 +1781,9 @@ export default function QuoteFlow() {
                         );
                       })}
                     </div>
+                    {/* The submission did not persist. Retry from here; the
+                        confirmation screen stays unreachable until one does. */}
+                    {submitErr ? <StepAlert message={submitErr} /> : null}
                     <div className="qf-actions">
                       <span
                         style={{
@@ -1454,7 +1804,7 @@ export default function QuoteFlow() {
                         disabled={!slot || submitting}
                         onClick={() => void submit()}
                       >
-                        Send the request
+                        {submitErr ? "Try sending again" : "Send the request"}
                       </Button>
                     </div>
                   </div>

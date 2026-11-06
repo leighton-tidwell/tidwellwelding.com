@@ -56,7 +56,7 @@ describe("SiteHeader", () => {
     expect(active).toHaveLength(1);
     expect(active[0]).toHaveTextContent("Services");
     expect(active[0]).toHaveAttribute("aria-current", "page");
-    expect(active[0].querySelector(".site-nav__seam")).toBeInTheDocument();
+    expect(active[0]!.querySelector(".site-nav__seam")).toBeInTheDocument();
   });
 
   test("nested paths keep the section link active", () => {
