@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import Button from "@/components/ds/button";
 import Card from "@/components/ds/card";
 import HazardBar from "@/components/ds/hazard-bar";
@@ -476,6 +476,7 @@ export default function HomePage() {
           />
           {/* 2.2.2/2.3.3: no autoplay for users who asked for reduced motion. */}
           <script
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: static inline script, no user input.
             dangerouslySetInnerHTML={{
               __html:
                 '(function(){try{if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){var v=document.getElementById("rig-video");if(v){v.removeAttribute("autoplay");v.autoplay=false;v.pause();}}}catch(e){}})();',

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Saira_Condensed, Archivo, IBM_Plex_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Saira_Condensed } from "next/font/google";
 import "./globals.css";
-import ConvexClientProvider from "./ConvexClientProvider";
 import JsonLd from "@/components/json-ld";
 import {
   EMAIL,
@@ -15,6 +14,7 @@ import {
   SERVICE_AREA,
   SITE_URL,
 } from "@/lib/business";
+import ConvexClientProvider from "./ConvexClientProvider";
 
 const saira = Saira_Condensed({
   weight: ["500", "600", "700", "800", "900"],

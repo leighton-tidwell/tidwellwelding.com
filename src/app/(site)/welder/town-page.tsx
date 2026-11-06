@@ -1,9 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
+import type { CSSProperties, ReactNode } from "react";
 import Button from "@/components/ds/button";
 import HazardBar from "@/components/ds/hazard-bar";
-import Icon from "@/components/ds/icon";
 import type { IconName } from "@/components/ds/icon";
+import Icon from "@/components/ds/icon";
 import JsonLd from "@/components/json-ld";
 import {
   EMAIL,
@@ -217,6 +217,7 @@ export default function TownPage({ content }: { content: TownContent }) {
           <div className="flex flex-col gap-[18px]">
             <div style={kicker}>{content.bodyKicker}</div>
             {content.paragraphs.map((p, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: static copy, never reordered.
               <p key={i} style={bodyCopy}>
                 {p}
               </p>
@@ -266,6 +267,7 @@ export default function TownPage({ content }: { content: TownContent }) {
         </h2>
         <div className="flex flex-col gap-[18px]">
           {content.question.paragraphs.map((p, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static copy, never reordered.
             <p key={i} style={{ ...bodyCopy, maxWidth: "64ch" }}>
               {p}
             </p>

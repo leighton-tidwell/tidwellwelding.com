@@ -1,8 +1,9 @@
+import { ConvexHttpClient } from "convex/browser";
+import type { FunctionReturnType } from "convex/server";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "../../../../convex/_generated/api";
 import { Button } from "@/components/ds";
+import { api } from "../../../../convex/_generated/api";
 import SetPasswordForm from "./set-password-form";
 import "../admin.css";
 
@@ -73,7 +74,7 @@ export default async function SetPasswordPage({
     );
   }
 
-  let result;
+  let result: FunctionReturnType<typeof api.auth.checkSetupToken>;
   try {
     const convex = new ConvexHttpClient(
       process.env.NEXT_PUBLIC_CONVEX_URL as string,

@@ -1,6 +1,6 @@
 import { Resend } from "@convex-dev/resend";
-import { Resend as ResendSdk } from "resend";
 import { ConvexError, v } from "convex/values";
+import { Resend as ResendSdk } from "resend";
 import { components, internal } from "./_generated/api";
 import { action, internalMutation } from "./_generated/server";
 import {
@@ -9,15 +9,15 @@ import {
   isEmail,
   type QuotePayload,
 } from "./emailTemplates";
+import { type Estimate, estimateSchema, rejectOversize } from "./estimate";
 import { buildCallbackIcs } from "./ics";
-import { estimateSchema, rejectOversize, type Estimate } from "./estimate";
 import { assertSessionId, limitQuoteSubmit } from "./rateLimits";
+import { verifyTurnstile } from "./turnstile";
 import {
   MAX_UPLOAD_FILES,
   rejectCompetitorFile,
   rejectFile,
 } from "./uploadRules";
-import { verifyTurnstile } from "./turnstile";
 
 const OWNER_EMAIL = "eric@tidwellwelding.com";
 const FROM = "TSWS Website <quotes@tidwellwelding.com>";
@@ -338,7 +338,8 @@ export const submitQuote = action({
             headers: { "Idempotency-Key": emailId },
           });
           if (error) throw new Error(`Resend send failed: ${error.message}`);
-          return data!.id;
+          if (!data) throw new Error("Resend send returned no data");
+          return data.id;
         },
       );
     };

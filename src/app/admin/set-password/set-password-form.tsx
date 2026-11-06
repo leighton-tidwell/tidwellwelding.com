@@ -3,8 +3,8 @@
 import { useMutation } from "convex/react";
 import Link from "next/link";
 import { useState } from "react";
-import { api } from "../../../../convex/_generated/api";
 import { Button, Input } from "@/components/ds";
+import { api } from "../../../../convex/_generated/api";
 import "../admin.css";
 
 const MIN_LENGTH = 12;

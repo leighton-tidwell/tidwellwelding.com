@@ -1,14 +1,14 @@
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
-import { convexTest } from "convex-test";
 import { ConvexError } from "convex/values";
+import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import {
+  type Estimate,
   estimateSchema,
   fallbackEstimate,
   rejectOversize,
   toCustomerEstimate,
-  type Estimate,
 } from "./estimate";
 import schema from "./schema";
 
@@ -256,7 +256,7 @@ describe("draftEstimate action", () => {
   test("returns the parsed model estimate when the reply contains valid JSON", async () => {
     const t = setup();
     generateTextMock.mockResolvedValue({
-      text: "Here is the estimate:\n" + JSON.stringify(canonicalEstimate),
+      text: `Here is the estimate:\n${JSON.stringify(canonicalEstimate)}`,
     });
     const res = await t.action(api.estimate.draftEstimate, baseArgs());
     expect(res).toEqual(canonicalEstimate);

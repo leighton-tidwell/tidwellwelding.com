@@ -1,16 +1,14 @@
 "use client";
 
+import { Turnstile } from "@marsidev/react-turnstile";
+import { useConvex } from "convex/react";
 import {
+  type CSSProperties,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
-import { useConvex } from "convex/react";
-import { Turnstile } from "@marsidev/react-turnstile";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
 import {
   Badge,
   Button,
@@ -21,6 +19,9 @@ import {
   Select,
 } from "@/components/ds";
 import { getSessionId } from "@/lib/session";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import { fallbackDraft } from "../../../../convex/estimateFallback";
 import {
   CNC_TYPE,
   COMPETITOR_ACCEPT,
@@ -29,7 +30,6 @@ import {
   rejectFile,
   uploadAccept,
 } from "../../../../convex/uploadRules";
-import { fallbackDraft } from "../../../../convex/estimateFallback";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -205,8 +205,8 @@ function makeSlots() {
       month: "short",
       day: "numeric",
     });
-    out.push({ label: day + " · Morning", day, time: "8a–12p" });
-    out.push({ label: day + " · Afternoon", day, time: "1p–5p" });
+    out.push({ label: `${day} · Morning`, day, time: "8a–12p" });
+    out.push({ label: `${day} · Afternoon`, day, time: "1p–5p" });
     added++;
   }
   return out;
@@ -221,7 +221,7 @@ function makeRequestId(): string {
   );
 }
 
-const fmt = (n: number) => "$" + Number(n || 0).toLocaleString("en-US");
+const fmt = (n: number) => `$${Number(n || 0).toLocaleString("en-US")}`;
 
 /* ---- shared style fragments (1280px desktop comp, quote.dc.html) ---- */
 
@@ -634,7 +634,7 @@ export default function QuoteFlow() {
     f.timeline === "Emergency. Right now." || f.type === "Emergency";
   const estReady = !!est && !estBusy;
   const photoLabel = f.photos.length
-    ? f.photos.length + " file(s): " + f.photos.join(", ")
+    ? `${f.photos.length} file(s): ${f.photos.join(", ")}`
     : form.uploadEmpty;
   const compFileLabel = f.compFile || "Tap to attach the other shop's quote.";
 
@@ -683,7 +683,7 @@ export default function QuoteFlow() {
                         : "rgba(255,255,255,.4)",
                 }}
               >
-                {"0" + (i + 1)}
+                {`0${i + 1}`}
               </span>
               <span
                 style={{
@@ -1154,6 +1154,7 @@ export default function QuoteFlow() {
                       </div>
                       {est.line_items.map((li, i) => (
                         <div
+                          // biome-ignore lint/suspicious/noArrayIndexKey: estimate lines are replaced wholesale, never reordered.
                           key={i}
                           className="qf-li-row"
                           style={{
@@ -1300,7 +1301,7 @@ export default function QuoteFlow() {
                         </span>
                       </div>
                     ) : null}
-                    {est.questions && est.questions.length ? (
+                    {est.questions?.length ? (
                       <div>
                         <div
                           style={{
@@ -1444,7 +1445,7 @@ export default function QuoteFlow() {
                         }}
                       >
                         {slot
-                          ? "Slot: " + slot
+                          ? `Slot: ${slot}`
                           : "Pick a window for the callback."}
                       </span>
                       <Button

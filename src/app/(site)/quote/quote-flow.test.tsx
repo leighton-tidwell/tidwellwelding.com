@@ -1,8 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
-  afterEach,
   afterAll,
+  afterEach,
   beforeEach,
   describe,
   expect,
@@ -49,7 +49,6 @@ vi.mock("@marsidev/react-turnstile", async () => {
     Turnstile: ({ onSuccess }: { onSuccess?: (token: string) => void }) => {
       React.useEffect(() => {
         onSuccess?.("test-turnstile-token");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, []);
       return <div data-testid="turnstile-stub" />;
     },

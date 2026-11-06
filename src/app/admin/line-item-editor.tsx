@@ -4,8 +4,8 @@ import { useId } from "react";
 import { Button, Checkbox, Icon, Input, Select } from "@/components/ds";
 import {
   formatMoney,
-  parseMoneyToCents,
   type LineUnit,
+  parseMoneyToCents,
 } from "@/lib/invoice-format";
 
 /** A line as the form holds it: every numeric field stays a string while the
@@ -91,6 +91,7 @@ export default function LineItemEditor({
         const amount = lineAmountCentsOrNull(line);
         const rowId = `${idBase}-${line.key}`;
         return (
+          // biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the grid.
           <div
             key={line.key}
             role="group"
@@ -138,10 +139,7 @@ export default function LineItemEditor({
                 checked={line.taxable}
                 onChange={(checked) => update(index, { taxable: checked })}
               />
-              <span
-                className="admin-line-amount"
-                aria-label={`Line ${index + 1} amount`}
-              >
+              <span className="admin-line-amount">
                 {amount === null ? "—" : formatMoney(amount)}
               </span>
               <Button

@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["**", "!convex/_generated", "!public"]
+  },
+  "formatter": { "indentStyle": "space" },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "performance": {
+        // next.config sets images.unoptimized; the design uses plain <img>.
+        "noImgElement": "off"
+      },
+      "a11y": {
+        // role="list" restores list semantics that Safari/VoiceOver drops
+        // when a list is styled with list-style: none.
+        "noRedundantRoles": "off"
+      }
+    },
+    "domains": {
+      "next": "recommended",
+      "react": "recommended",
+      "test": "recommended"
+    }
+  },
+  "overrides": [
+    {
+      // In tests a wrong `!` throws at the assertion, which is the failure we want.
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
+      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+    }
+  ],
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+}

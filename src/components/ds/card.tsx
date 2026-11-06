@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type CardProps = {
   variant?: "default" | "plate" | "light";
@@ -12,7 +12,6 @@ export type CardProps = {
   media?: ReactNode;
   /** Footer row divided by a hairline. */
   footer?: ReactNode;
-  onClick?: MouseEventHandler<HTMLDivElement>;
   className?: string;
   style?: CSSProperties;
   children?: ReactNode;
@@ -26,7 +25,6 @@ export default function Card({
   title,
   media,
   footer,
-  onClick,
   className,
   style,
   children,
@@ -48,7 +46,7 @@ export default function Card({
     );
 
   return (
-    <div className={classes} style={style} onClick={onClick}>
+    <div className={classes} style={style}>
       {rule ? <div className="tsws-card__rule" aria-hidden="true" /> : null}
       {media ? <div className="tsws-card__media">{media}</div> : null}
       <div className="tsws-card__body">

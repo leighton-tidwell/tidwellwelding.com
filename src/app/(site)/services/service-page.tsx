@@ -1,8 +1,8 @@
-import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
+import type { CSSProperties, ReactNode } from "react";
 import Button from "@/components/ds/button";
-import Icon from "@/components/ds/icon";
 import type { IconName } from "@/components/ds/icon";
+import Icon from "@/components/ds/icon";
 import JsonLd from "@/components/json-ld";
 import { PHONE_DISPLAY, PHONE_TEL, SITE_URL } from "@/lib/business";
 
@@ -246,6 +246,7 @@ export default function ServicePage({
                   {section.heading}
                 </h2>
                 {section.paragraphs.map((paragraph, index) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static copy, never reordered.
                   <p key={index} style={bodyCopy}>
                     {paragraph}
                   </p>

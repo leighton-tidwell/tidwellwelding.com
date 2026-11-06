@@ -33,7 +33,12 @@ const OVERRIDE_VAR = "EXPECTED_PRODUCTION_CONVEX_URL";
 // Next's env precedence for a production build, highest first. `process.env`
 // outranks every file, which is how `convex deploy --cmd-url-env-var-name`
 // injects the deployment it just pushed to.
-const ENV_FILES = [".env.production.local", ".env.local", ".env.production", ".env"];
+const ENV_FILES = [
+  ".env.production.local",
+  ".env.local",
+  ".env.production",
+  ".env",
+];
 
 /** Minimal dotenv reader: returns the value of `key`, or undefined. */
 function readFromFile(file, key) {
@@ -57,7 +62,8 @@ function readFromFile(file, key) {
 
 /** Resolve `key` the way Next will when it inlines it. */
 function resolve(key) {
-  if (process.env[key]) return { value: process.env[key], source: "process.env" };
+  if (process.env[key])
+    return { value: process.env[key], source: "process.env" };
   for (const file of ENV_FILES) {
     const value = readFromFile(file, key);
     if (value) return { value, source: file };
@@ -65,7 +71,8 @@ function resolve(key) {
   return { value: undefined, source: "unset" };
 }
 
-const expected = process.env[OVERRIDE_VAR] || readFromFile(".env.production", VAR);
+const expected =
+  process.env[OVERRIDE_VAR] || readFromFile(".env.production", VAR);
 
 if (!expected) {
   console.error(
@@ -98,4 +105,6 @@ if (actual.value !== expected) {
   process.exit(1);
 }
 
-console.log(`[convex-url-guard] OK: ${VAR}=${actual.value} (from ${actual.source})`);
+console.log(
+  `[convex-url-guard] OK: ${VAR}=${actual.value} (from ${actual.source})`,
+);
