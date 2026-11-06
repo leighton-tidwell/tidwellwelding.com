@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
+import { ADMIN_URL } from "./admin-url";
 
 /**
  * Icons inside buttons sat a few pixels high: `.tsws-icon` is inline-grid with
@@ -14,7 +15,7 @@ test("icons are vertically centred against their button label", async ({
     fs.readFileSync(path.join(__dirname, ".admin-credentials.json"), "utf8"),
   );
 
-  await page.goto("/admin");
+  await page.goto(ADMIN_URL);
   await page.getByLabel("Email").fill(creds.email);
   await page.getByLabel("Password").fill(creds.password);
   await page.getByRole("button", { name: "Sign in" }).click();

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test as setup } from "@playwright/test";
+import { ADMIN_URL } from "./admin-url";
 
 /**
  * Provisions a disposable admin account on the local Convex backend and walks
@@ -47,7 +48,7 @@ setup(
     });
 
     // Prove the account works before the suite depends on it.
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
     await page.getByLabel("Email").fill(TEST_EMAIL);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
