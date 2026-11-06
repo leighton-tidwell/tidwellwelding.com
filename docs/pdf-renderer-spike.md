@@ -48,7 +48,7 @@ At 250 line items the gap widens: react-pdf takes 4617ms, Chromium 56ms — 82x.
 3. **Drop: direct `pdf-lib` composition.** Fast (42x) and it can be made to
    meet the constraints, but it puts ~545 lines of hand-measured layout on us
    permanently. Chromium gets the same speed class with none of that. The
-   prototype stays in `bench/` as a record.
+   prototype is not kept in the tree; see **Reproducing** for where to find it.
 
 `testTimeout: 30_000` stays as it is regardless, as the issue says.
 
@@ -348,14 +348,25 @@ last. Not yet solved, and it belongs with the font question on the gate list.
 
 ## Reproducing
 
+The benchmark harness has been removed. It was always throwaway, and once #45
+adopted the search fix it had done its job — while it sat in the tree it was
+linted and typechecked, and since #42 the production deploy runs `make ci`, so a
+future lint or type change breaking dead benchmark code would have blocked
+deploys. Removed per #46.
+
+Raw output is kept alongside this report in
+[`pdf-renderer-spike-results.md`](./pdf-renderer-spike-results.md).
+
+To get the harness back, take it from the commit that added it:
+
 ```bash
+git show 2136573 --stat                  # the #32 merge, with bench/ intact
+git checkout 2136573 -- bench vitest.bench.config.mts
 pnpm exec vitest run --config vitest.bench.config.mts
 ```
 
-Benchmark code lives in `bench/` and is **throwaway**: it is excluded from
-`make test` (`vitest.config.mts` includes only `convex/**` and `src/**`) and has
-no bearing on production. Raw output in
-[`bench/results.md`](../bench/results.md).
+Every `bench/...` path cited in this report refers to that tree, not to the
+current one.
 
 Numbers above are medians of 7 timed runs after 2 warm-up runs (3 runs for the
 cold-launch figure), one bench file at a time, on an Apple M4 Pro (14 cores) /
