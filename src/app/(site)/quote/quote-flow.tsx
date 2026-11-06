@@ -5,6 +5,7 @@ import { useConvex } from "convex/react";
 import {
   type CSSProperties,
   type ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -575,6 +576,18 @@ export default function QuoteFlow() {
   const [submitErr, setSubmitErr] = useState("");
 
   const slots = useMemo(() => makeSlots(), []);
+
+  /**
+   * Stable identity, and a no-op when there is nothing to clear: the widget
+   * re-subscribes whenever this callback changes, so a fresh object from
+   * either state setter here would re-render it, re-fire the success handler
+   * and loop forever.
+   */
+  const onVerified = useCallback((token: string) => {
+    setTurnstileToken(token);
+    // Drops the "finish the check" notice once the check clears.
+    setErrs((prev) => (prev.form ? { ...prev, form: "" } : prev));
+  }, []);
 
   /** The widget mounts on step 2 and takes a few seconds to solve. Until it
    * hands over a token the server will reject the estimate, so the action
@@ -1286,11 +1299,7 @@ export default function QuoteFlow() {
                 <Turnstile
                   siteKey={TURNSTILE_SITE_KEY}
                   options={{ theme: "dark" }}
-                  onSuccess={(token) => {
-                    setTurnstileToken(token);
-                    // Drops the "finish the check" notice once it clears.
-                    setErrs((prev) => ({ ...prev, form: "" }));
-                  }}
+                  onSuccess={onVerified}
                   onExpire={() => setTurnstileToken("")}
                   onError={() => setTurnstileToken("")}
                 />
