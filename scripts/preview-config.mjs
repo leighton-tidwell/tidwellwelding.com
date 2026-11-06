@@ -46,7 +46,9 @@ if (Array.isArray(config.services)) {
 
 config.vars = {
   ...(config.vars ?? {}),
-  ADMIN_ACCESS_KEY: randomBytes(12).toString("hex"),
+  // The preview workflow passes its own key so e2e can reach /admin.
+  ADMIN_ACCESS_KEY:
+    process.env.ADMIN_ACCESS_KEY || randomBytes(12).toString("hex"),
 };
 
 writeFileSync("wrangler.preview.jsonc", `${JSON.stringify(config, null, 2)}\n`);

@@ -37,6 +37,9 @@ export default defineSchema({
     estimate: v.optional(v.any()),
     slot: v.string(),
     status: v.string(),
+    // Set when the operator saves this request as a customer. Optional because
+    // every row written before the quotes inbox could link the two has none.
+    customerId: v.optional(v.id("customers")),
     createdAt: v.number(),
   })
     .index("by_createdAt", ["createdAt"])
@@ -200,6 +203,10 @@ export default defineSchema({
       v.literal("void"),
     ),
     customerId: v.id("customers"),
+    // The quote request this invoice was raised from, when it came from one.
+    // Optional: an invoice started from the Invoices tab has no quote behind
+    // it, and neither does any invoice written before this link existed.
+    quoteId: v.optional(v.id("quotes")),
     jobPo: v.optional(v.string()),
     issuedAt: v.number(),
     dueAt: v.optional(v.number()),
@@ -232,5 +239,6 @@ export default defineSchema({
     .index("by_number", ["number"])
     .index("by_status", ["status", "createdAt"])
     .index("by_customer", ["customerId", "createdAt"])
+    .index("by_quote", ["quoteId"])
     .index("by_createdAt", ["createdAt"]),
 });

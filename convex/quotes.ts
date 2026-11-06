@@ -2,7 +2,12 @@ import { Resend } from "@convex-dev/resend";
 import { ConvexError, type ObjectType, v } from "convex/values";
 import { Resend as ResendSdk } from "resend";
 import { components, internal } from "./_generated/api";
-import { type ActionCtx, action, internalMutation } from "./_generated/server";
+import {
+  type ActionCtx,
+  action,
+  internalMutation,
+  type MutationCtx,
+} from "./_generated/server";
 import {
   buildCustomerEmail,
   buildOwnerEmail,
@@ -71,12 +76,60 @@ const storedFileValidator = v.object({
 });
 type StoredFile = typeof storedFileValidator.type;
 
-function makeRequestId(): string {
-  return (
-    "Q-" +
-    new Date().getFullYear() +
-    "-" +
-    String(Math.floor(100 + Math.random() * 900))
+/** The customer-facing request id format, as the client may also send it. */
+const REQUEST_ID_FORMAT = /^Q-\d{4}-\d{3,4}$/;
+
+/** Candidates tried per digit width before widening the space. A random
+ * 3-digit id collides with p = taken/900, so eight draws miss a free slot
+ * only once the year is almost full — at which point the 4-digit space
+ * (another 9000 ids) takes over and the error below is the honest answer. */
+const ID_ATTEMPTS_PER_WIDTH = 8;
+
+/** A random id in the `digits`-wide space for `year`, e.g. Q-2026-104. */
+function randomRequestId(year: number, digits: 3 | 4): string {
+  const min = 10 ** (digits - 1);
+  return `Q-${year}-${Math.floor(min + Math.random() * min * 9)}`;
+}
+
+/** Whether any quote already carries this id. `first()`, never `unique()`:
+ * rows written before ids were claimed transactionally may already hold a
+ * duplicate, and a check for collisions must not itself throw on one. */
+async function requestIdTaken(
+  ctx: MutationCtx,
+  requestId: string,
+): Promise<boolean> {
+  const existing = await ctx.db
+    .query("quotes")
+    .withIndex("by_requestId", (q) => q.eq("requestId", requestId))
+    .first();
+  return existing !== null;
+}
+
+/**
+ * The id this quote will be filed under: the caller's preference when it is
+ * free, otherwise a generated one that is not in use.
+ *
+ * Must run inside the inserting mutation. Convex mutations are transactional,
+ * so a check here and the insert that follows cannot be interleaved with
+ * another submission; choosing an id in the action and inserting later could
+ * be, which is exactly how two quotes came to share one.
+ */
+async function claimRequestId(
+  ctx: MutationCtx,
+  preferred: string | undefined,
+): Promise<string> {
+  if (preferred && !(await requestIdTaken(ctx, preferred))) return preferred;
+  const year = new Date().getFullYear();
+  for (const digits of [3, 4] as const) {
+    for (let attempt = 0; attempt < ID_ATTEMPTS_PER_WIDTH; attempt++) {
+      const candidate = randomRequestId(year, digits);
+      if (!(await requestIdTaken(ctx, candidate))) return candidate;
+    }
+  }
+  // Bounded on purpose: no unbounded loop, and a duplicate is never the
+  // fallback. Reaching this needs ~9900 quotes in one year.
+  throw new ConvexError(
+    "We could not file your request. Call us and we will take it down.",
   );
 }
 
@@ -88,7 +141,9 @@ const clipOpt = (s: string | undefined, n: number) => {
 
 export const insertQuote = internalMutation({
   args: {
-    requestId: v.string(),
+    /** The id to file this under if it is free; a fresh one is generated
+     * when it is taken or absent. The stored id comes back in the return. */
+    requestId: v.optional(v.string()),
     name: v.string(),
     company: v.optional(v.string()),
     phone: v.string(),
@@ -98,13 +153,16 @@ export const insertQuote = internalMutation({
     estimate: v.optional(v.any()),
     slot: v.string(),
   },
-  returns: v.id("quotes"),
+  returns: v.object({ id: v.id("quotes"), requestId: v.string() }),
   handler: async (ctx, args) => {
-    return await ctx.db.insert("quotes", {
+    const requestId = await claimRequestId(ctx, args.requestId);
+    const id = await ctx.db.insert("quotes", {
       ...args,
+      requestId,
       status: "new",
       createdAt: Date.now(),
     });
+    return { id, requestId };
   },
 });
 
@@ -240,14 +298,40 @@ async function recordFailedQuote(
   }
 }
 
+/**
+ * Delete the uploads this attempt pushed to storage, including the
+ * competitor quote. Only safe while no quote row references them.
+ *
+ * Never throws: the visitor's own error is the one that matters.
+ */
+async function discardUploads(ctx: ActionCtx, args: SubmitArgs): Promise<void> {
+  const storageIds = (args.files ?? []).map((f) => f.storageId);
+  if (!storageIds.length) return;
+  try {
+    await ctx.runMutation(internal.uploads.discardFiles, { storageIds });
+  } catch (err) {
+    console.error("Discarding the uploads of a rejected quote failed", err);
+  }
+}
+
+/** Whether the quote row has landed. Until it has, the uploaded files belong
+ * to nothing and a failure must delete them; once it has, the row owns them
+ * and deleting would strip Eric's own request of its photos. Set next to the
+ * insert, read only in the handler's catch. */
+type UploadOwner = { byQuote: boolean };
+
 export const submitQuote = action({
   args: submitArgs,
   handler: async (ctx, args): Promise<{ ok: boolean; requestId: string }> => {
+    // The browser uploads its files before it calls this action, so a
+    // submission rejected below leaves them with nothing pointing at them.
+    const owner: UploadOwner = { byQuote: false };
     try {
-      return await runSubmit(ctx, args);
+      return await runSubmit(ctx, args, owner);
     } catch (err) {
-      // Any failure at all, anticipated or not: the lead is kept before the
-      // error goes back to the visitor.
+      // Any failure at all, anticipated or not: the orphaned uploads go and
+      // the lead is kept, both before the error goes back to the visitor.
+      if (!owner.byQuote) await discardUploads(ctx, args);
       await recordFailedQuote(ctx, args, err);
       throw err;
     }
@@ -260,6 +344,7 @@ export const submitQuote = action({
 async function runSubmit(
   ctx: ActionCtx,
   args: SubmitArgs,
+  owner: UploadOwner,
 ): Promise<{ ok: boolean; requestId: string }> {
   assertSessionId(args.sessionId);
 
@@ -324,8 +409,7 @@ async function runSubmit(
   await limitQuoteSubmit(ctx, args.sessionId);
 
   // Uploaded files: photos for every job, drawings and CAD files for CNC,
-  // plus one competitor quote (photo or PDF). One bad file refuses the set,
-  // and every refused upload is deleted so nothing lingers in storage.
+  // plus one competitor quote (photo or PDF). One bad file refuses the set.
   const uploads = args.files ?? [];
   const files: StoredFile[] = [];
   const fileLinks: { name: string; url: string }[] = [];
@@ -366,18 +450,17 @@ async function runSubmit(
       if (upload.kind === "competitor") competitorLink = { name, url };
       else fileLinks.push({ name, url });
     }
-    if (problem) {
-      await ctx.runMutation(internal.uploads.discardFiles, {
-        storageIds: uploads.map((f) => f.storageId),
-      });
-      throw new ConvexError(problem);
-    }
+    // Throwing is enough: the handler deletes every upload of a rejected
+    // attempt, whichever check refused it.
+    if (problem) throw new ConvexError(problem);
   }
 
-  const requestId =
-    args.requestId && /^Q-\d{4}-\d{3,4}$/.test(args.requestId)
+  // A well-formed client id is a preference, not a promise: insertQuote keeps
+  // it only if no quote holds it already.
+  const preferredRequestId =
+    args.requestId && REQUEST_ID_FORMAT.test(args.requestId)
       ? args.requestId
-      : makeRequestId();
+      : undefined;
 
   // Prefer the server-side draft for this job type (it keeps the dollars a
   // low-confidence customer never saw); fall back to validating whatever the client sent.
@@ -403,8 +486,7 @@ async function runSubmit(
     }
   }
 
-  const payload: QuotePayload = {
-    requestId,
+  const quote = {
     name: clip(args.name, 120),
     company: clipOpt(args.company, 120),
     phone: clip(args.phone, 40),
@@ -428,10 +510,16 @@ async function runSubmit(
     slot: clip(args.slot, 80),
   };
 
-  await ctx.runMutation(internal.quotes.insertQuote, {
-    ...payload,
+  // The mutation owns the id, so the row, the reply and the emails all use
+  // the one it actually claimed.
+  const { requestId } = await ctx.runMutation(internal.quotes.insertQuote, {
+    ...quote,
+    requestId: preferredRequestId,
     files: files.length ? files : undefined,
   });
+  // The row references the uploads now. Nothing may delete them after this.
+  owner.byQuote = true;
+  const payload: QuotePayload = { requestId, ...quote };
   // Download links go in Eric's email only; the row keeps the storage ids.
   if (fileLinks.length) payload.files = fileLinks;
   if (competitorLink) payload.competitorFile = competitorLink;

@@ -4,11 +4,7 @@
 // is shaped exactly like production's. Refuses any backend that isn't local.
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference as fn } from "convex/server";
-
-export const OWNER = {
-  email: "owner@tidwellwelding.test",
-  password: "local-only-password",
-};
+import { OWNER } from "./owner.mjs";
 
 const url = process.env.CONVEX_SELF_HOSTED_URL ?? "";
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(url)) {

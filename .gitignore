@@ -61,3 +61,4 @@ tests/e2e/.admin-credentials.json
 
 # local stack logs (make dev / make logs)
 /.logs/
+/.screenshots/

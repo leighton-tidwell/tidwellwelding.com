@@ -3,6 +3,7 @@ import {
   internalMutation,
   internalQuery,
   mutation,
+  type QueryCtx,
   query,
 } from "./_generated/server";
 import { requireAdmin } from "./auth";
@@ -12,20 +13,26 @@ import { requireAdmin } from "./auth";
  * never sit in the repo. */
 export const LABOR_RATE_KEY = "laborRateHourly";
 
+/** The one place the rate is read out of the table. Shared by the gated and
+ * internal readers, and by any mutation that needs to price a line, so they
+ * can never disagree about what counts as a usable rate. Returns dollars per
+ * hour, or null when the owner has not set one. */
+export async function readLaborRate(ctx: QueryCtx): Promise<number | null> {
+  const row = await ctx.db
+    .query("shopSettings")
+    .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
+    .unique();
+  const value = row?.numberValue;
+  return typeof value === "number" && value > 0 ? value : null;
+}
+
 /** Eric's billed labor rate, or null when it has not been set. Callers must
  * handle null by falling back to public market anchors — there is deliberately
  * no rate hardcoded anywhere in this codebase. */
 export const getLaborRate = internalQuery({
   args: {},
   returns: v.union(v.number(), v.null()),
-  handler: async (ctx) => {
-    const row = await ctx.db
-      .query("shopSettings")
-      .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
-      .unique();
-    const value = row?.numberValue;
-    return typeof value === "number" && value > 0 ? value : null;
-  },
+  handler: async (ctx) => await readLaborRate(ctx),
 });
 
 /** Seed or update the rate. Run it with the value at the command line:
@@ -68,12 +75,7 @@ export const getLaborRateAdmin = query({
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, { token }) => {
     await requireAdmin(ctx, token);
-    const row = await ctx.db
-      .query("shopSettings")
-      .withIndex("by_key", (q) => q.eq("key", LABOR_RATE_KEY))
-      .unique();
-    const value = row?.numberValue;
-    return typeof value === "number" && value > 0 ? value : null;
+    return await readLaborRate(ctx);
   },
 });
 

@@ -1,0 +1,21 @@
+
+
+# ── Subject ───────────────────────────────────────────────────────────────
+# One line, conventional commit:  type(scope): summary
+#   type   feat fix chore docs refactor perf test ci build revert
+#   scope  optional, the area touched — auth, quote, admin, invoice, deps
+#   summary imperative and lower case, no trailing period, under ~72 chars
+#
+# ── Body ──────────────────────────────────────────────────────────────────
+# Four sentences or fewer, in prose. Cover:
+#   why   the problem, or the reason this change exists
+#   what  what the change does
+#   how   the approach — only if the diff does not make it obvious
+# Leave the body out entirely for a change whose subject already says it all
+# (a typo, a version bump). Do not restate the diff file by file.
+#
+# ── Refs ──────────────────────────────────────────────────────────────────
+# Last line, when there is anything to point at. Issues, PRs, docs:
+#   Refs: #19, #28, docs/local-stack.md
+#   Closes: #6
+# Omit the line when there is nothing to reference.

@@ -172,21 +172,45 @@ test("every sitemap <loc> is byte-identical to that page's canonical", async ({
   }
 });
 
+// PR previews live on *.workers.dev and disallow everything (src/app/robots.ts).
+const onPreviewHost = (baseURL: string | undefined) =>
+  new URL(baseURL ?? "http://localhost").hostname.endsWith(".workers.dev");
+
+test("robots.txt on a preview host disallows everything", async ({
+  request,
+  baseURL,
+}) => {
+  test.skip(!onPreviewHost(baseURL), "only preview hosts");
+  const body = await (await request.get("/robots.txt")).text();
+  expect(body).toMatch(/User-Agent:\s*\*\s*\nDisallow:\s*\/\s*$/im);
+});
+
 test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallowing /admin", async ({
   request,
+  baseURL,
 }) => {
+  test.skip(onPreviewHost(baseURL), "preview hosts disallow everything");
   const res = await request.get("/robots.txt");
   expect(res.status()).toBe(200);
   const body = await res.text();
 
-  // Split into user-agent groups (blank-line separated blocks).
+  // Crawlers merge every group that names their user agent (RFC 9309 §2.2.1),
+  // and in production Cloudflare prepends its own managed groups, so judge
+  // the merged rules per agent rather than the first matching block.
   const groups = body
     .split(/\n\s*\n/)
     .filter((block) => /user-agent:/i.test(block));
+  const rulesFor = (agent: string) =>
+    groups
+      .filter((g) =>
+        new RegExp(
+          `^user-agent:\\s*${agent.replace("*", "\\*")}\\s*$`,
+          "im",
+        ).test(g),
+      )
+      .join("\n");
 
-  const wildcard = groups.find((g) => /user-agent:\s*\*/i.test(g));
-  expect(wildcard, "wildcard group missing").toBeTruthy();
-  expect(wildcard!).toMatch(/Disallow:\s*\/admin/i);
+  expect(rulesFor("*")).toMatch(/Disallow:\s*\/admin/i);
 
   // P1-2: a bot matching a specific group IGNORES the wildcard group, so the
   // explicit AI group must re-state the /admin disallow itself.
@@ -202,11 +226,7 @@ test("robots.txt keeps the wildcard and explicit AI-crawler groups, each disallo
     "Google-Extended",
   ];
   for (const bot of AI_BOTS) {
-    const group = groups.find((g) =>
-      new RegExp(`user-agent:\\s*${bot}\\s*$`, "im").test(g),
-    );
-    expect(group, `no explicit group for ${bot}`).toBeTruthy();
-    expect(group!, `${bot} group must disallow /admin`).toMatch(
+    expect(rulesFor(bot), `${bot} must disallow /admin`).toMatch(
       /Disallow:\s*\/admin/i,
     );
   }

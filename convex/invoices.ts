@@ -39,7 +39,9 @@ export function invoiceDateStamp(issuedAt: number): string {
   return `${get("month")}${get("day")}${get("year")}`;
 }
 
-async function nextInvoiceNumber(
+/** Exported so the quotes inbox can raise an invoice from a quote without
+ * inventing a second numbering scheme. */
+export async function nextInvoiceNumber(
   ctx: MutationCtx,
   issuedAt: number,
 ): Promise<string> {
@@ -197,7 +199,18 @@ export const get = query({
     if (!invoice) return null;
     const customer = await ctx.db.get(invoice.customerId);
     if (!customer) throw new Error("That invoice's customer no longer exists");
-    return { ...invoice, customer, totals: totalsFor(invoice) };
+    // The quote this was raised from, when it came from one, so the editor can
+    // point back at the request the numbers were seeded from. A deleted quote
+    // reads as none rather than breaking the editor.
+    const quote = invoice.quoteId ? await ctx.db.get(invoice.quoteId) : null;
+    return {
+      ...invoice,
+      customer,
+      quote: quote
+        ? { _id: quote._id, requestId: quote.requestId, name: quote.name }
+        : null,
+      totals: totalsFor(invoice),
+    };
   },
 });
 
