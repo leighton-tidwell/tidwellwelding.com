@@ -31,11 +31,11 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: make install
 
       # Same gate as production: a red suite never reaches a preview URL.
       - name: Unit and integration tests
-        run: pnpm test
+        run: make test
 
       # Creates (or updates) an isolated Convex backend named for this PR, then
       # builds the Worker with that preview deployment's URL injected — so the
