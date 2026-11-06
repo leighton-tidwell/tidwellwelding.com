@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,6 +20,7 @@ import {
   Image as ImageIcon,
   Lock,
   LogOut,
+  type LucideIcon,
   Mail,
   MapPin,
   Menu,
@@ -45,8 +45,8 @@ import {
   Wrench,
   X,
   Zap,
-  type LucideIcon,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 
 /**
  * Curated lucide-react set (named imports keep the bundle tree-shakeable).
@@ -130,6 +130,7 @@ export default function Icon({
   if (!Glyph) return null;
   const px = typeof size === "string" ? parseInt(size, 10) || 18 : size;
   return (
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role is "img" whenever label is set.
     <span
       className={className ? `tsws-icon ${className}` : "tsws-icon"}
       style={{ width: px, height: px, color, ...style }}

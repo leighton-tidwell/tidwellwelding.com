@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import type { CSSProperties } from "react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Card, Icon, MediaFrame } from "@/components/ds";
 import JsonLd from "@/components/json-ld";
 import { EMAIL, EMAIL_MAILTO, PHONE_DISPLAY, PHONE_TEL } from "@/lib/business";

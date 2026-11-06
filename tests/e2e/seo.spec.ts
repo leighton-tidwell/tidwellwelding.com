@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -88,11 +88,9 @@ test("home page LocalBusiness JSON-LD parses with the legal name", async ({
     "HomeAndConstructionBusiness",
     "LocalBusiness",
   ]);
-  expect(business!["legalName"]).toBe(
-    "Tidwell Specialty Welding Services, LLC",
-  );
+  expect(business!.legalName).toBe("Tidwell Specialty Welding Services, LLC");
   expect(business!["@context"]).toBe("https://schema.org");
-  expect(business!["name"]).toBe("Tidwell Specialty Welding");
+  expect(business!.name).toBe("Tidwell Specialty Welding");
 });
 
 test("/contact FAQPage JSON-LD matches the rendered FAQ", async ({ page }) => {
@@ -101,7 +99,7 @@ test("/contact FAQPage JSON-LD matches the rendered FAQ", async ({ page }) => {
   const faqPage = nodes.find((n) => n["@type"] === "FAQPage");
   expect(faqPage, "FAQPage JSON-LD block missing").toBeTruthy();
 
-  const mainEntity = faqPage!["mainEntity"] as {
+  const mainEntity = faqPage!.mainEntity as {
     "@type": string;
     name: string;
     acceptedAnswer: { "@type": string; text: string };
@@ -238,9 +236,9 @@ test("WebSite JSON-LD (with SearchAction) renders on the home page only", async 
   const site = nodes.find((n) => n["@type"] === "WebSite");
   expect(site, "WebSite JSON-LD block missing on /").toBeTruthy();
   expect(site!["@id"]).toBe("https://tidwellwelding.com/#website");
-  expect(site!["url"]).toBe("https://tidwellwelding.com");
-  expect(site!["name"]).toBe("Tidwell Specialty Welding");
-  const action = site!["potentialAction"] as {
+  expect(site!.url).toBe("https://tidwellwelding.com");
+  expect(site!.name).toBe("Tidwell Specialty Welding");
+  const action = site!.potentialAction as {
     target: { urlTemplate: string };
     "query-input": string;
   };
@@ -299,7 +297,7 @@ test("town and service pages carry a BreadcrumbList whose last item has no `item
     const nodes = await readJsonLd(page);
     const crumbs = nodes.find((n) => n["@type"] === "BreadcrumbList");
     expect(crumbs, `${path} missing BreadcrumbList`).toBeTruthy();
-    const items = crumbs!["itemListElement"] as {
+    const items = crumbs!.itemListElement as {
       position: number;
       name: string;
       item?: string;

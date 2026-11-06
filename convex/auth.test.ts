@@ -1,6 +1,6 @@
 import rateLimiterComponent from "@convex-dev/rate-limiter/test";
-import { convexTest } from "convex-test";
 import { ConvexError } from "convex/values";
+import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import { requireAdmin } from "./auth";

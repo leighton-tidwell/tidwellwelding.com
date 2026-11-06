@@ -31,7 +31,9 @@ describe("MediaFrame", () => {
   test("children override both src and placeholder", () => {
     const { container } = render(
       <MediaFrame src="/ignored.jpg" label="ignored">
-        <video data-testid="vid" />
+        <video data-testid="vid">
+          <track kind="captions" />
+        </video>
       </MediaFrame>,
     );
     expect(screen.getByTestId("vid")).toBeInTheDocument();

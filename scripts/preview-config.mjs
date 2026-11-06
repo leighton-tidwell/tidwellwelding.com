@@ -49,5 +49,5 @@ config.vars = {
   ADMIN_ACCESS_KEY: randomBytes(12).toString("hex"),
 };
 
-writeFileSync("wrangler.preview.jsonc", JSON.stringify(config, null, 2) + "\n");
+writeFileSync("wrangler.preview.jsonc", `${JSON.stringify(config, null, 2)}\n`);
 console.log(`[preview-config] ${name} — routes stripped, workers_dev on`);

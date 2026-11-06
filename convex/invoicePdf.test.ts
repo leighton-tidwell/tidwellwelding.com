@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderInvoicePdf, type InvoicePdfInput } from "./invoicePdf";
+import { type InvoicePdfInput, renderInvoicePdf } from "./invoicePdf";
 import { countPages, extractText, extractTextRuns } from "./pdfText";
 
 /**

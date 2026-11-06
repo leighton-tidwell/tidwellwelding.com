@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 // never registers. Without this, renders stack up across tests in one document
 // and every getAllBy* query sees the previous test's rows too.
 afterEach(cleanup);
+
 import LineItemEditor, { type EditorLine } from "./line-item-editor";
 
 const LINE = (over: Partial<EditorLine> = {}): EditorLine => ({

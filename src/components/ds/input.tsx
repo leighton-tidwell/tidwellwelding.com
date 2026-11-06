@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  useId,
-  useState,
   type ChangeEvent,
   type CSSProperties,
   type HTMLInputTypeAttribute,
   type ReactNode,
+  useId,
+  useState,
 } from "react";
 
 export type InputProps = {
@@ -34,7 +34,13 @@ export type InputProps = {
   disabled?: boolean;
   autoComplete?: string;
   inputMode?:
-    "text" | "tel" | "email" | "numeric" | "decimal" | "search" | "url";
+    | "text"
+    | "tel"
+    | "email"
+    | "numeric"
+    | "decimal"
+    | "search"
+    | "url";
   maxLength?: number;
   className?: string;
   style?: CSSProperties;

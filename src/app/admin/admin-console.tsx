@@ -2,13 +2,13 @@
 
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 import { Badge, Button, HazardBar, Icon, Input, Select } from "@/components/ds";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import DownloadPdfButton from "./download-pdf-button";
-import LineItemEditor, { emptyLine, type EditorLine } from "./line-item-editor";
+import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
 import { useAdminSession } from "./use-admin-session";
 import "./admin.css";
 
@@ -280,6 +280,7 @@ function InvoiceList({
         <p className="admin-empty">No invoices yet.</p>
       ) : (
         <>
+          {/* biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the flex row. */}
           <div
             className="admin-filters"
             role="group"
