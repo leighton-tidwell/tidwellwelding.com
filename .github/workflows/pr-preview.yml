@@ -92,3 +92,11 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body: payload });
             }
+
+      # The whole suite against the deployed preview, minus @live specs (the
+      # preview has no AI or email keys). Admin setup runs on the pr-N backend.
+      - name: E2E against the preview
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}
+          E2E_CONVEX_FLAGS: --preview-name pr-${{ github.event.pull_request.number }}
+        run: make e2e-remote URL=${{ steps.upload.outputs.preview_url }}

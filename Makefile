@@ -19,6 +19,8 @@ export CONVEX_DEPLOYMENT :=
 export CONVEX_SELF_HOSTED_URL := http://127.0.0.1:$(CONVEX_PORT)
 export CONVEX_SELF_HOSTED_ADMIN_KEY := tsws-local|0162f19744026baa6e6d2144b832c9a9b37b3927db9695311d78814f6761487636891648cf
 export NEXT_PUBLIC_CONVEX_URL := $(CONVEX_SELF_HOSTED_URL)
+# Remote targets drop the local settings so the Convex CLI uses its deploy key.
+REMOTE = env -u CONVEX_SELF_HOSTED_URL -u CONVEX_SELF_HOSTED_ADMIN_KEY -u CONVEX_DEPLOYMENT E2E_BASE_URL="$(URL)"
 
 help: ## List every command
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z0-9-]+:.*## / {printf "  make %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -72,6 +74,15 @@ test: ## Unit and integration tests (Vitest)
 e2e: up ## End-to-end tests (Playwright) against the local stack
 	pnpm exec playwright test
 
+e2e-remote: ## E2E against a deployed site, minus @live specs: make e2e-remote URL=https://...
+	$(REMOTE) pnpm exec playwright test --grep-invert @live
+
+smoke: ## Read-only page checks against a deployed site, one at a time: make smoke URL=https://...
+	$(REMOTE) pnpm exec playwright test --no-deps --workers=1 tests/e2e/smoke.spec.ts tests/e2e/seo.spec.ts
+
+screenshot: up seed ## Screenshot a local page: make screenshot URL=/quote [VIEWPORT=phone] [ADMIN=1]
+	URL="$(URL)" VIEWPORT="$(VIEWPORT)" ADMIN="$(ADMIN)" node scripts/screenshot.mjs
+
 pr-size: ## Fail if this branch is over 500 lines / 10 files without an explainer
 	node scripts/check-pr-size.mjs
 
@@ -80,4 +91,4 @@ fail-first: ## Fail if a new unit test also passes against main's code
 
 ci: lint typecheck test fail-first pr-size e2e ## Every check the PR pipeline runs, in its order
 
-.PHONY: help install up dev down reset seed logs lint fix typecheck test e2e pr-size fail-first ci
+.PHONY: help install up dev down reset seed logs lint fix typecheck test e2e e2e-remote smoke screenshot pr-size fail-first ci
