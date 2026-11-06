@@ -179,6 +179,8 @@ function Console({
             token={token}
             id={view.id}
             onBack={() => setView({ name: "quotes" })}
+            onOpenCustomer={(id) => setView({ name: "customer", id })}
+            onOpenInvoice={(id) => setView({ name: "invoice", id })}
           />
         )}
         {view.name === "customers" && (
@@ -200,6 +202,7 @@ function Console({
             token={token}
             id={view.id}
             onBack={() => setView({ name: "invoices" })}
+            onOpenQuote={(id) => setView({ name: "quote", id })}
           />
         )}
       </main>
@@ -483,6 +486,9 @@ function QuoteList({
                       : ""}
                   </span>
                 </span>
+                {quote.invoiceNumber !== undefined ? (
+                  <Badge>{quote.invoiceNumber}</Badge>
+                ) : null}
                 {quote.dollarsLow !== undefined &&
                 quote.dollarsHigh !== undefined ? (
                   <span className="admin-row__amount">
@@ -501,21 +507,101 @@ function QuoteList({
 }
 
 /** Loads one quote (with its download links) and hands it to the presentational
- * detail view, which is where the layout and its tests live. */
+ * detail view, which is where the layout and its tests live. The two mutations
+ * are driven from here so the detail view stays free of queries. */
 function QuoteInbox({
   token,
   id,
   onBack,
+  onOpenCustomer,
+  onOpenInvoice,
 }: {
   token: string;
   id: Id<"quotes">;
   onBack: () => void;
+  onOpenCustomer: (id: Id<"customers">) => void;
+  onOpenInvoice: (id: Id<"invoices">) => void;
 }) {
   const quote = useQuery(api.adminQuotes.get, { token, id });
+  const createCustomer = useMutation(api.adminQuotes.createCustomerFromQuote);
+  const createInvoice = useMutation(api.adminQuotes.createInvoiceFromQuote);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [nameConflict, setNameConflict] = useState<{
+    customerId: string;
+    customerName: string;
+  } | null>(null);
+
+  /** The mutation answers "nameTaken" without writing anything when the name
+   * is already in the book; that answer becomes the question on screen. */
+  const saveCustomer = useCallback(
+    async (choice?: { linkTo?: string; createAnyway?: boolean }) => {
+      if (busy) return;
+      setBusy(true);
+      setError("");
+      try {
+        const result = await createCustomer({
+          token,
+          id,
+          ...(choice?.linkTo === undefined
+            ? {}
+            : { linkTo: choice.linkTo as Id<"customers"> }),
+          ...(choice?.createAnyway === true ? { createAnyway: true } : {}),
+        });
+        if (result.outcome === "nameTaken") {
+          setNameConflict({
+            customerId: result.customerId,
+            customerName: result.customerName,
+          });
+        } else {
+          setNameConflict(null);
+        }
+      } catch {
+        setError("Could not save that customer. Try again.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, createCustomer, token, id],
+  );
+
+  const raiseInvoice = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      onOpenInvoice(await createInvoice({ token, id }));
+    } catch {
+      setError("Could not raise an invoice from this quote.");
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, createInvoice, token, id, onOpenInvoice]);
 
   if (quote === undefined) return <p className="admin-note">Loading…</p>;
   if (quote === null) return <p className="admin-empty">That quote is gone.</p>;
-  return <QuoteDetail quote={quote} onBack={onBack} />;
+  return (
+    <QuoteDetail
+      quote={quote}
+      onBack={onBack}
+      actions={{
+        busy,
+        error,
+        nameConflict,
+        onCreateCustomer: () => void saveCustomer(),
+        onLinkExistingCustomer: () =>
+          void saveCustomer({ linkTo: nameConflict?.customerId }),
+        onCreateSeparateCustomer: () =>
+          void saveCustomer({ createAnyway: true }),
+        onCreateInvoice: () => void raiseInvoice(),
+        onOpenCustomer: (customerId) =>
+          onOpenCustomer(customerId as Id<"customers">),
+        onOpenInvoice: (invoiceId) =>
+          onOpenInvoice(invoiceId as Id<"invoices">),
+      }}
+    />
+  );
 }
 
 /* ------------------------------------------------------------ customers --- */
@@ -742,10 +828,12 @@ function InvoiceEditor({
   token,
   id,
   onBack,
+  onOpenQuote,
 }: {
   token: string;
   id: Id<"invoices">;
   onBack: () => void;
+  onOpenQuote: (id: Id<"quotes">) => void;
 }) {
   const invoice = useQuery(api.invoices.get, { token, id });
   const laborRate = useQuery(api.settings.getLaborRateAdmin, { token });
@@ -821,6 +909,10 @@ function InvoiceEditor({
   if (invoice === null)
     return <p className="admin-empty">That invoice is gone.</p>;
 
+  // Pulled out so the click handler closes over a value TypeScript has already
+  // narrowed, rather than re-reading a nullable field.
+  const fromQuote = invoice.quote;
+
   return (
     <>
       <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
@@ -847,6 +939,20 @@ function InvoiceEditor({
           }
         />
       </div>
+
+      {fromQuote === null ? null : (
+        <p className="admin-note">
+          Raised from quote request{" "}
+          <button
+            type="button"
+            className="admin-linkish"
+            onClick={() => onOpenQuote(fromQuote._id)}
+          >
+            {fromQuote.requestId}
+          </button>{" "}
+          · {fromQuote.name}
+        </p>
+      )}
 
       <div className="admin-card">
         <h2 className="admin-card__title">Job details</h2>

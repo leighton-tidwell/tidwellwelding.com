@@ -27,6 +27,36 @@ export type QuoteEstimate = {
   questions: string[];
 };
 
+/** The quote's two outward links, as the server reports them. Null means the
+ * step has not happened — or that the linked row was deleted, which reads the
+ * same way here: there is nothing to open. */
+export type QuoteCustomerLink = { _id: string; name: string };
+export type QuoteInvoiceLink = {
+  _id: string;
+  number: string;
+  status: string;
+};
+
+/**
+ * What the operator can do with a request, handed in rather than queried so
+ * this stays a presentational component. Omit it and the card still shows what
+ * the quote is linked to, just without the buttons.
+ */
+export type QuoteLinkActions = {
+  onCreateCustomer: () => void;
+  onCreateInvoice: () => void;
+  onOpenCustomer: (id: string) => void;
+  onOpenInvoice: (id: string) => void;
+  /** A mutation is in flight; the buttons go quiet so it cannot double-fire. */
+  busy?: boolean;
+  error?: string;
+  /** Someone with this quote's name is already in the customer book, so the
+   * operator has to say whether it is the same person. */
+  nameConflict?: { customerId: string; customerName: string } | null;
+  onLinkExistingCustomer?: () => void;
+  onCreateSeparateCustomer?: () => void;
+};
+
 export type QuoteDetailData = {
   requestId: string;
   name: string;
@@ -50,6 +80,8 @@ export type QuoteDetailData = {
   slot: string;
   status: string;
   createdAt: number;
+  customer: QuoteCustomerLink | null;
+  invoice: QuoteInvoiceLink | null;
 };
 
 /** Human size for the attachment rows. Bytes are what storage reports. */
@@ -89,12 +121,138 @@ function jobFields(job: QuoteDetailData["job"]): [string, string][] {
   return rows;
 }
 
+/**
+ * Where a request stops being an inbox item. Shows what the quote has already
+ * been turned into, and offers the step that has not happened yet — a customer
+ * first, because an invoice needs somebody to bill.
+ */
+function WorkCard({
+  quote,
+  actions,
+}: {
+  quote: QuoteDetailData;
+  actions?: QuoteLinkActions;
+}) {
+  const conflict = actions?.nameConflict ?? null;
+  const busy = actions?.busy === true;
+
+  return (
+    <div className="admin-card">
+      <h2 className="admin-card__title">Turn this into work</h2>
+
+      <div className="admin-fields">
+        <div className="admin-field">
+          <span className="admin-field__label">Customer</span>
+          <span className="admin-field__value">
+            {quote.customer === null ? (
+              "Not saved yet"
+            ) : actions === undefined ? (
+              quote.customer.name
+            ) : (
+              <button
+                type="button"
+                className="admin-linkish"
+                onClick={() =>
+                  actions.onOpenCustomer(quote.customer?._id ?? "")
+                }
+              >
+                {quote.customer.name}
+              </button>
+            )}
+          </span>
+        </div>
+        <div className="admin-field">
+          <span className="admin-field__label">Invoice</span>
+          <span className="admin-field__value">
+            {quote.invoice === null ? (
+              "None raised yet"
+            ) : actions === undefined ? (
+              quote.invoice.number
+            ) : (
+              <button
+                type="button"
+                className="admin-linkish"
+                onClick={() => actions.onOpenInvoice(quote.invoice?._id ?? "")}
+              >
+                {quote.invoice.number}
+              </button>
+            )}
+          </span>
+        </div>
+      </div>
+
+      {conflict !== null ? (
+        <>
+          <p className="admin-note">
+            A customer called {conflict.customerName} is already saved. Same
+            person, or a different one with the same name?
+          </p>
+          <div className="admin-actions">
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() => actions?.onLinkExistingCustomer?.()}
+            >
+              <Icon name="user" /> Same person — link them
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy}
+              onClick={() => actions?.onCreateSeparateCustomer?.()}
+            >
+              <Icon name="plus" /> Different — save a separate one
+            </Button>
+          </div>
+        </>
+      ) : actions !== undefined ? (
+        <div className="admin-actions">
+          {quote.customer === null ? (
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={actions.onCreateCustomer}
+            >
+              <Icon name="user" /> Save as customer
+            </Button>
+          ) : null}
+          {quote.invoice === null ? (
+            <Button
+              variant={quote.customer === null ? "secondary" : "primary"}
+              size="sm"
+              disabled={busy || quote.customer === null}
+              onClick={actions.onCreateInvoice}
+            >
+              <Icon name="file-text" /> Create invoice
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {quote.customer === null && conflict === null ? (
+        <p className="admin-note">
+          An invoice needs somebody to bill, so save the customer first. The
+          estimate&rsquo;s tasks and hours come across as hourly lines.
+        </p>
+      ) : null}
+
+      {actions?.error ? (
+        <p className="admin-gate__error" role="alert">
+          {actions.error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function QuoteDetail({
   quote,
   onBack,
+  actions,
 }: {
   quote: QuoteDetailData;
   onBack: () => void;
+  actions?: QuoteLinkActions;
 }) {
   const contact = [quote.company, quote.phone, quote.email]
     .filter(Boolean)
@@ -158,6 +316,8 @@ export default function QuoteDetail({
           ) : null}
         </div>
       </div>
+
+      <WorkCard quote={quote} actions={actions} />
 
       <div className="admin-card">
         <h2 className="admin-card__title">The job</h2>

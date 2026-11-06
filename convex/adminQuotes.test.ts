@@ -296,3 +296,299 @@ describe("adminQuotes — one quote with its files", () => {
     expect(await t.query(api.adminQuotes.get, { token, id })).toBeNull();
   });
 });
+
+describe("adminQuotes — turning a quote into a customer", () => {
+  test("both write mutations refuse an unauthenticated caller", async () => {
+    const t = convexTestWithLimiter();
+    const id = await insertQuote(t);
+
+    await expect(
+      t.mutation(api.adminQuotes.createCustomerFromQuote, {
+        token: "not-a-session",
+        id,
+      }),
+    ).rejects.toThrow();
+    await expect(
+      t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+        token: "not-a-session",
+        id,
+      }),
+    ).rejects.toThrow();
+
+    // Nothing was written on the way to being refused.
+    const customers = await t.run(async (ctx) =>
+      ctx.db.query("customers").collect(),
+    );
+    expect(customers).toHaveLength(0);
+  });
+
+  test("the quote's contact details come across onto the customer", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const id = await insertQuote(t, {
+      company: "Serrano Builds",
+      email: "m@serrano.example",
+    });
+
+    const result = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id,
+    });
+    expect(result.outcome).toBe("created");
+
+    const customer = await t.query(api.customers.get, {
+      token,
+      id: result.customerId,
+    });
+    expect(customer?.name).toBe("Marisol Serrano");
+    expect(customer?.company).toBe("Serrano Builds");
+    expect(customer?.phone).toBe("(817) 555-0142");
+    expect(customer?.email).toBe("m@serrano.example");
+  });
+
+  test("saving the same quote twice links to the one customer, not two", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const id = await insertQuote(t);
+
+    const first = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id,
+    });
+    const second = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id,
+    });
+
+    expect(first.outcome).toBe("created");
+    expect(second.outcome).toBe("linked");
+    expect(second.customerId).toBe(first.customerId);
+    const customers = await t.run(async (ctx) =>
+      ctx.db.query("customers").collect(),
+    );
+    expect(customers).toHaveLength(1);
+  });
+
+  test("a name already in the book stops and reports the match instead of duplicating", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const existing = await t.mutation(api.customers.create, {
+      token,
+      name: "Marisol Serrano",
+    });
+    const id = await insertQuote(t);
+
+    const result = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id,
+    });
+    expect(result.outcome).toBe("nameTaken");
+    expect(result.customerId).toBe(existing);
+    // Reporting a match is not a write: the quote is still unlinked.
+    const quote = await t.query(api.adminQuotes.get, { token, id });
+    expect(quote?.customer).toBeNull();
+    expect(
+      await t.run(async (ctx) => ctx.db.query("customers").collect()),
+    ).toHaveLength(1);
+  });
+
+  test("the operator can link that match, or keep the two apart", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const existing = await t.mutation(api.customers.create, {
+      token,
+      name: "Marisol Serrano",
+    });
+
+    const sameId = await insertQuote(t);
+    const linked = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id: sameId,
+      linkTo: existing,
+    });
+    expect(linked).toEqual({ outcome: "linked", customerId: existing });
+
+    const otherId = await insertQuote(t, { requestId: "Q-2026-102" });
+    const separate = await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id: otherId,
+      createAnyway: true,
+    });
+    expect(separate.outcome).toBe("created");
+    expect(separate.customerId).not.toBe(existing);
+    expect(
+      await t.run(async (ctx) => ctx.db.query("customers").collect()),
+    ).toHaveLength(2);
+  });
+});
+
+describe("adminQuotes — raising an invoice from a quote", () => {
+  /** A signed-in owner with a rate set and one quote already saved as a
+   * customer: the state every invoice test below starts from. */
+  async function readyToInvoice(
+    t: ReturnType<typeof convexTest>,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const token = await signedIn(t);
+    await t.mutation(internal.settings.setLaborRate, { rate: 95 });
+    const id = await insertQuote(t, overrides);
+    await t.mutation(api.adminQuotes.createCustomerFromQuote, { token, id });
+    return { token, id };
+  }
+
+  test("estimate tasks become hourly lines at the shop rate", async () => {
+    const t = convexTestWithLimiter();
+    const { token, id } = await readyToInvoice(t, {
+      estimate: {
+        ...ESTIMATE,
+        line_items: [
+          { task: "Fabricate frame", crew: 1, hours: 8 },
+          // Two welders for three hours is six billable hours.
+          { task: "Hang and align", crew: 2, hours: 3 },
+        ],
+      },
+    });
+
+    const invoiceId = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+    const invoice = await t.query(api.invoices.get, { token, id: invoiceId });
+
+    expect(invoice?.lineItems).toEqual([
+      {
+        qty: 8,
+        unit: "hr",
+        description: "Fabricate frame",
+        rateCents: 9500,
+        taxable: true,
+      },
+      {
+        qty: 6,
+        unit: "hr",
+        description: "Hang and align",
+        rateCents: 9500,
+        taxable: true,
+      },
+    ]);
+    // 14 hours at $95, server-computed, never sent by a client.
+    expect(invoice?.totals.subtotalCents).toBe(133000);
+  });
+
+  test("a quote with no usable estimate still gets an invoice, with no lines", async () => {
+    const t = convexTestWithLimiter();
+    const { token, id } = await readyToInvoice(t);
+
+    const invoiceId = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+    const invoice = await t.query(api.invoices.get, { token, id: invoiceId });
+    expect(invoice?.lineItems).toEqual([]);
+    expect(invoice?.totals.balanceCents).toBe(0);
+  });
+
+  test("no labor rate set yet seeds the lines at zero rather than skipping them", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const id = await insertQuote(t, { estimate: ESTIMATE });
+    await t.mutation(api.adminQuotes.createCustomerFromQuote, { token, id });
+
+    const invoiceId = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+    const invoice = await t.query(api.invoices.get, { token, id: invoiceId });
+    expect(invoice?.lineItems).toHaveLength(1);
+    expect(invoice?.lineItems[0]?.rateCents).toBe(0);
+  });
+
+  test("a quote with no customer is refused rather than billed to nobody", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const id = await insertQuote(t, { estimate: ESTIMATE });
+
+    await expect(
+      t.mutation(api.adminQuotes.createInvoiceFromQuote, { token, id }),
+    ).rejects.toThrow(/customer/i);
+    expect(
+      await t.run(async (ctx) => ctx.db.query("invoices").collect()),
+    ).toHaveLength(0);
+  });
+
+  test("raising twice returns the same invoice instead of a second one", async () => {
+    const t = convexTestWithLimiter();
+    const { token, id } = await readyToInvoice(t, { estimate: ESTIMATE });
+
+    const first = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+    const second = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+    expect(second).toBe(first);
+    expect(
+      await t.run(async (ctx) => ctx.db.query("invoices").collect()),
+    ).toHaveLength(1);
+  });
+
+  test("raising an invoice moves the quote off 'new', so the status means something", async () => {
+    const t = convexTestWithLimiter();
+    const { token, id } = await readyToInvoice(t, { estimate: ESTIMATE });
+
+    expect((await t.query(api.adminQuotes.get, { token, id }))?.status).toBe(
+      "new",
+    );
+    await t.mutation(api.adminQuotes.createInvoiceFromQuote, { token, id });
+    expect((await t.query(api.adminQuotes.get, { token, id }))?.status).toBe(
+      "quoted",
+    );
+  });
+});
+
+describe("adminQuotes — the links read back both ways", () => {
+  test("the quote names its customer and invoice; the invoice names its quote", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    await t.mutation(internal.settings.setLaborRate, { rate: 95 });
+    const id = await insertQuote(t, { estimate: ESTIMATE });
+    await t.mutation(api.adminQuotes.createCustomerFromQuote, { token, id });
+    const invoiceId = await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id,
+    });
+
+    const quote = await t.query(api.adminQuotes.get, { token, id });
+    expect(quote?.customer?.name).toBe("Marisol Serrano");
+    expect(quote?.invoice?._id).toBe(invoiceId);
+
+    const invoice = await t.query(api.invoices.get, { token, id: invoiceId });
+    expect(invoice?.quote).toEqual({
+      _id: id,
+      requestId: "Q-2026-101",
+      name: "Marisol Serrano",
+    });
+  });
+
+  test("the inbox list shows which requests have already been invoiced", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const billed = await insertQuote(t, { requestId: "Q-2026-101" });
+    await insertQuote(t, { requestId: "Q-2026-102" });
+    await t.mutation(api.adminQuotes.createCustomerFromQuote, {
+      token,
+      id: billed,
+    });
+    await t.mutation(api.adminQuotes.createInvoiceFromQuote, {
+      token,
+      id: billed,
+    });
+
+    const rows = await t.query(api.adminQuotes.list, { token });
+    const byRequest = new Map(rows.map((row) => [row.requestId, row]));
+    expect(byRequest.get("Q-2026-101")?.invoiceNumber).toMatch(/^TSWS-/);
+    expect(byRequest.get("Q-2026-102")?.invoiceNumber).toBeUndefined();
+  });
+});

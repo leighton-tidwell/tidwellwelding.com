@@ -1,8 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import QuoteDetail, {
   formatFileSize,
   type QuoteDetailData,
+  type QuoteLinkActions,
 } from "./quote-detail";
 
 afterEach(() => {
@@ -23,6 +25,8 @@ const BASE: QuoteDetailData = {
   slot: "Thursday morning",
   status: "new",
   createdAt: Date.UTC(2026, 9, 14, 15, 0),
+  customer: null,
+  invoice: null,
 };
 
 function quote(overrides: Partial<QuoteDetailData> = {}): QuoteDetailData {
@@ -196,5 +200,144 @@ describe("formatFileSize", () => {
     expect(formatFileSize(800)).toBe("800 B");
     expect(formatFileSize(2048)).toBe("2 KB");
     expect(formatFileSize(2_400_000)).toBe("2.3 MB");
+  });
+});
+
+describe("QuoteDetail — turning a request into work", () => {
+  /** Every handler stubbed, so a test can assert on the one it cares about and
+   * know an unexpected click would have shown up on another. */
+  function actions(overrides: Partial<QuoteLinkActions> = {}) {
+    return {
+      onCreateCustomer: vi.fn(),
+      onCreateInvoice: vi.fn(),
+      onOpenCustomer: vi.fn(),
+      onOpenInvoice: vi.fn(),
+      onLinkExistingCustomer: vi.fn(),
+      onCreateSeparateCustomer: vi.fn(),
+      ...overrides,
+    };
+  }
+
+  test("an unlinked quote offers the customer step and holds the invoice back", async () => {
+    const acts = actions();
+    render(<QuoteDetail quote={quote()} onBack={() => {}} actions={acts} />);
+    const user = userEvent.setup();
+
+    expect(screen.getByText("Not saved yet")).toBeInTheDocument();
+    expect(screen.getByText("None raised yet")).toBeInTheDocument();
+
+    // An invoice needs somebody to bill, so the button is there but inert.
+    const invoiceButton = screen.getByRole("button", {
+      name: /create invoice/i,
+    });
+    expect(invoiceButton).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /save as customer/i }));
+    expect(acts.onCreateCustomer).toHaveBeenCalledTimes(1);
+    expect(acts.onCreateInvoice).not.toHaveBeenCalled();
+  });
+
+  test("a saved customer unlocks the invoice step", async () => {
+    const acts = actions();
+    render(
+      <QuoteDetail
+        quote={quote({ customer: { _id: "c1", name: "Serrano Builds" } })}
+        onBack={() => {}}
+        actions={acts}
+      />,
+    );
+    const user = userEvent.setup();
+
+    // The customer step is done, so it is no longer offered.
+    expect(
+      screen.queryByRole("button", { name: /save as customer/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /create invoice/i }));
+    expect(acts.onCreateInvoice).toHaveBeenCalledTimes(1);
+  });
+
+  test("once both exist, the names link through instead of offering the steps again", async () => {
+    const acts = actions();
+    render(
+      <QuoteDetail
+        quote={quote({
+          customer: { _id: "c1", name: "Serrano Builds" },
+          invoice: { _id: "i1", number: "TSWS-101426", status: "draft" },
+        })}
+        onBack={() => {}}
+        actions={acts}
+      />,
+    );
+    const user = userEvent.setup();
+
+    expect(
+      screen.queryByRole("button", { name: /create invoice/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Serrano Builds" }));
+    expect(acts.onOpenCustomer).toHaveBeenCalledWith("c1");
+    await user.click(screen.getByRole("button", { name: "TSWS-101426" }));
+    expect(acts.onOpenInvoice).toHaveBeenCalledWith("i1");
+  });
+
+  test("a name already in the book asks which it is rather than choosing", async () => {
+    const acts = actions();
+    render(
+      <QuoteDetail
+        quote={quote()}
+        onBack={() => {}}
+        actions={{
+          ...acts,
+          nameConflict: { customerId: "c9", customerName: "Marisol Serrano" },
+        }}
+      />,
+    );
+    const user = userEvent.setup();
+
+    expect(screen.getByText(/already saved/i)).toBeInTheDocument();
+    // The plain "save" button is replaced by the two answers, so there is no
+    // way to resolve this by accident.
+    expect(
+      screen.queryByRole("button", { name: /^save as customer$/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /same person/i }));
+    expect(acts.onLinkExistingCustomer).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: /separate one/i }));
+    expect(acts.onCreateSeparateCustomer).toHaveBeenCalledTimes(1);
+  });
+
+  test("a mutation in flight disables the buttons, and a failure is said out loud", () => {
+    render(
+      <QuoteDetail
+        quote={quote()}
+        onBack={() => {}}
+        actions={{ ...actions(), busy: true, error: "Could not save that." }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /save as customer/i }),
+    ).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not save that.");
+  });
+
+  test("with no handlers wired the card still reports what the quote became", () => {
+    render(
+      <QuoteDetail
+        quote={quote({
+          customer: { _id: "c1", name: "Serrano Builds" },
+          invoice: { _id: "i1", number: "TSWS-101426", status: "draft" },
+        })}
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Serrano Builds")).toBeInTheDocument();
+    expect(screen.getByText("TSWS-101426")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /create invoice/i }),
+    ).not.toBeInTheDocument();
   });
 });
