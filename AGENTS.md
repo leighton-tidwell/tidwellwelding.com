@@ -12,3 +12,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Business details (name, email, phone, address) live in `src/lib/business.ts` — import
   them, never re-type.
+- Pull request bodies follow `.github/pull_request_template.md`: a short `## Summary`
+  (what / why / how, in prose), then `## Proof` with the actual output of `pnpm lint`,
+  `pnpm typecheck` and `pnpm test`, screenshots for anything user-visible, and a plain
+  statement of what you did not verify. `gh pr create --body` does not pick the
+  template up on its own — read it and follow it. Keep it short; detail goes in the
+  diff or the issue.
