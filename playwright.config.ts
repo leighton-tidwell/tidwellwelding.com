@@ -1,14 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// E2E runs against the DEV Convex deployment via .env.local (loaded by `next dev`).
-// Intentionally no TURNSTILE-related env here: dev mode passes without captcha.
-// E2E_PORT reuses an already-running dev server on another port (Next 16
-// allows only one dev server per project dir): E2E_PORT=3355 pnpm test:e2e
-const PORT = process.env.E2E_PORT ?? "3311";
+// Run through `make e2e`: it starts the local Docker stack and exports
+// NEXT_PUBLIC_CONVEX_URL and WEB_PORT, which the dev server below inherits.
+// No Turnstile keys locally, so the captcha passes in dev mode.
+const PORT = process.env.WEB_PORT ?? "3311";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  retries: 1,
+  // A flaky test is a bug to fix, not to retry past.
+  retries: 0,
   use: {
     baseURL: `http://localhost:${PORT}`,
   },
@@ -27,9 +27,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm dev --port ${PORT}`,
+    command: `pnpm exec next dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });

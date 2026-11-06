@@ -1,0 +1,49 @@
+# Local stack: a self-hosted Convex backend plus fakes for Anthropic and Resend.
+# Started by `make up` / `make dev`; ports come from the Makefile so each git
+# worktree gets its own set and its own compose project.
+services:
+  convex:
+    image: ghcr.io/convex/convex-backend@sha256:e9c084e8bd6c1f249012c672193f0988c748824f55a24cdad45f6185a8462f9a
+    stop_signal: SIGINT
+    # The backend calls itself at its public origin (node actions do), so it
+    # listens on the same port inside the container as on the host. That means
+    # skipping run_backend.sh, which pins 3210; these are its flags otherwise.
+    entrypoint: ["bash", "-c"]
+    command:
+      - >-
+        source ./read_credentials.sh && mkdir -p /convex/data/tmp /convex/data/storage &&
+        TMPDIR=/convex/data/tmp exec ./convex-local-backend
+        --instance-name "$$INSTANCE_NAME" --instance-secret "$$INSTANCE_SECRET"
+        --port ${CONVEX_PORT:-3210} --site-proxy-port ${CONVEX_SITE_PORT:-3211}
+        --convex-origin http://127.0.0.1:${CONVEX_PORT:-3210}
+        --convex-site http://127.0.0.1:${CONVEX_SITE_PORT:-3211}
+        --disable-beacon --local-storage /convex/data/storage /convex/data/db.sqlite3
+    ports:
+      - "127.0.0.1:${CONVEX_PORT:-3210}:${CONVEX_PORT:-3210}"
+      - "127.0.0.1:${CONVEX_SITE_PORT:-3211}:${CONVEX_SITE_PORT:-3211}"
+    environment:
+      # Fixed, local-only credentials so the admin key is a known constant.
+      # This backend only listens on localhost and holds seed data.
+      INSTANCE_NAME: tsws-local
+      INSTANCE_SECRET: 4c6f63616c2d6f6e6c792d7473777300000000000000000000000000000000aa
+    volumes:
+      - convex-data:/convex/data
+    healthcheck:
+      test: curl -f http://localhost:${CONVEX_PORT:-3210}/version
+      interval: 2s
+      retries: 30
+
+  fakes:
+    image: node:26-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
+    command: node /fakes.mjs
+    ports:
+      - "127.0.0.1:${FAKES_PORT:-4010}:4010"
+    volumes:
+      - ./local/fakes.mjs:/fakes.mjs:ro
+    healthcheck:
+      test: wget -qO- http://localhost:4010/health
+      interval: 2s
+      retries: 15
+
+volumes:
+  convex-data:

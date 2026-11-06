@@ -36,11 +36,11 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - run: make install
 
       # Hard gate: a red suite must never reach production.
       - name: Unit and integration tests
-        run: pnpm test
+        run: make test
 
       # Pushes backend functions to the production Convex deployment (chosen by
       # CONVEX_DEPLOY_KEY — note there is no --preview-name here), then runs the
