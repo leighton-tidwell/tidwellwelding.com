@@ -26,6 +26,9 @@ help: ## List every command
 install: ## Install dependencies from the lockfile, plus the e2e browser
 	pnpm install --frozen-lockfile
 	pnpm exec playwright install $(if $(CI),--with-deps) chromium
+	@# Relative on purpose: worktrees share .git/config, and an absolute path
+	@# would break every other worktree when this one is removed.
+	@git config commit.template .gitmessage
 
 up: ## Start Convex and the API fakes in Docker, then push the functions
 	docker compose up -d --wait
