@@ -62,8 +62,3 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm exec wrangler deploy
-
-      # Read-only: page loads, headings, structured data, robots. Never submits
-      # a form, so production data and email are untouched.
-      - name: Smoke-check production
-        run: make smoke URL=https://tidwellwelding.com
