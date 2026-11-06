@@ -5,13 +5,8 @@
 
 ## What changed
 
-<!-- Two to four sentences of prose, answering:
-       what  — what this changes, in plain terms
-       why   — the problem it solves, or the issue it closes
-       how   — the approach, only if the diff does not make it obvious
-
-     Sentences, not a bullet dump of every file you touched. If you genuinely
-     need a list, cap it at five bullets of one line each. -->
+<!-- Two to four sentences of prose: what this changes, why, and how if the
+     diff does not show it. Not a file-by-file list. -->
 
 ## Proof
 

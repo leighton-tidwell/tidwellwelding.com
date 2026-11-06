@@ -38,7 +38,9 @@ describe("QuoteDetail — a quote with nothing attached", () => {
     render(<QuoteDetail quote={quote()} onBack={() => {}} />);
 
     expect(screen.getByText("Q-2026-101")).toBeInTheDocument();
-    expect(screen.getByText(/no photos or drawings/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no photos, video or drawings/i),
+    ).toBeInTheDocument();
     // An empty file list must not produce a download control at all.
     expect(
       screen.queryByRole("button", { name: /download/i }),

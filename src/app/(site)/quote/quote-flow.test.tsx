@@ -822,8 +822,8 @@ describe("QuoteFlow", () => {
       screen.getByLabelText(/^Job type/),
       "Pipe welding",
     );
-    const input = screen.getByLabelText(/Photos of the job/);
-    expect(input).toHaveAttribute("accept", "image/*");
+    const input = screen.getByLabelText(/Photos or video of the job/);
+    expect(input).toHaveAttribute("accept", "image/*,video/*");
 
     await user.upload(input, new File(["0"], "sign.dxf", { type: "" }));
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -967,7 +967,7 @@ describe("QuoteFlow", () => {
       });
     await fillStep1Fields(user);
     await user.upload(
-      screen.getByLabelText(/Photos of the job/),
+      screen.getByLabelText(/Photos or video of the job/),
       new File(["x"], "gate.jpg", { type: "image/jpeg" }),
     );
     const comp = screen.getByLabelText(/Competitor quote/);
@@ -1025,6 +1025,59 @@ describe("QuoteFlow", () => {
     expect(submitArgs.files).toBeUndefined();
     expect(submitArgs.job.photoNames).toBeUndefined();
     expect(submitArgs.job.compQuote).toBeUndefined();
+  });
+
+  test("a failed upload is disclosed on the confirmation (issue #37)", async () => {
+    const user = userEvent.setup();
+    render(<QuoteFlow />);
+    // One photo reaches storage, the second is rejected by the upload host.
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ storageId: "stor-good" }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+    await fillStep1Fields(user);
+    await user.upload(screen.getByLabelText(/Photos or video of the job/), [
+      new File(["x"], "weld-good.jpg", { type: "image/jpeg" }),
+      new File(["y"], "weld-bad.jpg", { type: "image/jpeg" }),
+    ]);
+
+    const submitArgs = await finishAndSubmit(user);
+    // The request still went in: the uploaded file by id, the failed one by
+    // name, so Eric can ask for it.
+    expect(submitArgs.files).toEqual([
+      { storageId: "stor-good", name: "weld-good.jpg" },
+    ]);
+    expect(submitArgs.job.photoNames).toEqual(["weld-bad.jpg"]);
+
+    // The confirmation still reads as a success...
+    expect(screen.getByText("Request sent.")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Your reference is Q-2026-777/),
+    ).toBeInTheDocument();
+    // ...and the notice names the failed file only and says Eric will ask.
+    const notice = screen.getByText(/did not finish uploading/);
+    expect(notice).toHaveTextContent("weld-bad.jpg");
+    expect(notice).not.toHaveTextContent("weld-good.jpg");
+    expect(notice).toHaveTextContent(/he will ask for them on the call/);
+
+    // One tap sends Eric a text that already carries the reference and the
+    // file names, so nothing is typed and he can match the photos up.
+    const text = screen.getByRole("link", { name: "Text Eric the photos" });
+    const href = text.getAttribute("href") ?? "";
+    expect(href.startsWith("sms:+18178946357?&body=")).toBe(true);
+    const body = decodeURIComponent(href.split("?&body=")[1] ?? "");
+    expect(body).toContain("Q-2026-777");
+    expect(body).toContain("Jane Rig");
+    expect(body).toContain("weld-bad.jpg");
+    expect(body).not.toContain("weld-good.jpg");
+    expect(body).toMatch(/did not upload/);
+
+    // Calling is still offered, as the second action.
+    expect(
+      screen.getByRole("link", { name: "Call (817) 894-6357" }),
+    ).toHaveAttribute("href", "tel:8178946357");
   });
 
   test("other job types keep the full form without CNC fields", () => {

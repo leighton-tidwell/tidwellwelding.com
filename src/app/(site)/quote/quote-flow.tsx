@@ -20,7 +20,7 @@ import {
   Input,
   Select,
 } from "@/components/ds";
-import { PHONE_DISPLAY, PHONE_TEL } from "@/lib/business";
+import { PHONE_DISPLAY, PHONE_E164, PHONE_TEL } from "@/lib/business";
 import { getSessionId } from "@/lib/session";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -28,6 +28,10 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 // bundle gets the same email rule the server enforces.
 import { isEmail } from "../../../../convex/emailTemplates";
 import { fallbackDraft } from "../../../../convex/estimateFallback";
+import {
+  FIELD_MAX,
+  MAX_PHOTO_NAME_CHARS,
+} from "../../../../convex/fieldLimits";
 import {
   CNC_TYPE,
   COMPETITOR_ACCEPT,
@@ -125,8 +129,8 @@ const DEFAULT_FORM: JobForm = {
   descHint: "Sizes, counts and what broke. Write it like a text message.",
   dimsLabel: "Rough dimensions",
   dimsPlaceholder: "8 in crack · 3/4 in plate",
-  uploadLabel: "Photos of the job",
-  uploadEmpty: "Tap to attach. Two angles beat ten words.",
+  uploadLabel: "Photos or video of the job",
+  uploadEmpty: "Tap to attach. Two angles, or a short clip, beat ten words.",
   uploadCountLabel: "PHOTOS",
 };
 
@@ -192,25 +196,11 @@ const TIMELINE_OPTIONS = [
 ];
 
 /**
- * Server caps mirrored on the client so the visitor sees the limit on the
- * field instead of a rejected submission. Keep these in step with the
- * `rejectOversize` tables in convex/quotes.ts and convex/estimate.ts.
- * `location` takes the stricter of the two server caps (500 in
- * draftEstimate, 600 in submitQuote) so one value clears both endpoints.
+ * The same caps the two quote endpoints reject on, so the visitor sees the
+ * limit on the field instead of a rejected submission. Imported, never
+ * retyped: a copy here could drift from the server that enforces it.
  */
-const MAX = {
-  desc: 4000,
-  name: 300,
-  company: 300,
-  phone: 100,
-  email: 300,
-  dims: 500,
-  thickness: 100,
-  quantity: 100,
-  location: 500,
-  compQuote: 100,
-  photoName: 300,
-} as const;
+const MAX = { ...FIELD_MAX, photoName: MAX_PHOTO_NAME_CHARS } as const;
 
 const tooLong = (max: number) =>
   `Keep this under ${max.toLocaleString("en-US")} characters.`;
@@ -575,6 +565,10 @@ export default function QuoteFlow() {
   /** Set only when a submission did not persist. Step 4 never renders while
    * this is set. */
   const [submitErr, setSubmitErr] = useState("");
+  /** Files whose upload failed on the submission that got through. The
+   * request persisted with their names, so step 4 names them in a notice
+   * rather than letting the visitor assume Eric has the files (issue #37). */
+  const [notUploaded, setNotUploaded] = useState<string[]>([]);
 
   const slots = useMemo(() => makeSlots(), []);
 
@@ -880,10 +874,18 @@ export default function QuoteFlow() {
       // Storage blocked: the confirmation still shows.
     }
     setReqId(finalId);
+    setNotUploaded(notSent);
     setSubmitting(false);
     setStep(4);
     window.scrollTo(0, 0);
   };
+
+  /** One tap from the confirmation to a text that already says which request
+   * it is about and which files are coming, so Eric can match them up without
+   * the visitor typing anything (issue #37). */
+  const smsHref = `sms:${PHONE_E164}?&body=${encodeURIComponent(
+    `Quote ${reqId} — ${c.name || "quote request"}. These files did not upload: ${notUploaded.join(", ")}. Attaching them here.`,
+  )}`;
 
   const form = jobFormFor(f.type);
   const shows = (k: keyof JobFields) => !form.hidden.includes(k);
@@ -1897,6 +1899,55 @@ export default function QuoteFlow() {
                 A copy went to eric@tidwellwelding.com. Check your email for the
                 recap.
               </div>
+              {notUploaded.length ? (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    padding: 14,
+                    background: "rgba(255,176,32,.08)",
+                    border: "1px solid rgba(255,176,32,.35)",
+                  }}
+                >
+                  <Icon
+                    name="triangle-alert"
+                    size={20}
+                    color="#ffb020"
+                    strokeWidth={2.5}
+                  />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: BODY,
+                        fontSize: 15,
+                        lineHeight: 1.55,
+                        color: "rgba(255,255,255,.82)",
+                        margin: 0,
+                      }}
+                    >
+                      These files did not finish uploading:{" "}
+                      {notUploaded.join(", ")}. Eric has your request and the
+                      file names, and he will ask for them on the call. To send
+                      them now, text him the photos — the message is already
+                      written.
+                    </p>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <Button variant="secondary" href={smsHref}>
+                        Text Eric the photos
+                      </Button>
+                      <Button variant="ghost" href={PHONE_TEL}>
+                        Call {PHONE_DISPLAY}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               <div
                 style={{
                   display: "flex",

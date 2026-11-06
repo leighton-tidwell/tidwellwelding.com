@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Estimate } from "./estimate";
+import { FIELD_MAX } from "./fieldLimits";
 import schema from "./schema";
 
 const modules = import.meta.glob([
@@ -248,6 +249,35 @@ describe("input validation", () => {
       }),
       "Too many photo names.",
     );
+  });
+
+  test("the location cap is the one both endpoints share", async () => {
+    const t = setup();
+    await markSessionVerified(t);
+
+    // 600 used to pass here and fail the estimate step, which put the
+    // visitor straight into the swallowed-failure path (issue #6).
+    await expectConvexError(
+      t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        job: {
+          type: "Repair",
+          desc: "ok",
+          location: "l".repeat(FIELD_MAX.location + 1),
+        },
+      }),
+      "An entry is too long.",
+    );
+    // Exactly at the cap still goes through.
+    const res = await t.action(api.quotes.submitQuote, {
+      ...baseArgs(),
+      job: {
+        type: "Repair",
+        desc: "ok",
+        location: "l".repeat(FIELD_MAX.location),
+      },
+    });
+    expect(res.ok).toBe(true);
   });
 
   test("rejects a junk sessionId", async () => {
@@ -756,6 +786,22 @@ describe("requestId and stored row", () => {
       expect(await blobExists(t, dxf)).toBe(false);
     });
 
+    // Issue #20: video was dropped for non-CNC jobs in #17 and is allowed
+    // again, so the server has to take it and store it like any other upload.
+    test("a phone clip is accepted on a non-CNC job and saved on the quote", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const clip = await storeBlob(t, 4096, "video/quicktime");
+      await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        files: [{ storageId: clip, name: "weld.mov" }],
+      });
+      expect(await blobExists(t, clip)).toBe(true);
+      const row = await t.run(async (ctx) => ctx.db.query("quotes").first());
+      expect(row?.files?.[0]?.name).toBe("weld.mov");
+      expect(row?.files?.[0]?.storageId).toBe(clip);
+    });
+
     test("an oversized photo is refused and every upload in the set is deleted", async () => {
       const t = setup();
       await markSessionVerified(t);
@@ -903,7 +949,8 @@ describe("requestId and stored row", () => {
       job: {
         type: "Repair",
         desc: "d".repeat(4000),
-        location: "L".repeat(600),
+        // At the shared cap, not past it: 600 used to be accepted here.
+        location: "L".repeat(FIELD_MAX.location),
       },
     });
     const row = await t.run(async (ctx) =>
