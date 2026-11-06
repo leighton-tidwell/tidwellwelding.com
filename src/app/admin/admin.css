@@ -631,3 +631,9 @@
   gap: 2px;
   min-width: 0;
 }
+
+/* "Worth asking" follows the line-item list directly; without this the heading
+ * sits flush against the last row and reads as part of it. */
+.admin-quote-lines + .admin-card__title {
+  margin-top: 18px;
+}
