@@ -287,6 +287,26 @@ describe("long and awkward text", () => {
     expect(text).toContain("TERMS");
   });
 
+  it("formats the phone and prints the whole email in the contact row", async () => {
+    // From a real invoice: the phone printed as typed and the email was cut to "…".
+    const email = "Accounting@surecretellc.com";
+    const runs = await extractTextRuns(
+      await renderInvoicePdf({
+        ...REFERENCE,
+        customer: {
+          name: "Surecrete LLC",
+          company: "Surecrete LLC",
+          contact: "Controller",
+          phone: "4698868696",
+          email,
+        },
+      }),
+    );
+
+    expect(runs).toContain("(469) 886-8696");
+    expect(runs).toContain(email);
+  });
+
   it("handles a large amount without truncating the digits", async () => {
     const text = await extractText(
       await renderInvoicePdf({
