@@ -329,9 +329,11 @@ describe("failed attempts are kept as leads (issue #6)", () => {
     expect(rows[0]!.job?.desc).toHaveLength(4000);
   });
 
-  test("an attempt with no way to reach anyone is not kept", async () => {
+  test("an attempt with no way to reach anyone is not kept, while a reachable one is", async () => {
     const t = setup();
 
+    // Same rejection twice: once with nothing to call or write to, once with
+    // a good email. Only the second is a lead.
     await expectConvexError(
       t.action(api.quotes.submitQuote, {
         ...baseArgs(),
@@ -340,13 +342,6 @@ describe("failed attempts are kept as leads (issue #6)", () => {
       }),
       "Enter a 10-digit number.",
     );
-
-    expect(await failedRows(t)).toHaveLength(0);
-  });
-
-  test("an email alone is enough to keep the attempt", async () => {
-    const t = setup();
-
     await expectConvexError(
       t.action(api.quotes.submitQuote, { ...baseArgs(), phone: "555-0123" }),
       "Enter a 10-digit number.",
@@ -355,15 +350,27 @@ describe("failed attempts are kept as leads (issue #6)", () => {
     const rows = await failedRows(t);
     expect(rows).toHaveLength(1);
     expect(rows[0]!.email).toBe(CUSTOMER_EMAIL);
+    expect(rows[0]!.reason).toBe("Enter a 10-digit number.");
   });
 
-  test("a submission that lands records nothing", async () => {
+  test("a submission that lands adds nothing to the failed attempts", async () => {
     const t = setup();
-    await markSessionVerified(t);
 
+    // One rejection, so the table is not trivially empty, then the same
+    // request once the session is verified.
+    await expectConvexError(
+      t.action(api.quotes.submitQuote, baseArgs()),
+      "Verification failed.",
+    );
+    expect(await failedRows(t)).toHaveLength(1);
+
+    await markSessionVerified(t);
     expect((await t.action(api.quotes.submitQuote, baseArgs())).ok).toBe(true);
 
-    expect(await failedRows(t)).toHaveLength(0);
+    expect(await failedRows(t)).toHaveLength(1);
+    expect(
+      await t.run(async (ctx) => ctx.db.query("quotes").collect()),
+    ).toHaveLength(1);
   });
 
   test("records older than 90 days are pruned on the next write", async () => {
