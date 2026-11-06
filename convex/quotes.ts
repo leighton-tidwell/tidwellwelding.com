@@ -10,6 +10,11 @@ import {
   type QuotePayload,
 } from "./emailTemplates";
 import { type Estimate, estimateSchema, rejectOversize } from "./estimate";
+import {
+  FIELD_MAX,
+  MAX_PHOTO_NAME_CHARS,
+  MAX_PHOTO_NAMES,
+} from "./fieldLimits";
 import { buildCallbackIcs } from "./ics";
 import { assertSessionId, limitQuoteSubmit } from "./rateLimits";
 import { verifyTurnstile } from "./turnstile";
@@ -270,27 +275,29 @@ async function runSubmit(
   if (!args.slot.trim()) throw new ConvexError("Pick a callback slot.");
   // Reject oversized args up front instead of silently clipping megabytes.
   rejectOversize([
-    [args.name, 300],
-    [args.company, 300],
-    [args.phone, 100],
-    [args.email, 300],
-    [args.slot, 200],
-    [args.job.type, 200],
-    [args.job.material, 200],
-    [args.job.desc, 4000],
-    [args.job.dims, 500],
-    [args.job.thickness, 100],
-    [args.job.quantity, 100],
-    [args.job.timeline, 200],
-    [args.job.location, 600],
-    [args.job.compQuote, 100],
+    [args.name, FIELD_MAX.name],
+    [args.company, FIELD_MAX.company],
+    [args.phone, FIELD_MAX.phone],
+    [args.email, FIELD_MAX.email],
+    [args.slot, FIELD_MAX.slot],
+    [args.job.type, FIELD_MAX.type],
+    [args.job.material, FIELD_MAX.material],
+    [args.job.desc, FIELD_MAX.desc],
+    [args.job.dims, FIELD_MAX.dims],
+    [args.job.thickness, FIELD_MAX.thickness],
+    [args.job.quantity, FIELD_MAX.quantity],
+    [args.job.timeline, FIELD_MAX.timeline],
+    [args.job.location, FIELD_MAX.location],
+    [args.job.compQuote, FIELD_MAX.compQuote],
   ]);
   if (
     args.job.photoNames &&
-    (args.job.photoNames.length > 20 ||
-      args.job.photoNames.some((n) => n.length > 300))
+    (args.job.photoNames.length > MAX_PHOTO_NAMES ||
+      args.job.photoNames.some((n) => n.length > MAX_PHOTO_NAME_CHARS))
   ) {
-    throw new ConvexError("Too many photo names. Send 20 or fewer.");
+    throw new ConvexError(
+      `Too many photo names. Send ${MAX_PHOTO_NAMES} or fewer.`,
+    );
   }
   const email = clipOpt(args.email, 200);
   if (email && !isEmail(email)) {
