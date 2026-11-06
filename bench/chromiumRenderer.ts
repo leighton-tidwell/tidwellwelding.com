@@ -10,7 +10,7 @@
  */
 import { type Browser, chromium, type Page } from "@playwright/test";
 import type { InvoicePdfInput } from "../convex/invoicePdf";
-import { invoiceHtml } from "./htmlInvoice";
+import { type FillerMode, invoiceHtml } from "./htmlInvoice";
 
 const MAX_FILLER_ROWS = 12;
 
@@ -77,13 +77,20 @@ export type ChromiumRenderResult = {
  */
 export async function renderInvoiceChromium(
   input: InvoicePdfInput,
-  options: { fillerRows?: number } = {},
+  options: { fillerRows?: number; fillerMode?: FillerMode } = {},
 ): Promise<ChromiumRenderResult> {
   await warmChromium();
   if (!page) throw new Error("Chromium page unavailable");
   const p = page;
+  const mode = options.fillerMode ?? "rows";
 
-  await p.setContent(invoiceHtml(input), { waitUntil: "load" });
+  await p.setContent(invoiceHtml(input, mode), { waitUntil: "load" });
+
+  // "none" and "css" resolve filler without measuring: one print, no search.
+  if (mode !== "rows") {
+    const bytes = new Uint8Array(await p.pdf(PDF_OPTIONS));
+    return { bytes, pages: pageCountOf(bytes), prints: 1, fillerRows: 0 };
+  }
 
   if (options.fillerRows !== undefined) {
     await setFillerRows(p, options.fillerRows);

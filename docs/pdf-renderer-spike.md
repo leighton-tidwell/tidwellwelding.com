@@ -238,6 +238,65 @@ the shop than an invoice that does not render at all**, so the fallback is
 unconditional and the in-process renderer stays in the tree as the safety net.
 Only a failure of _both_ renderers surfaces an error.
 
+### Which filler strategy? Measured, not argued
+
+Filler rows are the blank ruled rows under the last line item that make the
+table read as a complete form. Three ways to produce them, rendered and
+compared against the current react-pdf output page by page.
+
+**Accuracy — RMSE against the react-pdf reference, last page, lower is closer:**
+
+| line items | blank `<tr>`s (measured) | no filler | CSS spacer |
+| ---------- | ------------------------ | --------- | ---------- |
+| 3          | **0.132**                | 0.187     | 0.161      |
+| 7          | **0.140**                | 0.190     | 0.168      |
+| 40         | **0.083**                | 0.194     | 0.194      |
+| 100        | **0.104**                | 0.170     | 0.170      |
+
+Measured blank rows win at every size. Note the 40- and 100-line rows: the CSS
+spacer scores _identically_ to having no filler at all.
+
+**The CSS spacer is rejected.** Two independent defects, both measured:
+
+1. **It collapses as soon as the invoice paginates.** On a 40-line invoice the
+   rendered last page is pixel-identical to the no-filler version — `magick
+   compare` reports **0 differing pixels**. At 100 lines only 2.2% of pixels
+   differ. `min-height: 100%` on the flex body resolves against the flow, not
+   against the last page box, so there is no leftover space to distribute.
+   It fills a single-page invoice and nothing else — exactly the paged-media
+   fragmentation limit this spike was unsure about. Now it is not unsure.
+2. **Even where it fills, the rules cannot match the table.** Borders are
+   snapped to device pixels; gradient colour stops are not. A 0.6pt rule in a
+   `repeating-linear-gradient` anti-aliases away to nothing, and the thinnest
+   value that renders at all is ~1.5pt — by which point it is visibly heavier
+   than the 0.6pt hairlines directly above it. Reproducing the column dividers
+   also meant hardcoding the column geometry (72/248/344/420pt) into four
+   background layers, duplicating the table's own widths. That is precisely
+   the hand-measured-constant problem this candidate was supposed to delete.
+
+**No filler is honest but looks worse.** On a 40-line invoice the last page
+has no table at all: the totals block sits stranded at the top of an otherwise
+empty sheet. It is a legitimate choice if the form look is not wanted, but it
+is not "the same invoice, cheaper".
+
+**So the filler question resolves to the two options that measure:** accept the
+extra round trips (option 1), or use the Workers binding for DOM access
+(option 3). The one-round-trip shortcut does not exist.
+
+### A fidelity gap still open in this candidate
+
+Comparing the rendered pages turned up one difference that is not about
+filler: **the footer sits in the wrong place.** react-pdf pins "Thank you for
+your business" to the bottom of the last page (`marginTop: "auto"`); the HTML
+template has it follow the totals block, so on a short last page it floats
+mid-sheet with white space beneath. Visible in the montages at both 7 and 40
+line items.
+
+It is fixable but not trivially: a flex `margin-top: auto` hits the same
+fragmentation limit the CSS spacer did, and `displayHeaderFooter` +
+`footerTemplate` would put the footer on _every_ page rather than once on the
+last. Not yet solved, and it belongs with the font question on the gate list.
+
 ### Open questions before this could ship
 
 1. **Fonts — the real risk.** On macOS Chromium resolves genuine Helvetica.
@@ -253,17 +312,20 @@ Only a failure of _both_ renderers surfaces an error.
    `@font-face` as base64 in the document**, so rendering is identical
    everywhere and does not depend on the container's font set. Must be done
    and verified against the hosted renderer before adopting.
-2. **Filler rows need DOM access.** The local prototype resolves them by
-   measuring, mutating the DOM and reprinting the already-loaded page — 2
-   prints for a long invoice, up to 6 for a short one. The hosted REST
-   endpoint takes HTML and returns a PDF, with no DOM in between, so the same
-   strategy costs 2–6 round trips per invoice. Options: accept the round trips
-   (free if the PDF is pre-generated when the invoice is saved rather than on
-   download), drop filler rows (they are cosmetic), or drive a browser session
-   through the Workers binding, which does give DOM access. Unresolved.
-3. **Visual diff.** Pagination and overflow are verified; pixel placement is
-   not. Needs a page-by-page image diff against Eric's reference invoice.
-4. **Where it runs.** A Convex action can `fetch` the REST endpoint (a token
+2. **Filler rows need DOM access, and there is no shortcut.** The prototype
+   resolves them by measuring, mutating the DOM and reprinting the loaded page
+   — 2 prints for a long invoice, up to 6 for a short one. The hosted REST
+   endpoint has no DOM in between, so that costs 2–6 round trips. The
+   one-round-trip CSS alternative was built and measured and does not work
+   (see above). So: accept the round trips — free if the PDF is pre-generated
+   on save rather than on download — or use the Workers binding, which does
+   give DOM access. Dropping filler is a real option but it visibly changes
+   the document.
+3. **The footer is in the wrong place** on a short last page. See above.
+4. **Visual diff against Eric's real invoice.** Pagination, overflow and the
+   filler question are now verified against the current renderer's output;
+   a diff against the owner's actual reference invoice is still outstanding.
+5. **Where it runs.** A Convex action can `fetch` the REST endpoint (a token
    on the Convex deployment), or the Next.js Worker can use the `env.BROWSER`
    binding with no token at all. The binding is cheaper and avoids a secret,
    but moves PDF generation out of the Convex action.

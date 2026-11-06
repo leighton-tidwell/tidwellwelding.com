@@ -68,6 +68,7 @@ const CSS = `
 
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
+  html { height: 100%; }
   body {
     font-family: Helvetica, Arial, sans-serif;
     font-size: 9pt;
@@ -137,6 +138,41 @@ const CSS = `
   }
   tr.filler td { height: 26pt; }
 
+  /* Option 4, rejected — see FillerMode. Two separate problems, both real:
+     1. It only fills on a single-page invoice. Once the document paginates
+        the spacer collapses and the result equals no filler at all.
+     2. Even where it does fill, the rules cannot match the table. Borders are
+        snapped to device pixels; gradient stops are not, so a 0.6pt rule
+        anti-aliases away to nothing. It only becomes visible at ~1.5pt, by
+        which point it is visibly heavier than the 0.6pt hairlines above it.
+     The 1.5pt below is the thinnest value that renders at all. */
+  body.filler-css { display: flex; flex-direction: column; min-height: 100%; }
+  body.filler-css .spacer {
+    flex: 1 1 auto;
+    min-height: 0;
+    border-left: 0.6pt solid ${HAIRLINE};
+    border-right: 0.6pt solid ${HAIRLINE};
+    border-bottom: 0.6pt solid ${HAIRLINE};
+    /* Four vertical column dividers plus the 26pt horizontal rules, drawn as
+       background layers. Note what this costs: the column geometry (72/248/
+       344/420pt) and the row pitch now exist in two places — the table's own
+       widths, and here. */
+    background-image:
+      linear-gradient(${HAIRLINE}, ${HAIRLINE}),
+      linear-gradient(${HAIRLINE}, ${HAIRLINE}),
+      linear-gradient(${HAIRLINE}, ${HAIRLINE}),
+      linear-gradient(${HAIRLINE}, ${HAIRLINE}),
+      repeating-linear-gradient(
+        to bottom,
+        ${HAIRLINE} 0pt 1.5pt,
+        transparent 1.5pt 26pt
+      );
+    background-size: 0.6pt 100%, 0.6pt 100%, 0.6pt 100%, 0.6pt 100%, 100% 100%;
+    background-position: 72pt 0, 248pt 0, 344pt 0, 420pt 0, 0 0;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+  }
+  body:not(.filler-css) .spacer { display: none; }
+
   /* Foot: notes beside totals, kept whole ---------------------------------- */
   .foot-block { break-inside: avoid; margin-top: 12pt; }
   .foot { display: flex; gap: 12pt; align-items: flex-start; }
@@ -171,7 +207,27 @@ const CSS = `
   .small-print { font-size: 6.5pt; color: ${GREY}; line-height: 1.3; }
 `;
 
-export function invoiceHtml(input: InvoicePdfInput): string {
+/**
+ * How the blank ruled area under the last line item is produced.
+ *
+ * - "rows": blank <tr>s, count resolved by measuring and reprinting. Needs a
+ *   DOM between prints, so on a stateless endpoint it costs a round trip per
+ *   attempt. This is what the react-pdf renderer does today, expensively.
+ * - "none": no filler at all. One print, nothing to measure.
+ * - "css": a ruled spacer that grows to fill whatever space is left on the
+ *   last page. One print, nothing to measure — but MEASURED AND REJECTED. It
+ *   fills on a single-page invoice and does nothing at all once the document
+ *   paginates: against a 40-line invoice its last page is pixel-identical to
+ *   "none" (0 differing pixels). `min-height: 100%` on the flex body resolves
+ *   against the flow, not against the last page box. Kept here as the
+ *   evidence for that, not as a usable option.
+ */
+export type FillerMode = "rows" | "none" | "css";
+
+export function invoiceHtml(
+  input: InvoicePdfInput,
+  fillerMode: FillerMode = "rows",
+): string {
   const totals = computeInvoiceTotals({
     lines: input.lineItems,
     discountCents: input.discountCents,
@@ -248,7 +304,7 @@ export function invoiceHtml(input: InvoicePdfInput): string {
 <html lang="en"><head><meta charset="utf-8"><title>Invoice ${esc(
     input.number,
   )}</title><style>${CSS}</style></head>
-<body>
+<body class="${fillerMode === "css" ? "filler-css" : ""}">
   <div class="header">
     ${logo}
     <div class="header-right">
@@ -273,6 +329,8 @@ export function invoiceHtml(input: InvoicePdfInput): string {
     </tr></thead>
     <tbody id="rows">${rows}</tbody>
   </table>
+
+  <div class="spacer"></div>
 
   <div class="foot-block">
     <div class="foot">
