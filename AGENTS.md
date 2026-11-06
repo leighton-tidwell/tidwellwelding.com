@@ -25,7 +25,8 @@ Next.js 16 on Cloudflare Workers (OpenNext), Convex backend. A merge to `main` d
 - Business details (name, email, phone, address) come from `src/lib/business.ts`. Never re-type them.
 - Every lint suppression or config exception says why, in a comment next to it.
 - A new unit test must fail against `main` and pass against your change; `make fail-first` checks it.
-- PRs: use the template, stay under 500 lines and 10 files or fill in the Explainer, and claim only checks you ran.
+- Commits: `.gitmessage` is the format — a one-line conventional subject, then four sentences or fewer of prose covering why, what and how, then a `Refs:`/`Closes:` line. `make install` wires it up for `git commit`, but `-m` and `-F` bypass it — read it and follow it.
+- PRs: use the template, stay under 500 lines and 10 files or fill in the Explainer, and claim only checks you ran. `gh pr create --body` does not pick the template up on its own — read it and follow it.
 - The chat prompt in `convex/chat.ts` holds an intentional easter egg. Leave it.
 
 ## Where things live
