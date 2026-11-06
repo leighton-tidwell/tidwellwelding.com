@@ -1,6 +1,6 @@
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
@@ -15,6 +15,8 @@ Next.js 16 on Cloudflare Workers (OpenNext), Convex backend. A merge to `main` d
 ## Commands
 
 `make` lists every command. Run `make ci` before opening a PR: it is exactly what CI runs.
+
+`make dev` runs the full stack locally in Docker with seed data and fakes for the paid APIs; see `docs/local-stack.md`. A broken `make dev` is a blocking bug.
 
 ## Rules
 
