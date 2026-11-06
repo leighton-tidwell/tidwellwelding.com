@@ -129,7 +129,7 @@ test("sitemap.xml lists exactly the 15 public routes with truthful lastmod", asy
   expect(res.status()).toBe(200);
   const xml = await res.text();
 
-  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
   expect(urls.sort()).toEqual([...SITEMAP_URLS].sort());
 
   // /admin is private and /search is noindexed — neither may ever appear.
@@ -156,7 +156,7 @@ test("every sitemap <loc> is byte-identical to that page's canonical", async ({
 }) => {
   const res = await request.get("/sitemap.xml");
   const xml = await res.text();
-  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]!);
   expect(locs.length).toBe(SITEMAP_URLS.length);
 
   // A <loc> that disagrees with its own canonical gives Google two candidates.
@@ -277,7 +277,7 @@ test("every page carries exactly one LocalBusiness block referenced by #business
       businesses,
       `${path} must carry exactly one LocalBusiness`,
     ).toHaveLength(1);
-    expect(businesses[0]["@id"]).toBe("https://tidwellwelding.com/#business");
+    expect(businesses[0]!["@id"]).toBe("https://tidwellwelding.com/#business");
   }
 });
 
@@ -307,10 +307,10 @@ test("town and service pages carry a BreadcrumbList whose last item has no `item
       item?: string;
     }[];
     expect(items.length).toBeGreaterThanOrEqual(2);
-    expect(items[0].name).toBe("Home");
-    expect(items[0].item).toBe("https://tidwellwelding.com");
+    expect(items[0]!.name).toBe("Home");
+    expect(items[0]!.item).toBe("https://tidwellwelding.com");
     // Google guideline: the final crumb (the page itself) carries no `item`.
-    expect(items[items.length - 1].item).toBeUndefined();
+    expect(items[items.length - 1]!.item).toBeUndefined();
     // The visible trail matches.
     await expect(page.locator("nav[aria-label='Breadcrumb']")).toBeVisible();
   }
