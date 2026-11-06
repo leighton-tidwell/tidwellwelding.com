@@ -23,11 +23,13 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30 # make ci adds the e2e suite and its Docker stack
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # make ci's pr-size and fail-first diff against a base
 
       - uses: pnpm/action-setup@v6
 
@@ -38,9 +40,11 @@ jobs:
 
       - run: make install
 
-      # Hard gate: a red suite must never reach production.
-      - name: Unit and integration tests
-        run: make test
+      # Hard gate: the same harness target CI runs on the PR, not a subset of
+      # it. `make test` alone let lint, typecheck, fail-first and e2e failures
+      # reach production whenever a commit arrived without a green PR run.
+      - name: Verify (make ci)
+        run: make ci
 
       # Pushes backend functions to the production Convex deployment (chosen by
       # CONVEX_DEPLOY_KEY — note there is no --preview-name here), then runs the
