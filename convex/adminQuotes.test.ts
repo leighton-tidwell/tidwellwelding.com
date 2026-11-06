@@ -147,7 +147,7 @@ describe("adminQuotes — the inbox list", () => {
     const token = await signedIn(t);
     await insertQuote(t, { company: "Serrano Builds", estimate: ESTIMATE });
 
-    const [row] = await t.query(api.adminQuotes.list, { token });
+    const row = (await t.query(api.adminQuotes.list, { token }))[0]!;
     expect(row.name).toBe("Marisol Serrano");
     expect(row.company).toBe("Serrano Builds");
     expect(row.jobType).toBe("Gate / fence");
@@ -161,7 +161,7 @@ describe("adminQuotes — the inbox list", () => {
     const token = await signedIn(t);
     await insertQuote(t);
 
-    const [row] = await t.query(api.adminQuotes.list, { token });
+    const row = (await t.query(api.adminQuotes.list, { token }))[0]!;
     expect(row.dollarsLow).toBeUndefined();
     expect(row.dollarsHigh).toBeUndefined();
   });
@@ -173,7 +173,7 @@ describe("adminQuotes — the inbox list", () => {
       job: { ...JOB, photoNames: ["gate.jpg", "post.jpg"] },
     });
 
-    const [row] = await t.query(api.adminQuotes.list, { token });
+    const row = (await t.query(api.adminQuotes.list, { token }))[0]!;
     expect(row.fileCount).toBe(0);
   });
 });
@@ -199,9 +199,9 @@ describe("adminQuotes — one quote with its files", () => {
 
     const quote = await t.query(api.adminQuotes.get, { token, id });
     expect(quote?.files).toHaveLength(1);
-    expect(quote?.files[0].name).toBe("gate.jpg");
-    expect(quote?.files[0].competitor).toBe(false);
-    expect(typeof quote?.files[0].url).toBe("string");
+    expect(quote!.files[0]!.name).toBe("gate.jpg");
+    expect(quote!.files[0]!.competitor).toBe(false);
+    expect(typeof quote!.files[0]!.url).toBe("string");
   });
 
   test("a competitor quote is flagged so it is not mistaken for a photo", async () => {
@@ -224,7 +224,7 @@ describe("adminQuotes — one quote with its files", () => {
     });
 
     const quote = await t.query(api.adminQuotes.get, { token, id });
-    expect(quote?.files[0].competitor).toBe(true);
+    expect(quote!.files[0]!.competitor).toBe(true);
   });
 
   test("a quote submitted before uploads existed reads back with an empty file list", async () => {
@@ -255,8 +255,8 @@ describe("adminQuotes — one quote with its files", () => {
     await t.run(async (ctx) => ctx.storage.delete(storageId));
 
     const quote = await t.query(api.adminQuotes.get, { token, id });
-    expect(quote?.files[0].name).toBe("gate.jpg");
-    expect(quote?.files[0].url).toBeNull();
+    expect(quote!.files[0]!.name).toBe("gate.jpg");
+    expect(quote!.files[0]!.url).toBeNull();
   });
 
   test("the estimate is normalised to camelCase for the console", async () => {
@@ -302,18 +302,21 @@ describe("adminQuotes — turning a quote into a customer", () => {
     const t = convexTestWithLimiter();
     const id = await insertQuote(t);
 
+    // Match the refusal itself, not merely "something threw": a bare
+    // toThrow() is satisfied by the function not existing at all, which
+    // proves nothing about the auth gate.
     await expect(
       t.mutation(api.adminQuotes.createCustomerFromQuote, {
         token: "not-a-session",
         id,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/not signed in/i);
     await expect(
       t.mutation(api.adminQuotes.createInvoiceFromQuote, {
         token: "not-a-session",
         id,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/not signed in/i);
 
     // Nothing was written on the way to being refused.
     const customers = await t.run(async (ctx) =>

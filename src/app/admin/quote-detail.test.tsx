@@ -183,7 +183,7 @@ describe("QuoteDetail — attachments", () => {
   test("a file whose blob is gone says so instead of offering a dead link", () => {
     render(
       <QuoteDetail
-        quote={quote({ files: [{ ...FILES[0], url: null }] })}
+        quote={quote({ files: [{ ...FILES[0]!, url: null }] })}
         onBack={() => {}}
       />,
     );
