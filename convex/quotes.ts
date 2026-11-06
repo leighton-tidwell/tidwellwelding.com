@@ -235,14 +235,40 @@ async function recordFailedQuote(
   }
 }
 
+/**
+ * Delete the uploads this attempt pushed to storage, including the
+ * competitor quote. Only safe while no quote row references them.
+ *
+ * Never throws: the visitor's own error is the one that matters.
+ */
+async function discardUploads(ctx: ActionCtx, args: SubmitArgs): Promise<void> {
+  const storageIds = (args.files ?? []).map((f) => f.storageId);
+  if (!storageIds.length) return;
+  try {
+    await ctx.runMutation(internal.uploads.discardFiles, { storageIds });
+  } catch (err) {
+    console.error("Discarding the uploads of a rejected quote failed", err);
+  }
+}
+
+/** Whether the quote row has landed. Until it has, the uploaded files belong
+ * to nothing and a failure must delete them; once it has, the row owns them
+ * and deleting would strip Eric's own request of its photos. Set next to the
+ * insert, read only in the handler's catch. */
+type UploadOwner = { byQuote: boolean };
+
 export const submitQuote = action({
   args: submitArgs,
   handler: async (ctx, args): Promise<{ ok: boolean; requestId: string }> => {
+    // The browser uploads its files before it calls this action, so a
+    // submission rejected below leaves them with nothing pointing at them.
+    const owner: UploadOwner = { byQuote: false };
     try {
-      return await runSubmit(ctx, args);
+      return await runSubmit(ctx, args, owner);
     } catch (err) {
-      // Any failure at all, anticipated or not: the lead is kept before the
-      // error goes back to the visitor.
+      // Any failure at all, anticipated or not: the orphaned uploads go and
+      // the lead is kept, both before the error goes back to the visitor.
+      if (!owner.byQuote) await discardUploads(ctx, args);
       await recordFailedQuote(ctx, args, err);
       throw err;
     }
@@ -255,6 +281,7 @@ export const submitQuote = action({
 async function runSubmit(
   ctx: ActionCtx,
   args: SubmitArgs,
+  owner: UploadOwner,
 ): Promise<{ ok: boolean; requestId: string }> {
   assertSessionId(args.sessionId);
 
@@ -317,8 +344,7 @@ async function runSubmit(
   await limitQuoteSubmit(ctx, args.sessionId);
 
   // Uploaded files: photos for every job, drawings and CAD files for CNC,
-  // plus one competitor quote (photo or PDF). One bad file refuses the set,
-  // and every refused upload is deleted so nothing lingers in storage.
+  // plus one competitor quote (photo or PDF). One bad file refuses the set.
   const uploads = args.files ?? [];
   const files: StoredFile[] = [];
   const fileLinks: { name: string; url: string }[] = [];
@@ -359,12 +385,9 @@ async function runSubmit(
       if (upload.kind === "competitor") competitorLink = { name, url };
       else fileLinks.push({ name, url });
     }
-    if (problem) {
-      await ctx.runMutation(internal.uploads.discardFiles, {
-        storageIds: uploads.map((f) => f.storageId),
-      });
-      throw new ConvexError(problem);
-    }
+    // Throwing is enough: the handler deletes every upload of a rejected
+    // attempt, whichever check refused it.
+    if (problem) throw new ConvexError(problem);
   }
 
   const requestId =
@@ -425,6 +448,8 @@ async function runSubmit(
     ...payload,
     files: files.length ? files : undefined,
   });
+  // The row references the uploads now. Nothing may delete them after this.
+  owner.byQuote = true;
   // Download links go in Eric's email only; the row keeps the storage ids.
   if (fileLinks.length) payload.files = fileLinks;
   if (competitorLink) payload.competitorFile = competitorLink;

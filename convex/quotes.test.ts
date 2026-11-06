@@ -767,6 +767,54 @@ describe("requestId and stored row", () => {
       expect(await blobExists(t, photo)).toBe(false);
       expect(await blobExists(t, dxf)).toBe(false);
     });
+
+    // Issue #21: the browser uploads before it calls submitQuote, so every
+    // check that throws ahead of the insert used to leave the files behind.
+    test("a field the form refuses deletes the uploads, while an accepted submission keeps them", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      const bid = await storeBlob(t, 2048, "application/pdf");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          phone: "555-012",
+          files: [
+            { storageId: photo, name: "gate.jpg" },
+            { storageId: bid, name: "other-shop.pdf", kind: "competitor" },
+          ],
+        }),
+        "Enter a 10-digit number.",
+      );
+      expect(await blobExists(t, photo)).toBe(false);
+      expect(await blobExists(t, bid)).toBe(false);
+
+      // The same files on a submission that lands stay in storage, and the
+      // row that now owns them points at them.
+      const kept = await storeBlob(t, 1024, "image/jpeg");
+      await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        files: [{ storageId: kept, name: "gate.jpg" }],
+      });
+      expect(await blobExists(t, kept)).toBe(true);
+      const row = await t.run(async (ctx) => ctx.db.query("quotes").first());
+      expect(row?.files?.[0]?.storageId).toBe(kept);
+    });
+
+    test("a refused verification deletes the uploads", async () => {
+      // No markSessionVerified and no token: the gate the quote form hits
+      // most often in practice.
+      const t = setup();
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          files: [{ storageId: photo, name: "gate.jpg" }],
+        }),
+        "Verification failed.",
+      );
+      expect(await blobExists(t, photo)).toBe(false);
+    });
   });
 
   test("long fields are clipped to the stored caps", async () => {
