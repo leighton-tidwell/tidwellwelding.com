@@ -18,6 +18,8 @@ const TITLES: Record<string, string> = {
     "Mobile Welding, Granbury TX to DFW & Stephenville | Tidwell Specialty Welding",
   "/services/emergency":
     "24/7 Emergency Welding, Granbury TX to DFW & Stephenville | Tidwell Specialty Welding",
+  "/services/cnc-plasma-cutting":
+    "CNC Plasma Cutting in Granbury, TX | Tidwell Specialty Welding",
   "/work":
     "Welding & Fabrication Job Log | Tidwell Specialty Welding, Granbury TX",
   "/about":
@@ -45,6 +47,7 @@ const SITEMAP_URLS = [
   "https://tidwellwelding.com/services/equipment",
   "https://tidwellwelding.com/services/mobile",
   "https://tidwellwelding.com/services/emergency",
+  "https://tidwellwelding.com/services/cnc-plasma-cutting",
   "https://tidwellwelding.com/work",
   "https://tidwellwelding.com/about",
   "https://tidwellwelding.com/contact",
@@ -291,6 +294,7 @@ test("town and service pages carry a BreadcrumbList whose last item has no `item
     "/services/equipment",
     "/services/mobile",
     "/services/emergency",
+    "/services/cnc-plasma-cutting",
   ];
   for (const path of paths) {
     await page.goto(path, { timeout: 60_000 });

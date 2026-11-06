@@ -13,11 +13,26 @@ export default defineSchema({
       material: v.optional(v.string()),
       desc: v.string(),
       dims: v.optional(v.string()),
+      thickness: v.optional(v.string()),
+      quantity: v.optional(v.string()),
       timeline: v.optional(v.string()),
       location: v.optional(v.string()),
       compQuote: v.optional(v.string()),
       photoNames: v.optional(v.array(v.string())),
     }),
+    // Uploaded photos (any job) and drawings or CAD files (CNC). Older rows
+    // only have photoNames. kind "competitor" marks the other shop's quote.
+    files: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          name: v.string(),
+          contentType: v.string(),
+          size: v.number(),
+          kind: v.optional(v.literal("competitor")),
+        }),
+      ),
+    ),
     // AI draft estimate JSON (validated loosely; shape enforced at read time).
     estimate: v.optional(v.any()),
     slot: v.string(),
@@ -77,8 +92,11 @@ export default defineSchema({
 
   // Full AI drafts (including dollars the customer may not have been shown on
   // low confidence) so the owner email always carries the numbers.
+  // jobType keys the draft so a quote never carries a draft for another job
+  // type. Optional: rows written before it existed have none and never match.
   estimateDrafts: defineTable({
     sessionId: v.string(),
+    jobType: v.optional(v.string()),
     estimate: v.any(),
     createdAt: v.number(),
   }).index("by_sessionId", ["sessionId", "createdAt"]),

@@ -13,6 +13,7 @@ import type * as chat from "../chat.js";
 import type * as customers from "../customers.js";
 import type * as emailTemplates from "../emailTemplates.js";
 import type * as estimate from "../estimate.js";
+import type * as estimateFallback from "../estimateFallback.js";
 import type * as ics from "../ics.js";
 import type * as invoiceLogo from "../invoiceLogo.js";
 import type * as invoiceMath from "../invoiceMath.js";
@@ -27,6 +28,8 @@ import type * as rateLimits from "../rateLimits.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
 import type * as turnstile from "../turnstile.js";
+import type * as uploadRules from "../uploadRules.js";
+import type * as uploads from "../uploads.js";
 
 import type {
   ApiFromModules,
@@ -40,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   emailTemplates: typeof emailTemplates;
   estimate: typeof estimate;
+  estimateFallback: typeof estimateFallback;
   ics: typeof ics;
   invoiceLogo: typeof invoiceLogo;
   invoiceMath: typeof invoiceMath;
@@ -54,6 +58,8 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   settings: typeof settings;
   turnstile: typeof turnstile;
+  uploadRules: typeof uploadRules;
+  uploads: typeof uploads;
 }>;
 
 /**

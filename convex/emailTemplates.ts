@@ -51,19 +51,25 @@ export type QuotePayload = {
     material?: string;
     desc: string;
     dims?: string;
+    thickness?: string;
+    quantity?: string;
     timeline?: string;
     location?: string;
     compQuote?: string;
     photoNames?: string[];
   };
   estimate?: Estimate;
+  // Download links for uploaded CNC files. Owner email only.
+  files?: { name: string; url: string }[];
+  // Download link for the other shop's quote. Owner email only.
+  competitorFile?: { name: string; url: string };
   slot: string;
 };
 
 const DISCLAIMER =
   "An AI drafted these numbers from your description. They are not the final quote and can change once Eric sees the job. He confirms every number before work starts.";
 
-type Field = { label: string; value: string };
+type Field = { label: string; value: string; href?: string };
 
 function contactFields(q: QuotePayload): Field[] {
   const out: Field[] = [{ label: "Name", value: q.name }];
@@ -73,16 +79,26 @@ function contactFields(q: QuotePayload): Field[] {
   return out;
 }
 
-function jobFields(q: QuotePayload): Field[] {
+/** Job lines. The owner copy adds the competitor quote download link. */
+function jobFields(q: QuotePayload, owner = false): Field[] {
   const j = q.job;
   const out: Field[] = [{ label: "Job type", value: j.type }];
   if (j.material) out.push({ label: "Material", value: j.material });
   out.push({ label: "Description", value: j.desc });
   if (j.dims) out.push({ label: "Dimensions", value: j.dims });
+  if (j.thickness) out.push({ label: "Thickness", value: j.thickness });
+  if (j.quantity) out.push({ label: "Quantity", value: j.quantity });
   if (j.timeline) out.push({ label: "Timeline", value: j.timeline });
   if (j.location) out.push({ label: "Location", value: j.location });
   if (j.compQuote)
     out.push({ label: "Quote they got", value: `$${j.compQuote}` });
+  if (owner && q.competitorFile) {
+    out.push({
+      label: "Competitor quote",
+      value: q.competitorFile.name,
+      href: q.competitorFile.url,
+    });
+  }
   if (j.photoNames?.length) {
     out.push({
       label: "Photos named",
@@ -93,6 +109,15 @@ function jobFields(q: QuotePayload): Field[] {
   return out;
 }
 
+/** Uploaded files as download links, for Eric's copy only. */
+function fileFields(q: QuotePayload): Field[] {
+  return (q.files ?? []).map((f) => ({
+    label: "File",
+    value: f.name,
+    href: f.url,
+  }));
+}
+
 function fieldsHtml(fields: Field[]): string {
   return (
     `<table cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%;">` +
@@ -101,7 +126,7 @@ function fieldsHtml(fields: Field[]): string {
         (f) =>
           `<tr>` +
           `<td style="padding: 6px 12px 6px 0; font-size: 13px; color: #555555; white-space: nowrap; vertical-align: top;">${esc(f.label)}</td>` +
-          `<td style="padding: 6px 0; font-size: 14px; color: #000000; vertical-align: top;">${esc(f.value)}</td>` +
+          `<td style="padding: 6px 0; font-size: 14px; color: #000000; vertical-align: top;">${f.href ? `<a href="${esc(f.href)}" style="color: #c90314;">${esc(f.value)}</a>` : esc(f.value)}</td>` +
           `</tr>`,
       )
       .join("") +
@@ -113,7 +138,11 @@ function fieldsText(fields: Field[]): string {
   // Collapse newlines inside user values so a multi-line description cannot
   // spoof extra "Field: value" lines in the plain-text part.
   return fields
-    .map((f) => `${f.label}: ${f.value.replace(/\s*\n\s*/g, " / ")}`)
+    .map(
+      (f) =>
+        `${f.label}: ${f.value.replace(/\s*\n\s*/g, " / ")}` +
+        (f.href ? ` <${f.href}>` : ""),
+    )
     .join("\n");
 }
 
@@ -197,7 +226,7 @@ export function buildOwnerEmail(q: QuotePayload): {
       sectionLabel("Contact") +
       fieldsHtml(contactFields(q)) +
       sectionLabel("The job") +
-      fieldsHtml(jobFields(q)) +
+      fieldsHtml([...jobFields(q, true), ...fileFields(q)]) +
       (q.estimate
         ? sectionLabel("AI draft estimate") +
           estimateHtml(q.estimate) +
@@ -208,7 +237,7 @@ export function buildOwnerEmail(q: QuotePayload): {
     `Quote request ${q.requestId}\n` +
     `Callback slot: ${q.slot}\n\n` +
     `CONTACT\n${fieldsText(contactFields(q))}\n\n` +
-    `THE JOB\n${fieldsText(jobFields(q))}\n` +
+    `THE JOB\n${fieldsText([...jobFields(q, true), ...fileFields(q)])}\n` +
     (q.estimate
       ? `\nAI DRAFT ESTIMATE\n${estimateText(q.estimate)}\nAI draft, confidence ${(q.estimate.confidence ?? "medium").toUpperCase()}.${q.estimate.confidence === "low" ? " The customer saw hours only, no dollars." : ""} Confirm every number before quoting.\n`
       : "");

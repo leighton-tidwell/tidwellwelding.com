@@ -18,6 +18,7 @@ const ROUTES = [
   "/services/equipment",
   "/services/mobile",
   "/services/emergency",
+  "/services/cnc-plasma-cutting",
   "/work",
   "/about",
   "/contact",

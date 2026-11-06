@@ -12,6 +12,8 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   chatMessageGlobal: { kind: "fixed window", rate: 200, period: HOUR },
   chatThreadPerSession: { kind: "fixed window", rate: 6, period: HOUR },
   chatThreadGlobal: { kind: "fixed window", rate: 120, period: HOUR },
+  uploadUrlPerSession: { kind: "fixed window", rate: 30, period: HOUR },
+  uploadUrlGlobal: { kind: "fixed window", rate: 300, period: HOUR },
 });
 
 type LimiterCtx = Parameters<typeof rateLimiter.limit>[0];
@@ -35,6 +37,15 @@ export async function limitEstimateDraft(ctx: LimiterCtx, sessionId: string) {
   });
   if (!perSession.ok) throwSlowDown();
   const global = await rateLimiter.limit(ctx, "estimateDraftGlobal");
+  if (!global.ok) throwSlowDown();
+}
+
+export async function limitUploadUrl(ctx: LimiterCtx, sessionId: string) {
+  const perSession = await rateLimiter.limit(ctx, "uploadUrlPerSession", {
+    key: sessionId,
+  });
+  if (!perSession.ok) throwSlowDown();
+  const global = await rateLimiter.limit(ctx, "uploadUrlGlobal");
   if (!global.ok) throwSlowDown();
 }
 

@@ -4,9 +4,11 @@ import { ConvexError, v } from "convex/values";
 import { z } from "zod";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery } from "./_generated/server";
+import { fallbackDraft } from "./estimateFallback";
 import { loadSnapshotForPrompt } from "./market";
 import { assertSessionId, limitEstimateDraft } from "./rateLimits";
 import { verifyTurnstile } from "./turnstile";
+import { CNC_TYPE } from "./uploadRules";
 
 /** Shape of an AI draft estimate. Reused by quotes.ts to sanity-check the
  * estimate payload before rendering it into email. */
@@ -64,30 +66,14 @@ export function rejectOversize(
   }
 }
 
-/** Static fallback matching the prototype's fallbackEstimate shape. */
+/** Static fallback: the shared job-type draft plus the dollars Eric's email
+ * carries. Low confidence, so the customer never sees the dollars. */
 export function fallbackEstimate(jobType: string): Estimate {
-  const mobile =
-    jobType === "Mobile / on-site repair" || jobType === "Emergency";
-  const items = [
-    { task: "Assess, prep and fit-up", crew: 1, hours: 2 },
-    { task: "Weld-out", crew: 1, hours: 4 },
-    { task: "Grind, dress and inspect", crew: 1, hours: 1 },
-  ];
-  if (mobile)
-    items.unshift({ task: "Mobilize the truck to site", crew: 1, hours: 1 });
+  const cnc = jobType === CNC_TYPE;
   return {
-    title: "Draft estimate",
-    summary:
-      "A working draft based on jobs like yours. Eric firms up the numbers on the callback.",
-    line_items: items,
-    hours_low: 6,
-    hours_high: 10,
-    dollars_low: 750,
-    dollars_high: 1750,
-    // The static fallback is a guess by definition: hours show, dollars wait
-    // for Eric.
-    confidence: "low" as const,
-    questions: ["Exact sizes and material thickness", "Site access and power"],
+    ...fallbackDraft(jobType),
+    dollars_low: cnc ? 250 : 750,
+    dollars_high: cnc ? 750 : 1750,
   };
 }
 
@@ -139,6 +125,9 @@ function estimatorSystemPrompt(
     `Bucket ears/edges $500-1500. Boom or loader frame crack with gouge and preheat $1000-3500. AR400 wear package $1500-4500. Ranch gate repair $200-500; new 10-16 ft gate with posts $1000-3000; ornamental gates $2500-6000+. ` +
     `Pipe fence repair $250-750; new pipe fence $25-40 per foot. Handrail $60-130 per linear foot, typical job $1000-3000. Residential steel stair flight $4000-9000; commercial stairs to code $8000-15000+ and low confidence. ` +
     `Small shop fab parts $100-500 plus material. Industrial pipe $150-450 per weld. Multiply totals: stainless 1.25-1.75x, aluminum 1.5-2x, cast iron or unknown alloys 1.25-1.5x. Emergency or after-hours 1.5x; nights, weekends, holidays 2x.\n\n` +
+    `CNC plasma cutting jobs are shop-only: no travel, no mobilization, crew 1. Price them from material, thickness, part or sign size and quantity, plus layout and design time for signs and machine time per piece. ` +
+    `The table takes a 5x10 sheet and cuts carbon steel, stainless and aluminum; plate up to 3/8" cuts clean. Bill table time as labor hours at the same rate; there is no separate machine rate. ` +
+    `The cut path is not visible from a description, so run the dollar range wider. Line items for CNC cover layout or file prep, cutting, and cleanup. CNC questions cover the drawing or file, material and thickness, and size and quantity; never ask about site access or power.\n\n` +
     (marketSnapshot
       ? `Current material market snapshot (researched, use it to shape the material share of the total):\n${marketSnapshot}\n\n`
       : "") +
@@ -164,6 +153,8 @@ export const draftEstimate = action({
     material: v.optional(v.string()),
     desc: v.string(),
     dims: v.optional(v.string()),
+    thickness: v.optional(v.string()),
+    quantity: v.optional(v.string()),
     timeline: v.optional(v.string()),
     location: v.optional(v.string()),
     compQuote: v.optional(v.string()),
@@ -185,6 +176,8 @@ export const draftEstimate = action({
       [args.type, 200],
       [args.material, 200],
       [args.dims, 500],
+      [args.thickness, 100],
+      [args.quantity, 100],
       [args.timeline, 200],
       [args.location, 500],
       [args.compQuote, 100],
@@ -220,6 +213,8 @@ export const draftEstimate = action({
       `Dimensions: ${clip(args.dims, 200) || "not given"}. ` +
       `Timeline: ${clip(args.timeline, 80) || "flexible"}. ` +
       `Location: ${clip(args.location, 200) || "not given"}. ` +
+      (args.thickness ? `Thickness: ${clip(args.thickness, 40)}. ` : "") +
+      (args.quantity ? `Quantity: ${clip(args.quantity, 40)}. ` : "") +
       `Photos attached: ${args.photoNames?.length ?? 0}.`;
 
     // Cached daily research, not a per-quote web search.
@@ -249,6 +244,7 @@ export const draftEstimate = action({
       // ends up seeing.
       await ctx.runMutation(internal.estimate.saveDraft, {
         sessionId: args.sessionId,
+        jobType: args.type,
         estimate: parsed,
       });
       return toCustomerEstimate(parsed);
@@ -257,6 +253,7 @@ export const draftEstimate = action({
       const fb = applyLaborFloor(fallbackEstimate(args.type), rate);
       await ctx.runMutation(internal.estimate.saveDraft, {
         sessionId: args.sessionId,
+        jobType: args.type,
         estimate: fb,
       });
       return toCustomerEstimate(fb);
@@ -265,11 +262,12 @@ export const draftEstimate = action({
 });
 
 export const saveDraft = internalMutation({
-  args: { sessionId: v.string(), estimate: v.any() },
+  args: { sessionId: v.string(), jobType: v.string(), estimate: v.any() },
   returns: v.null(),
-  handler: async (ctx, { sessionId, estimate }) => {
+  handler: async (ctx, { sessionId, jobType, estimate }) => {
     await ctx.db.insert("estimateDrafts", {
       sessionId,
+      jobType,
       estimate,
       createdAt: Date.now(),
     });
@@ -284,16 +282,18 @@ export const saveDraft = internalMutation({
   },
 });
 
-/** Latest full draft for a session (2-hour window) — used by submitQuote so
- * the owner email always carries the real numbers. */
+/** Latest full draft for a session and job type (2-hour window) — used by
+ * submitQuote so the owner email carries the real numbers for the job that
+ * was submitted. Drafts saved before jobType existed never match. */
 export const latestDraftForSession = internalQuery({
-  args: { sessionId: v.string() },
-  handler: async (ctx, { sessionId }) => {
-    const row = await ctx.db
+  args: { sessionId: v.string(), jobType: v.string() },
+  handler: async (ctx, { sessionId, jobType }) => {
+    const rows = await ctx.db
       .query("estimateDrafts")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
       .order("desc")
-      .first();
+      .take(3);
+    const row = rows.find((r) => r.jobType === jobType);
     if (!row || Date.now() - row.createdAt > 2 * 60 * 60 * 1000) return null;
     return row.estimate;
   },
