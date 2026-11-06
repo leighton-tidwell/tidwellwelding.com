@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test as setup } from "@playwright/test";
+import { ADMIN_URL } from "./admin-url";
 
 /**
  * Provisions a disposable admin account on the local Convex backend and walks
@@ -14,10 +15,16 @@ const TEST_EMAIL = `e2e-admin-${Date.now()}@tidwellwelding.test`;
 const TEST_PASSWORD = "e2e-password-not-a-secret";
 
 function convexRun(fn: string, args: Record<string, unknown>): string {
-  const out = execFileSync("npx", ["convex", "run", fn, JSON.stringify(args)], {
-    cwd: path.join(__dirname, "..", ".."),
-    encoding: "utf8",
-  });
+  // E2E_CONVEX_FLAGS targets a remote backend, e.g. "--preview-name pr-12".
+  const flags = process.env.E2E_CONVEX_FLAGS?.split(" ").filter(Boolean) ?? [];
+  const out = execFileSync(
+    "npx",
+    ["convex", "run", ...flags, fn, JSON.stringify(args)],
+    {
+      cwd: path.join(__dirname, "..", ".."),
+      encoding: "utf8",
+    },
+  );
   // `convex run` prints the JSON return value on the last non-empty line.
   const lines = out.trim().split("\n").filter(Boolean);
   return JSON.parse(lines[lines.length - 1]!) as string;
@@ -41,7 +48,7 @@ setup(
     });
 
     // Prove the account works before the suite depends on it.
-    await page.goto("/admin", { timeout: 60_000 });
+    await page.goto(ADMIN_URL, { timeout: 60_000 });
     await page.getByLabel("Email").fill(TEST_EMAIL);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();

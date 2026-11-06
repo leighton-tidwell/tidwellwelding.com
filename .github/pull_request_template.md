@@ -15,7 +15,7 @@
 
 ## Proof
 
-<!-- UI: before/after screenshots or a short video from the local stack.
+<!-- UI: before/after screenshots from the local stack (`make screenshot URL=/path`).
      Backend: test output or command output showing the new behavior. -->
 
 ## How I verified
