@@ -4,41 +4,53 @@
 
 ## Finding in one line
 
-Most of the cost is not the renderer. `renderInvoicePdf` renders the whole
+Most of today's cost is not the renderer. `renderInvoicePdf` renders the whole
 document **up to 13 times** to choose the number of filler rows. One render of
-a 100-line invoice costs ~103ms; the search around it costs the other ~1.3s.
+a 100-line invoice costs ~98ms; the search around it costs the other ~1.3s.
+
+And the renderer itself can be replaced by one that owns no layout code at all:
+HTML + CSS printed by Chromium holds every layout constraint, matches today's
+pagination exactly, and is **34x** faster.
 
 100-line invoice, medians of 7 timed runs on this machine:
 
-| 100-line invoice                                     | median     | spread (7 runs) | vs today |
-| ---------------------------------------------------- | ---------- | --------------- | -------- |
-| today — `@react-pdf/renderer` + linear filler search | **1380ms** | 1345–1388       | —        |
-| `@react-pdf/renderer`, one render, no filler search  | 103ms      | 97–106          | 13x      |
-| `@react-pdf/renderer` + probe-max-then-bisect search | **218ms**  | 207–244         | **6.3x** |
-| direct `pdf-lib` composition                         | **32ms**   | 31–35           | **43x**  |
+| 100-line invoice                                       | median     | spread    | vs today |
+| ------------------------------------------------------ | ---------- | --------- | -------- |
+| today — `@react-pdf/renderer` + linear filler search   | **1374ms** | 1355–1397 | —        |
+| `@react-pdf/renderer`, one render, no filler search    | 98ms       | 97–100    | 14x      |
+| `@react-pdf/renderer` + probe-max-then-bisect search   | **209ms**  | 203–253   | **6.6x** |
+| direct `pdf-lib` composition                           | 33ms       | 31–34     | 42x      |
+| **HTML + CSS via Chromium** (warm browser)             | **42ms**   | 38–44     | **33x**  |
+| HTML + CSS via Chromium (cold browser launch included) | 152ms      | 149–165   | 9x       |
 
 The issue quotes 1739ms for today's path; this machine does the same work in
-1380ms. The ratios, not the absolute numbers, are the transferable part.
+1374ms. The ratios, not the absolute numbers, are the transferable part.
+
+At 250 line items the gap widens: react-pdf takes 4617ms, Chromium 56ms — 82x.
 
 ## Recommendation
 
-1. **Adopt: replace the linear filler search.** Keep `@react-pdf/renderer`.
-   1380ms → 218ms for 100 lines (6.3x), no new layout code, same chosen filler
+1. **Adopt now: replace the linear filler search.** Keep `@react-pdf/renderer`.
+   1374ms → 209ms for 100 lines (6.6x), no new layout code, same chosen filler
    count, byte-for-byte the same document. About 15 lines in
-   `convex/invoicePdf.tsx`. This is where the cost actually is.
-2. **Drop, for now: migrating the renderer to `pdf-lib`.** It is genuinely 43x
-   faster and it _can_ meet the layout constraints — the spike renderer proves
-   that, see below. But it costs ~450 lines of hand-measured layout to own and
-   test, re-introducing the class of defect the react-pdf rewrite removed, to
-   save a further 186ms on an operation that runs when the shop owner clicks
-   Download. After step 1 the renderer is no longer the bottleneck.
+   `convex/invoicePdf.tsx`. Zero formatting risk, and it is independent of
+   everything below — it is worth doing whether or not the renderer ever
+   changes, because it is where the cost actually is.
+2. **Adopt next, gated: HTML + CSS printed by Chromium.** This is the only
+   candidate that _reduces_ the amount of layout code we own. Repeated
+   headings, keep-together, row splitting, long-token breaking and page size
+   stop being our code and become five CSS declarations backed by the layout
+   engine the whole web is tested against. 33x faster warm, 9x faster even
+   counting a cold browser launch, and the pagination is identical to today's
+   at 0, 7, 40 and 100 line items. Three things must be settled first — an
+   embedded font, the filler-row strategy and a visual diff; see the open
+   questions below.
+3. **Drop: direct `pdf-lib` composition.** Fast (42x) and it can be made to
+   meet the constraints, but it puts ~545 lines of hand-measured layout on us
+   permanently. Chromium gets the same speed class with none of that. The
+   prototype stays in `bench/` as a record.
 
-Step 2 stays on the shelf as a proven escape hatch: `bench/pdfLibInvoice.ts` in
-this PR is a working starting point if invoice rendering ever becomes
-customer-facing at volume, or if invoices start running past ~250 lines (where
-react-pdf costs 339ms per render and pdf-lib still costs 44ms).
-
-`testTimeout: 30_000` stays as it is either way, as the issue says.
+`testTimeout: 30_000` stays as it is regardless, as the issue says.
 
 ## Where today's cost goes
 
@@ -58,7 +70,7 @@ On any invoice that already fills a page, every filler count fits, so the loop
 never breaks early and pays all 13 renders. That is the 40- and 100-line case —
 exactly the slow tests in the issue.
 
-## Candidate 1: cheaper filler search, same renderer
+## Candidate A: cheaper filler search, same renderer
 
 Because the relation is monotone, the largest filler that fits can be found by
 bisection instead of by walking the range. Two variants, measured:
@@ -78,7 +90,7 @@ Memory follows render count: the linear search peaked at **+477MB** RSS over a
 100-line run against **+60MB** for a single render. RSS deltas are noisy and
 should be read as indicative, not exact.
 
-## Candidate 2: direct `pdf-lib` composition
+## Candidate B: direct `pdf-lib` composition
 
 `bench/pdfLibInvoice.ts` composes the same invoice with `pdf-lib` — already a
 dependency, and already proven on this runtime, since `convex/pdfText.ts` uses
@@ -126,12 +138,142 @@ Being honest about what a 43x number is bought with:
   becomes arithmetic rather than flexbox, which is exactly the trade the current
   renderer's header comment warns about.
 
+## Candidate C: HTML + CSS printed by Chromium (recommended direction)
+
+`bench/htmlInvoice.ts` is the invoice as a single HTML document with a
+stylesheet. `bench/chromiumRenderer.ts` prints it with local Chromium through
+Playwright (already a devDependency). `bench/cloudflareRenderer.ts` is the
+hosted leg — Cloudflare Browser Rendering's `/pdf` quick action — plus the
+degradation chain.
+
+**Playwright's `page.pdf()` is Chromium's print-to-PDF, the same engine
+Cloudflare Browser Rendering runs server side.** The transport differs; the
+layout engine does not. So every layout behaviour verified below is the
+behaviour the hosted path produces, subject to the font caveat.
+
+### The whole point: the constraints become CSS
+
+| Constraint                       | Our code today                                        | As CSS                                                           |
+| -------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| Column headings repeat per page  | `fixed` prop on the heading View                      | `<thead>` / `display: table-header-group`                        |
+| Totals/notes/footer kept whole   | `wrap={false}`                                        | `break-inside: avoid`                                            |
+| Rows never split                 | `wrap={false}` per row                                | `break-inside: avoid` on `tr`                                    |
+| Long unbroken tokens stay in col | `Font.registerHyphenationCallback` + `MAX_TOKEN = 24` | `overflow-wrap: anywhere`                                        |
+| Long customer name clipped       | `maxLines: 1` + `textOverflow`                        | `white-space: nowrap; overflow: hidden; text-overflow: ellipsis` |
+| US Letter                        | `size="LETTER"`                                       | `@page { size: letter }`                                         |
+
+`bench/htmlInvoice.ts` contains no token-splitting constant, no hyphenation
+callback, no hand-measured row height and no page arithmetic.
+
+### Measured fidelity
+
+Structure is read back out of the PDF; overflow is measured in the DOM under
+print emulation, because Chromium's layout is the thing under test
+(`bench/html.bench.test.ts`, 3 tests, all passing):
+
+| line items | pages (react-pdf) | pages (Chromium) | heading on every page | totals | footer |
+| ---------- | ----------------- | ---------------- | --------------------- | ------ | ------ |
+| 0          | 1                 | 1                | 1/1                   | 1      | 1      |
+| 7          | 1                 | 1                | 1/1                   | 1      | 1      |
+| 40         | 3                 | 3                | 3/3                   | 1      | 1      |
+| 100        | 5                 | 5                | 5/5                   | 1      | 1      |
+
+- Page size 612x792pt, table 516pt wide, description column 175pt — the
+  react-pdf design's own geometry (176pt, less a hairline absorbed by
+  `border-collapse`). ✅
+- 100-character part number: **0** cells whose text overflows, **0** cells with
+  ink outside the column box. ✅
+- 84-character company name: clipped to one line, **0** values overflowing the
+  meta grid. ✅
+- "Fabricación Zürich" round-trips. ✅
+
+A gotcha worth recording: the stylesheet is written in **`pt`, not `px`**. CSS
+`pt` is 1/72in, the same unit the PDF uses, so the react-pdf design's numbers
+carry over unchanged. In `px` the sheet is 816 wide rather than 612 and the
+whole invoice comes out a quarter too small — which is exactly what the first
+draft of this candidate did, and the symptom was 40 line items fitting on 2
+pages instead of 3.
+
+### Timing
+
+| line items | react-pdf today | Chromium, one print | Chromium, filler resolved |
+| ---------- | --------------- | ------------------- | ------------------------- |
+| 7          | 148ms           | 18ms                | 78ms (6 prints)           |
+| 40         | 605ms           | 19ms                | 33ms (2 prints)           |
+| 100        | 1409ms          | 24ms                | 42ms (2 prints)           |
+| 250        | 4617ms          | 33ms                | 56ms (2 prints)           |
+
+A cold browser launch plus a 100-line render is 152ms — still 9x faster than
+today's warm path.
+
+Output is bigger: **160KB against 97KB** at 100 lines, because Chromium embeds
+subsetted font programs where react-pdf references the standard 14. That is
+1.6x more for Eric's phone to download, and worth weighing against the render
+saving.
+
+### Graceful degradation (tested)
+
+`bench/cloudflareRenderer.ts` renders through Cloudflare and falls back to the
+existing in-process renderer rather than failing. Cloudflare's published
+limits are 600 req/min on Workers Paid, 30 concurrent browsers, 30 new
+instances/minute, a 60s browser timeout, and 10 minutes of browser time per
+day on the free plan — so for this shop the realistic failure is a transient
+429/5xx or the free daily allowance, not sustained volume.
+
+The transport is injected, so the chain is verified with no network and no API
+token (`bench/fallback.bench.test.ts`, 7 tests, all passing):
+
+| situation                     | behaviour                                                       |
+| ----------------------------- | --------------------------------------------------------------- |
+| success                       | 1 call, no sleeping, fallback untouched                         |
+| 429 then 200                  | retried after the server's own `Retry-After`, no fallback       |
+| `Retry-After: 3600`           | capped at 2s — an invoice never hangs for an hour               |
+| sustained 429                 | 3 attempts with jittered backoff, then a real react-pdf invoice |
+| 401 / 413 (our mistake)       | no retries, no backoff, straight to the fallback                |
+| 3 consecutive failed invoices | breaker opens; later invoices skip the network entirely         |
+| 60s later                     | hosted renderer is probed again and recovers on its own         |
+
+The design rule: **an invoice that renders slowly is a much better outcome for
+the shop than an invoice that does not render at all**, so the fallback is
+unconditional and the in-process renderer stays in the tree as the safety net.
+Only a failure of _both_ renderers surfaces an error.
+
+### Open questions before this could ship
+
+1. **Fonts — the real risk.** On macOS Chromium resolves genuine Helvetica.
+   Cloudflare's Linux container will not have it and will substitute. I
+   verified the layout _is_ metric-sensitive (switching to a serif changes the
+   description column's ink width from 97pt to 89.67pt), but I could **not**
+   simulate Linux metrics here: Liberation Sans, DejaVu Sans and Nimbus Sans
+   are not installed on this machine, so all those family names resolve to the
+   same fallback and the test cannot tell them apart. Fixed 26pt row heights
+   mean page counts held across every family I could try, but a description
+   that wraps to two lines on Linux and one on macOS would change a row's
+   height and therefore the pagination. **Mitigation: embed a WOFF2 via
+   `@font-face` as base64 in the document**, so rendering is identical
+   everywhere and does not depend on the container's font set. Must be done
+   and verified against the hosted renderer before adopting.
+2. **Filler rows need DOM access.** The local prototype resolves them by
+   measuring, mutating the DOM and reprinting the already-loaded page — 2
+   prints for a long invoice, up to 6 for a short one. The hosted REST
+   endpoint takes HTML and returns a PDF, with no DOM in between, so the same
+   strategy costs 2–6 round trips per invoice. Options: accept the round trips
+   (free if the PDF is pre-generated when the invoice is saved rather than on
+   download), drop filler rows (they are cosmetic), or drive a browser session
+   through the Workers binding, which does give DOM access. Unresolved.
+3. **Visual diff.** Pagination and overflow are verified; pixel placement is
+   not. Needs a page-by-page image diff against Eric's reference invoice.
+4. **Where it runs.** A Convex action can `fetch` the REST endpoint (a token
+   on the Convex deployment), or the Next.js Worker can use the `env.BROWSER`
+   binding with no token at all. The binding is cheaper and avoids a secret,
+   but moves PDF generation out of the Convex action.
+
 ## Approaches considered and not measured
 
 - **Template + fill.** A pre-built US Letter template filled with `pdf-lib`
   would be faster still, but the table is variable-height and multi-page, so the
   template would have to carry every row count. The filler and pagination work
-  would be the same arithmetic as candidate 2, for no further saving.
+  would be the same arithmetic as candidate B, for no further saving.
 - **Caching the rendered PDF.** Already effectively present: the action stores
   the result in Convex file storage and attaches it to the invoice. It does not
   help the test suite, which is where the pain is.
@@ -153,9 +295,15 @@ Benchmark code lives in `bench/` and is **throwaway**: it is excluded from
 no bearing on production. Raw output in
 [`bench/results.md`](../bench/results.md).
 
-Numbers above are medians of 7 timed runs after 2 warm-up runs, one bench file
-at a time, on an Apple M4 Pro (14 cores) / Node v26.13.0 (the repo pin) / macOS.
-Run-to-run drift between whole-suite runs was about 5%. CI runners measured
-~5.5x slower than a dev machine on the same work (issue #10: 9590ms against
-1739ms), so expect roughly **1.2s on CI after the search fix** and **~180ms**
-for pdf-lib — extrapolated, not measured.
+Numbers above are medians of 7 timed runs after 2 warm-up runs (3 runs for the
+cold-launch figure), one bench file at a time, on an Apple M4 Pro (14 cores) /
+Node v26.13.0 (the repo pin) / macOS. Run-to-run drift between whole-suite runs
+was about 5%. CI runners measured ~5.5x slower than a dev machine on the same
+work (issue #10: 9590ms against 1739ms), so expect roughly **1.2s on CI after
+the search fix** — extrapolated, not measured.
+
+Chromium figures come from local Playwright, not from Cloudflare. The hosted
+endpoint was never called: it needs an account id and an API token with
+"Browser Run - Edit", and per `AGENTS.md` server secrets live on the Convex
+deployment. Cloudflare publishes no latency figure for `/pdf`; one third-party
+blog claims sub-200ms, unverified. **The hosted leg is untimed.**
