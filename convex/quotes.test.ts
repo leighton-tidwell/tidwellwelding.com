@@ -276,7 +276,7 @@ describe("failed attempts are kept as leads (issue #6)", () => {
     ).toHaveLength(0);
     const rows = await failedRows(t);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
+    expect(rows[0]!).toMatchObject({
       name: "Jane Walker",
       phone: "(817) 555-0123",
       email: CUSTOMER_EMAIL,
@@ -286,7 +286,7 @@ describe("failed attempts are kept as leads (issue #6)", () => {
       // No token at all: the visitor clicked before the widget solved.
       tokenPresent: false,
     });
-    expect(rows[0].job).toMatchObject({
+    expect(rows[0]!.job).toMatchObject({
       type: "Fabrication",
       desc: "Build a steel gate frame, 6 ft by 4 ft.",
     });
@@ -305,7 +305,7 @@ describe("failed attempts are kept as leads (issue #6)", () => {
 
     const rows = await failedRows(t);
     expect(rows).toHaveLength(1);
-    expect(rows[0].tokenPresent).toBe(true);
+    expect(rows[0]!.tokenPresent).toBe(true);
   });
 
   test("any rejection is recorded, not just the verification ones", async () => {
@@ -322,11 +322,11 @@ describe("failed attempts are kept as leads (issue #6)", () => {
 
     const rows = await failedRows(t);
     expect(rows).toHaveLength(1);
-    expect(rows[0].reason).toBe(
+    expect(rows[0]!.reason).toBe(
       "An entry is too long. Shorten it and try again.",
     );
     // The oversize value that caused it is clipped on the way in.
-    expect(rows[0].job?.desc).toHaveLength(4000);
+    expect(rows[0]!.job?.desc).toHaveLength(4000);
   });
 
   test("an attempt with no way to reach anyone is not kept", async () => {
@@ -354,7 +354,7 @@ describe("failed attempts are kept as leads (issue #6)", () => {
 
     const rows = await failedRows(t);
     expect(rows).toHaveLength(1);
-    expect(rows[0].email).toBe(CUSTOMER_EMAIL);
+    expect(rows[0]!.email).toBe(CUSTOMER_EMAIL);
   });
 
   test("a submission that lands records nothing", async () => {

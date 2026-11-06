@@ -481,7 +481,7 @@ describe("QuoteFlow", () => {
         { timeout: 4000 },
       );
       await user.click(
-        document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0],
+        document.querySelectorAll<HTMLButtonElement>(".qf-slot")[0]!,
       );
     }
 
