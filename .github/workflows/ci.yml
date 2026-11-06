@@ -1,7 +1,10 @@
 name: CI
 
-# Every PR, no label needed. Merges to main deploy, so this is the gate.
-# The steps live in the Makefile; this file only calls `make ci`.
+# Every PR, no label needed. This is the merge gate: the `ci` check must stay
+# required on main in branch protection, which lives in repo settings, not here.
+# The steps live in the Makefile; this file only calls `make ci`,
+# and deploy-production.yml runs that same target again on main before shipping,
+# so nothing reaches production on a subset of the checks.
 on:
   pull_request:
 
