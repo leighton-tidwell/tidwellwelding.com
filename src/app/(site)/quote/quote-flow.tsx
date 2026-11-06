@@ -575,6 +575,10 @@ export default function QuoteFlow() {
   /** Set only when a submission did not persist. Step 4 never renders while
    * this is set. */
   const [submitErr, setSubmitErr] = useState("");
+  /** Files whose upload failed on the submission that got through. The
+   * request persisted with their names, so step 4 names them in a notice
+   * rather than letting the visitor assume Eric has the files (issue #37). */
+  const [notUploaded, setNotUploaded] = useState<string[]>([]);
 
   const slots = useMemo(() => makeSlots(), []);
 
@@ -880,6 +884,7 @@ export default function QuoteFlow() {
       // Storage blocked: the confirmation still shows.
     }
     setReqId(finalId);
+    setNotUploaded(notSent);
     setSubmitting(false);
     setStep(4);
     window.scrollTo(0, 0);
@@ -1897,6 +1902,42 @@ export default function QuoteFlow() {
                 A copy went to eric@tidwellwelding.com. Check your email for the
                 recap.
               </div>
+              {notUploaded.length ? (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 12,
+                    padding: 14,
+                    background: "rgba(255,176,32,.08)",
+                    border: "1px solid rgba(255,176,32,.35)",
+                  }}
+                >
+                  <Icon
+                    name="triangle-alert"
+                    size={20}
+                    color="#ffb020"
+                    strokeWidth={2.5}
+                  />
+                  <p
+                    style={{
+                      fontFamily: BODY,
+                      fontSize: 15,
+                      lineHeight: 1.55,
+                      color: "rgba(255,255,255,.82)",
+                      margin: 0,
+                    }}
+                  >
+                    These files did not finish uploading:{" "}
+                    {notUploaded.join(", ")}. Eric has your request and the file
+                    names, and he will ask for them on the call. To send them
+                    sooner, call{" "}
+                    <a href={PHONE_TEL} style={{ color: "#ffb020" }}>
+                      {PHONE_DISPLAY}
+                    </a>
+                    .
+                  </p>
+                </div>
+              ) : null}
               <div
                 style={{
                   display: "flex",
