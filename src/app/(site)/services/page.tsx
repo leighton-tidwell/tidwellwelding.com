@@ -9,7 +9,7 @@ import styles from "./services.module.css";
 const PAGE_TITLE =
   "Welding Services: Fabrication, Pipe, Equipment Repair | Granbury & Fort Worth | TSWS";
 const PAGE_DESCRIPTION =
-  "Seven service lines out of Granbury, TX: fabrication, staircases and handrail, pipe welding, heavy equipment repair, mobile welding, 24/7 emergency, CNC plasma cutting.";
+  "Seven service lines out of Granbury, TX: fabrication, CNC plasma cutting, staircases and handrail, pipe welding, heavy equipment repair, mobile welding, 24/7 emergency.";
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -78,8 +78,32 @@ const SERVICES: Service[] = [
     ),
   },
   {
+    id: "cnc-plasma-cutting",
+    kicker: "SERVICE 02 — CNC PLASMA",
+    title: "CNC plasma cutting",
+    serviceType: "CNC plasma cutting",
+    body: "A CNC plasma table that takes a full 5x10 sheet and cuts steel, stainless and aluminum. Custom metal signs, ranch entry signs, brand and name signs, brackets and plate parts. Eric cuts from a DXF file, a drawing, a sketch or a part to copy. One part or a production run.",
+    chips: [
+      "Signs",
+      "Full 5x10 sheet",
+      "Steel, stainless, aluminum",
+      "From DXF or sketch",
+    ],
+    ctaLabel: "Request a quote",
+    ctaHref: "/quote",
+    fullLabel: "Full CNC plasma page",
+    note: "Shop · Granbury",
+    media: (
+      <img
+        className={styles.mediaEl}
+        src="/media/cnc-table-torch-poster.jpg"
+        alt="Torch carriage on the 5x10 CNC plasma table in the Granbury shop"
+      />
+    ),
+  },
+  {
     id: "structural",
-    kicker: "SERVICE 02 — STRUCTURAL",
+    kicker: "SERVICE 03 — STRUCTURAL",
     title: "Staircases & handrail",
     serviceType: "Structural steel welding",
     body: "Commercial staircase packages and handrail that reads clean from a foot away. A recent package ran three welders and 150 man-hours for a distribution facility, built over two weekends so the floor stayed open. Plumb, square, ready for inspection.",
@@ -98,7 +122,7 @@ const SERVICES: Service[] = [
   },
   {
     id: "pipe",
-    kicker: "SERVICE 03 — PIPE",
+    kicker: "SERVICE 04 — PIPE",
     title: "Pipe welding",
     serviceType: "Pipe welding",
     body: "Eric's road years: paper mills, chemical plants, refineries, pipeline stations and pipeline itself. Tie-ins, repairs and new runs in carbon, stainless, chrome-moly and Inconel. Roots that pass, caps that look it.",
@@ -122,7 +146,7 @@ const SERVICES: Service[] = [
   },
   {
     id: "equipment",
-    kicker: "SERVICE 04 — EQUIPMENT",
+    kicker: "SERVICE 05 — EQUIPMENT",
     title: "Heavy equipment repair",
     serviceType: "Heavy equipment welding repair",
     body: "Cracked bucket ears, worn pins, split tank seams, hot oil beds. Eric has repaired them at the plant, on the pad and in the pasture. The repair holds under load or he comes back on his dime.",
@@ -141,7 +165,7 @@ const SERVICES: Service[] = [
   },
   {
     id: "mobile",
-    kicker: "SERVICE 05 — MOBILE",
+    kicker: "SERVICE 06 — MOBILE",
     title: "Mobile welding",
     serviceType: "Mobile welding",
     body: "The truck carries the shop: machine, leads, gas, grinders, consumables. It rolls to ranches, plants, job sites and roadsides anywhere between DFW and Stephenville. The welder who quotes the job is the welder who shows up.",
@@ -160,7 +184,7 @@ const SERVICES: Service[] = [
   },
   {
     id: "emergency",
-    kicker: "SERVICE 06 — EMERGENCY",
+    kicker: "SERVICE 07 — EMERGENCY",
     title: "Emergency & on-call",
     serviceType: "Emergency welding",
     body: "Breakdowns don't book appointments. Call any hour and Eric drops what he's doing, loads the truck and drives to you. Plants get lines running, ranchers get equipment back in the field, contractors hold their schedule.",
@@ -174,30 +198,6 @@ const SERVICES: Service[] = [
         ratio="4 / 3"
         src="/media/cracked-equipment-repair.webp"
         alt="Field repair weld on a John Deere excavator boom, truck alongside, Granbury TX"
-      />
-    ),
-  },
-  {
-    id: "cnc-plasma-cutting",
-    kicker: "SERVICE 07 — CNC PLASMA",
-    title: "CNC plasma cutting",
-    serviceType: "CNC plasma cutting",
-    body: "A CNC plasma table that takes a full 5x10 sheet and cuts steel, stainless and aluminum. Custom metal signs, ranch entry signs, brand and name signs, brackets and plate parts. Eric cuts from a DXF file, a drawing, a sketch or a part to copy. One part or a production run.",
-    chips: [
-      "Signs",
-      "Full 5x10 sheet",
-      "Steel, stainless, aluminum",
-      "From DXF or sketch",
-    ],
-    ctaLabel: "Request a quote",
-    ctaHref: "/quote",
-    fullLabel: "Full CNC plasma page",
-    note: "Shop · Granbury",
-    media: (
-      <img
-        className={styles.mediaEl}
-        src="/media/cnc-table-torch-poster.jpg"
-        alt="Torch carriage on the 5x10 CNC plasma table in the Granbury shop"
       />
     ),
   },
