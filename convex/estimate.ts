@@ -5,6 +5,11 @@ import { z } from "zod";
 import { internal } from "./_generated/api";
 import { action, internalMutation, internalQuery } from "./_generated/server";
 import { fallbackDraft } from "./estimateFallback";
+import {
+  FIELD_MAX,
+  MAX_PHOTO_NAME_CHARS,
+  MAX_PHOTO_NAMES,
+} from "./fieldLimits";
 import { loadSnapshotForPrompt } from "./market";
 import { assertSessionId, limitEstimateDraft } from "./rateLimits";
 import { verifyTurnstile } from "./turnstile";
@@ -168,26 +173,28 @@ export const draftEstimate = action({
     if (!args.desc.trim()) {
       throw new ConvexError("Describe the job in a sentence or two.");
     }
-    if (args.desc.length > 4000) {
+    if (args.desc.length > FIELD_MAX.desc) {
       throw new ConvexError("Keep the description under 4,000 characters.");
     }
     // Reject oversized args up front instead of silently clipping megabytes.
     rejectOversize([
-      [args.type, 200],
-      [args.material, 200],
-      [args.dims, 500],
-      [args.thickness, 100],
-      [args.quantity, 100],
-      [args.timeline, 200],
-      [args.location, 500],
-      [args.compQuote, 100],
+      [args.type, FIELD_MAX.type],
+      [args.material, FIELD_MAX.material],
+      [args.dims, FIELD_MAX.dims],
+      [args.thickness, FIELD_MAX.thickness],
+      [args.quantity, FIELD_MAX.quantity],
+      [args.timeline, FIELD_MAX.timeline],
+      [args.location, FIELD_MAX.location],
+      [args.compQuote, FIELD_MAX.compQuote],
     ]);
     if (
       args.photoNames &&
-      (args.photoNames.length > 20 ||
-        args.photoNames.some((n) => n.length > 300))
+      (args.photoNames.length > MAX_PHOTO_NAMES ||
+        args.photoNames.some((n) => n.length > MAX_PHOTO_NAME_CHARS))
     ) {
-      throw new ConvexError("Too many photo names. Send 20 or fewer.");
+      throw new ConvexError(
+        `Too many photo names. Send ${MAX_PHOTO_NAMES} or fewer.`,
+      );
     }
 
     const verified = await verifyTurnstile(args.turnstileToken);

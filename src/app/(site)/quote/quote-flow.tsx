@@ -29,6 +29,10 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { isEmail } from "../../../../convex/emailTemplates";
 import { fallbackDraft } from "../../../../convex/estimateFallback";
 import {
+  FIELD_MAX,
+  MAX_PHOTO_NAME_CHARS,
+} from "../../../../convex/fieldLimits";
+import {
   CNC_TYPE,
   COMPETITOR_ACCEPT,
   MAX_UPLOAD_FILES,
@@ -192,25 +196,11 @@ const TIMELINE_OPTIONS = [
 ];
 
 /**
- * Server caps mirrored on the client so the visitor sees the limit on the
- * field instead of a rejected submission. Keep these in step with the
- * `rejectOversize` tables in convex/quotes.ts and convex/estimate.ts.
- * `location` takes the stricter of the two server caps (500 in
- * draftEstimate, 600 in submitQuote) so one value clears both endpoints.
+ * The same caps the two quote endpoints reject on, so the visitor sees the
+ * limit on the field instead of a rejected submission. Imported, never
+ * retyped: a copy here could drift from the server that enforces it.
  */
-const MAX = {
-  desc: 4000,
-  name: 300,
-  company: 300,
-  phone: 100,
-  email: 300,
-  dims: 500,
-  thickness: 100,
-  quantity: 100,
-  location: 500,
-  compQuote: 100,
-  photoName: 300,
-} as const;
+const MAX = { ...FIELD_MAX, photoName: MAX_PHOTO_NAME_CHARS } as const;
 
 const tooLong = (max: number) =>
   `Keep this under ${max.toLocaleString("en-US")} characters.`;

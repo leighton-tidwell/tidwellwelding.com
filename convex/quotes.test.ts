@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Estimate } from "./estimate";
+import { FIELD_MAX } from "./fieldLimits";
 import schema from "./schema";
 
 const modules = import.meta.glob([
@@ -248,6 +249,35 @@ describe("input validation", () => {
       }),
       "Too many photo names.",
     );
+  });
+
+  test("the location cap is the one both endpoints share", async () => {
+    const t = setup();
+    await markSessionVerified(t);
+
+    // 600 used to pass here and fail the estimate step, which put the
+    // visitor straight into the swallowed-failure path (issue #6).
+    await expectConvexError(
+      t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        job: {
+          type: "Repair",
+          desc: "ok",
+          location: "l".repeat(FIELD_MAX.location + 1),
+        },
+      }),
+      "An entry is too long.",
+    );
+    // Exactly at the cap still goes through.
+    const res = await t.action(api.quotes.submitQuote, {
+      ...baseArgs(),
+      job: {
+        type: "Repair",
+        desc: "ok",
+        location: "l".repeat(FIELD_MAX.location),
+      },
+    });
+    expect(res.ok).toBe(true);
   });
 
   test("rejects a junk sessionId", async () => {
@@ -919,7 +949,8 @@ describe("requestId and stored row", () => {
       job: {
         type: "Repair",
         desc: "d".repeat(4000),
-        location: "L".repeat(600),
+        // At the shared cap, not past it: 600 used to be accepted here.
+        location: "L".repeat(FIELD_MAX.location),
       },
     });
     const row = await t.run(async (ctx) =>
