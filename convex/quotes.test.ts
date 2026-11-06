@@ -466,9 +466,7 @@ describe("requestId and stored row", () => {
       // The 3-digit space is exhausted for this draw, so the id widens.
       expect(second.requestId).toBe(`Q-${year}-1000`);
 
-      const rows = await t.run(async (ctx) =>
-        ctx.db.query("quotes").collect(),
-      );
+      const rows = await t.run(async (ctx) => ctx.db.query("quotes").collect());
       expect(rows).toHaveLength(2);
       // Both ids still resolve to exactly one row, which is what every
       // by_requestId lookup assumes.

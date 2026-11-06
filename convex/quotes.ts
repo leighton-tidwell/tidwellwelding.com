@@ -4,9 +4,9 @@ import { Resend as ResendSdk } from "resend";
 import { components, internal } from "./_generated/api";
 import {
   type ActionCtx,
-  type MutationCtx,
   action,
   internalMutation,
+  type MutationCtx,
 } from "./_generated/server";
 import {
   buildCustomerEmail,
