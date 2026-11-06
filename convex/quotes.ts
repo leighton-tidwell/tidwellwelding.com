@@ -12,7 +12,11 @@ import {
 import { buildCallbackIcs } from "./ics";
 import { estimateSchema, rejectOversize, type Estimate } from "./estimate";
 import { assertSessionId, limitQuoteSubmit } from "./rateLimits";
-import { MAX_UPLOAD_FILES, rejectFile } from "./uploadRules";
+import {
+  MAX_UPLOAD_FILES,
+  rejectCompetitorFile,
+  rejectFile,
+} from "./uploadRules";
 import { verifyTurnstile } from "./turnstile";
 
 const OWNER_EMAIL = "eric@tidwellwelding.com";
@@ -43,6 +47,7 @@ const storedFileValidator = v.object({
   name: v.string(),
   contentType: v.string(),
   size: v.number(),
+  kind: v.optional(v.literal("competitor")),
 });
 type StoredFile = typeof storedFileValidator.type;
 
@@ -92,8 +97,15 @@ export const submitQuote = action({
     email: v.optional(v.string()),
     job: jobValidator,
     // Uploaded via uploads.generateUploadUrl; checked and described here.
+    // kind "competitor" is the other shop's quote (one photo or PDF).
     files: v.optional(
-      v.array(v.object({ storageId: v.id("_storage"), name: v.string() })),
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          name: v.string(),
+          kind: v.optional(v.literal("competitor")),
+        }),
+      ),
     ),
     estimate: v.optional(v.any()),
     slot: v.string(),
@@ -161,17 +173,23 @@ export const submitQuote = action({
 
     await limitQuoteSubmit(ctx, args.sessionId);
 
-    // Uploaded files: photos for every job, drawings and CAD files for CNC.
-    // One bad file refuses the set, and every refused upload is deleted so
-    // nothing lingers in storage.
+    // Uploaded files: photos for every job, drawings and CAD files for CNC,
+    // plus one competitor quote (photo or PDF). One bad file refuses the set,
+    // and every refused upload is deleted so nothing lingers in storage.
     const uploads = args.files ?? [];
     const files: StoredFile[] = [];
     const fileLinks: { name: string; url: string }[] = [];
+    let competitorLink: { name: string; url: string } | undefined;
     if (uploads.length) {
+      const competitorCount = uploads.filter(
+        (f) => f.kind === "competitor",
+      ).length;
       let problem =
-        uploads.length > MAX_UPLOAD_FILES
+        uploads.length - competitorCount > MAX_UPLOAD_FILES
           ? `Send ${MAX_UPLOAD_FILES} files or fewer.`
-          : null;
+          : competitorCount > 1
+            ? "Send one competitor quote."
+            : null;
       for (const upload of uploads) {
         if (problem) break;
         const name = clip(upload.name, 200);
@@ -183,18 +201,20 @@ export const submitQuote = action({
           problem = "A file did not upload. Try again.";
           break;
         }
-        problem = rejectFile(args.job.type, {
-          name,
-          type: meta.contentType,
-          size: meta.size,
-        });
+        const file = { name, type: meta.contentType, size: meta.size };
+        problem =
+          upload.kind === "competitor"
+            ? rejectCompetitorFile(file)
+            : rejectFile(args.job.type, file);
         files.push({
           storageId: upload.storageId,
           name,
           contentType: meta.contentType,
           size: meta.size,
+          ...(upload.kind ? { kind: upload.kind } : {}),
         });
-        fileLinks.push({ name, url });
+        if (upload.kind === "competitor") competitorLink = { name, url };
+        else fileLinks.push({ name, url });
       }
       if (problem) {
         await ctx.runMutation(internal.uploads.discardFiles, {
@@ -264,6 +284,7 @@ export const submitQuote = action({
     });
     // Download links go in Eric's email only; the row keeps the storage ids.
     if (fileLinks.length) payload.files = fileLinks;
+    if (competitorLink) payload.competitorFile = competitorLink;
 
     if (!process.env.RESEND_API_KEY) {
       console.warn("RESEND_API_KEY is unset. Skipping quote emails.");

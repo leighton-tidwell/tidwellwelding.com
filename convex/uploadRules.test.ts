@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { CNC_TYPE, rejectFile, uploadAccept } from "./uploadRules";
+import {
+  CNC_TYPE,
+  rejectCompetitorFile,
+  rejectFile,
+  uploadAccept,
+} from "./uploadRules";
 
 describe("upload rules", () => {
   test("CNC takes drawings, CAD files and photos", () => {
@@ -45,5 +50,21 @@ describe("upload rules", () => {
     expect(
       rejectFile(CNC_TYPE, { name: "a.dxf", type: "", size: 25 * mb + 1 }),
     ).toBe("a.dxf is over 25 MB.");
+  });
+
+  test("the competitor quote slot takes one photo or PDF", () => {
+    const mb = 1024 * 1024;
+    expect(
+      rejectCompetitorFile({ name: "bid.PDF", type: "", size: 20 * mb }),
+    ).toBeNull();
+    expect(
+      rejectCompetitorFile({ name: "bid.jpg", type: "image/jpeg", size: 1000 }),
+    ).toBeNull();
+    expect(
+      rejectCompetitorFile({ name: "bid.dxf", type: "", size: 1000 }),
+    ).toBe("bid.dxf is not a photo or PDF.");
+    expect(
+      rejectCompetitorFile({ name: "bid.pdf", type: "", size: 25 * mb + 1 }),
+    ).toBe("bid.pdf is over 25 MB.");
   });
 });

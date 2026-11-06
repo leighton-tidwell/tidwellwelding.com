@@ -21,7 +21,7 @@ export default defineSchema({
       photoNames: v.optional(v.array(v.string())),
     }),
     // Uploaded photos (any job) and drawings or CAD files (CNC). Older rows
-    // only have photoNames.
+    // only have photoNames. kind "competitor" marks the other shop's quote.
     files: v.optional(
       v.array(
         v.object({
@@ -29,6 +29,7 @@ export default defineSchema({
           name: v.string(),
           contentType: v.string(),
           size: v.number(),
+          kind: v.optional(v.literal("competitor")),
         }),
       ),
     ),

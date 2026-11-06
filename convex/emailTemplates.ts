@@ -58,6 +58,8 @@ export type QuotePayload = {
   estimate?: Estimate;
   // Download links for uploaded CNC files. Owner email only.
   files?: { name: string; url: string }[];
+  // Download link for the other shop's quote. Owner email only.
+  competitorFile?: { name: string; url: string };
   slot: string;
 };
 
@@ -74,7 +76,8 @@ function contactFields(q: QuotePayload): Field[] {
   return out;
 }
 
-function jobFields(q: QuotePayload): Field[] {
+/** Job lines. The owner copy adds the competitor quote download link. */
+function jobFields(q: QuotePayload, owner = false): Field[] {
   const j = q.job;
   const out: Field[] = [{ label: "Job type", value: j.type }];
   if (j.material) out.push({ label: "Material", value: j.material });
@@ -86,6 +89,13 @@ function jobFields(q: QuotePayload): Field[] {
   if (j.location) out.push({ label: "Location", value: j.location });
   if (j.compQuote)
     out.push({ label: "Quote they got", value: "$" + j.compQuote });
+  if (owner && q.competitorFile) {
+    out.push({
+      label: "Competitor quote",
+      value: q.competitorFile.name,
+      href: q.competitorFile.url,
+    });
+  }
   if (j.photoNames?.length) {
     out.push({
       label: "Photos named",
@@ -213,7 +223,7 @@ export function buildOwnerEmail(q: QuotePayload): {
       sectionLabel("Contact") +
       fieldsHtml(contactFields(q)) +
       sectionLabel("The job") +
-      fieldsHtml([...jobFields(q), ...fileFields(q)]) +
+      fieldsHtml([...jobFields(q, true), ...fileFields(q)]) +
       (q.estimate
         ? sectionLabel("AI draft estimate") +
           estimateHtml(q.estimate) +
@@ -224,7 +234,7 @@ export function buildOwnerEmail(q: QuotePayload): {
     `Quote request ${q.requestId}\n` +
     `Callback slot: ${q.slot}\n\n` +
     `CONTACT\n${fieldsText(contactFields(q))}\n\n` +
-    `THE JOB\n${fieldsText([...jobFields(q), ...fileFields(q)])}\n` +
+    `THE JOB\n${fieldsText([...jobFields(q, true), ...fileFields(q)])}\n` +
     (q.estimate
       ? `\nAI DRAFT ESTIMATE\n${estimateText(q.estimate)}\nAI draft, confidence ${(q.estimate.confidence ?? "medium").toUpperCase()}.${q.estimate.confidence === "low" ? " The customer saw hours only, no dollars." : ""} Confirm every number before quoting.\n`
       : "");

@@ -554,6 +554,76 @@ describe("requestId and stored row", () => {
       expect(await blobExists(t, ok)).toBe(false);
       expect(await blobExists(t, big)).toBe(false);
     });
+
+    test("a competitor PDF is saved with the competitor marker and linked in the owner email only", async () => {
+      vi.stubEnv("RESEND_API_KEY", "test-resend-key-not-real");
+      vi.stubEnv("RESEND_TEST_MODE", "false");
+      const t = setup();
+      await markSessionVerified(t);
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      const pdf = await storeBlob(t, 4096, "application/pdf");
+      const res = await t.action(api.quotes.submitQuote, {
+        ...baseArgs(),
+        job: { ...baseArgs().job, compQuote: "4,800" },
+        files: [
+          { storageId: photo, name: "gate.jpg" },
+          { storageId: pdf, name: "other-shop.pdf", kind: "competitor" },
+        ],
+      });
+      const row = await t.run(async (ctx) =>
+        ctx.db
+          .query("quotes")
+          .withIndex("by_requestId", (q) => q.eq("requestId", res.requestId))
+          .unique(),
+      );
+      expect(row!.files).toEqual([
+        {
+          storageId: photo,
+          name: "gate.jpg",
+          contentType: expect.any(String),
+          size: 1024,
+        },
+        {
+          storageId: pdf,
+          name: "other-shop.pdf",
+          contentType: expect.any(String),
+          size: 4096,
+          kind: "competitor",
+        },
+      ]);
+      const owner = sdkSendMock.mock.calls[0][0];
+      expect(String(owner.html)).toMatch(
+        /Competitor quote<\/td>.*<a href="[^"]+"[^>]*>other-shop\.pdf<\/a>/,
+      );
+      expect(owner.text).toContain("Quote they got: $4,800");
+      expect(owner.text).toMatch(/Competitor quote: other-shop\.pdf <\S+>/);
+      // Kept out of the main files list.
+      expect(owner.text).not.toMatch(/File: other-shop\.pdf/);
+      expect(owner.text).toMatch(/File: gate\.jpg <\S+>/);
+      const customer = sdkSendMock.mock.calls[1][0];
+      expect(String(customer.html)).not.toContain("Competitor quote");
+      expect(String(customer.html)).not.toContain("other-shop.pdf");
+    });
+
+    test("a .dxf in the competitor slot is refused and deleted", async () => {
+      const t = setup();
+      await markSessionVerified(t);
+      const photo = await storeBlob(t, 1024, "image/jpeg");
+      const dxf = await storeBlob(t, 2048, "application/octet-stream");
+      await expectConvexError(
+        t.action(api.quotes.submitQuote, {
+          ...baseArgs(),
+          job: { type: "CNC plasma cutting / signs", desc: "Ranch sign." },
+          files: [
+            { storageId: photo, name: "sketch.jpg" },
+            { storageId: dxf, name: "bid.dxf", kind: "competitor" },
+          ],
+        }),
+        "bid.dxf is not a photo or PDF.",
+      );
+      expect(await blobExists(t, photo)).toBe(false);
+      expect(await blobExists(t, dxf)).toBe(false);
+    });
   });
 
   test("long fields are clipped to the stored caps", async () => {

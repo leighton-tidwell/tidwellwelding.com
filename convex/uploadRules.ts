@@ -46,16 +46,30 @@ export function fileKind(
     : null;
 }
 
+type UploadFile = { name: string; type?: string; size: number };
+
+const overCap = (file: UploadFile, kind: FileKind) => {
+  const cap = kind === "cad" ? MAX_CAD_BYTES : MAX_IMAGE_BYTES;
+  return file.size > cap
+    ? `${file.name} is over ${cap / 1024 / 1024} MB.`
+    : null;
+};
+
 /** Null when the file fits the job type and its size cap, else the reason. */
-export function rejectFile(
-  jobType: string,
-  file: { name: string; type?: string; size: number },
-): string | null {
+export function rejectFile(jobType: string, file: UploadFile): string | null {
   const kind = fileKind(jobType, file);
   if (!kind) return `${file.name} is not a file type this job takes.`;
-  const cap = kind === "cad" ? MAX_CAD_BYTES : MAX_IMAGE_BYTES;
-  if (file.size > cap) {
-    return `${file.name} is over ${cap / 1024 / 1024} MB.`;
+  return overCap(file, kind);
+}
+
+/** The competitor quote slot takes one photo or PDF on any job type. */
+export const COMPETITOR_ACCEPT = "image/*,.pdf";
+
+/** Null when the competitor quote is a photo or PDF under its size cap. */
+export function rejectCompetitorFile(file: UploadFile): string | null {
+  if (file.name.toLowerCase().endsWith(".pdf")) return overCap(file, "cad");
+  if (fileKind("", file) !== "image") {
+    return `${file.name} is not a photo or PDF.`;
   }
-  return null;
+  return overCap(file, "image");
 }

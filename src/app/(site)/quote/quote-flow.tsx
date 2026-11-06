@@ -23,7 +23,9 @@ import {
 import { getSessionId } from "@/lib/session";
 import {
   CNC_TYPE,
+  COMPETITOR_ACCEPT,
   MAX_UPLOAD_FILES,
+  rejectCompetitorFile,
   rejectFile,
   uploadAccept,
 } from "../../../../convex/uploadRules";
@@ -393,6 +395,7 @@ export default function QuoteFlow() {
     email: "",
   });
   const [uploads, setUploads] = useState<File[]>([]);
+  const [compUpload, setCompUpload] = useState<File | null>(null);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [est, setEst] = useState<Estimate | null>(null);
   const [estBusy, setEstBusy] = useState(false);
@@ -520,14 +523,40 @@ export default function QuoteFlow() {
     setErrs((prev) => ({ ...prev, photos: problems.join(" ") }));
   };
 
+  /** Keep the competitor quote if it is a photo or PDF under its cap. */
+  const pickCompFile = (file: File | undefined) => {
+    const problem = file ? rejectCompetitorFile(file) : null;
+    const kept = file && !problem ? file : null;
+    setCompUpload(kept);
+    setJob((prev) => ({ ...prev, compFile: kept?.name ?? "" }));
+    setErrs((prev) => ({ ...prev, compFile: problem ?? "" }));
+  };
+
   /** Push each picked file to Convex storage. Files that fail (or no longer
-   * fit after a job type change) fall back to name-only. */
+   * fit after a job type change) fall back to name-only. The competitor
+   * quote rides along marked as such, unless this job type hides it. */
   const uploadFiles = async () => {
-    const sent: { storageId: Id<"_storage">; name: string }[] = [];
+    const sent: {
+      storageId: Id<"_storage">;
+      name: string;
+      kind?: "competitor";
+    }[] = [];
     const notSent: string[] = [];
-    for (const file of uploads) {
+    const picks = uploads.map((file) => ({
+      file,
+      problem: rejectFile(f.type, file),
+      kind: undefined as "competitor" | undefined,
+    }));
+    if (compUpload && !jobFormFor(f.type).hidden.includes("compFile")) {
+      picks.push({
+        file: compUpload,
+        problem: rejectCompetitorFile(compUpload),
+        kind: "competitor",
+      });
+    }
+    for (const { file, problem, kind } of picks) {
       try {
-        if (!convex || rejectFile(f.type, file)) throw new Error("skip");
+        if (!convex || problem) throw new Error("skip");
         const url = await convex.mutation(api.uploads.generateUploadUrl, {
           sessionId: getSessionId(),
         });
@@ -540,7 +569,7 @@ export default function QuoteFlow() {
         const { storageId } = (await res.json()) as {
           storageId: Id<"_storage">;
         };
-        sent.push({ storageId, name: file.name });
+        sent.push({ storageId, name: file.name, ...(kind ? { kind } : {}) });
       } catch {
         notSent.push(file.name);
       }
@@ -856,17 +885,15 @@ export default function QuoteFlow() {
                     </span>
                     <input
                       type="file"
-                      accept="image/*,.pdf"
-                      onChange={(e) =>
-                        setJob((prev) => ({
-                          ...prev,
-                          compFile: e.target.files?.[0]
-                            ? e.target.files[0].name
-                            : "",
-                        }))
-                      }
+                      accept={COMPETITOR_ACCEPT}
+                      onChange={(e) => pickCompFile(e.target.files?.[0])}
                       style={hiddenFileInput}
                     />
+                    {errs.compFile ? (
+                      <span role="alert" style={fileErrorText}>
+                        {errs.compFile}
+                      </span>
+                    ) : null}
                   </label>
                 ) : null}
               </div>
