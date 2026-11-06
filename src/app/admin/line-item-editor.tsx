@@ -39,7 +39,7 @@ export function emptyLine(key: string): EditorLine {
 }
 
 /** The amount for a line, or null when the numbers are not yet usable. */
-export function lineAmountCentsOrNull(line: EditorLine): number | null {
+function lineAmountCentsOrNull(line: EditorLine): number | null {
   const qty = Number(line.qty);
   const rateCents = parseMoneyToCents(line.rate);
   if (!Number.isFinite(qty) || qty < 0 || rateCents === null) return null;
