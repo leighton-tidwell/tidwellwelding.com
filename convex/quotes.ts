@@ -2,7 +2,12 @@ import { Resend } from "@convex-dev/resend";
 import { ConvexError, type ObjectType, v } from "convex/values";
 import { Resend as ResendSdk } from "resend";
 import { components, internal } from "./_generated/api";
-import { type ActionCtx, action, internalMutation } from "./_generated/server";
+import {
+  type ActionCtx,
+  type MutationCtx,
+  action,
+  internalMutation,
+} from "./_generated/server";
 import {
   buildCustomerEmail,
   buildOwnerEmail,
@@ -66,12 +71,60 @@ const storedFileValidator = v.object({
 });
 type StoredFile = typeof storedFileValidator.type;
 
-function makeRequestId(): string {
-  return (
-    "Q-" +
-    new Date().getFullYear() +
-    "-" +
-    String(Math.floor(100 + Math.random() * 900))
+/** The customer-facing request id format, as the client may also send it. */
+const REQUEST_ID_FORMAT = /^Q-\d{4}-\d{3,4}$/;
+
+/** Candidates tried per digit width before widening the space. A random
+ * 3-digit id collides with p = taken/900, so eight draws miss a free slot
+ * only once the year is almost full — at which point the 4-digit space
+ * (another 9000 ids) takes over and the error below is the honest answer. */
+const ID_ATTEMPTS_PER_WIDTH = 8;
+
+/** A random id in the `digits`-wide space for `year`, e.g. Q-2026-104. */
+function randomRequestId(year: number, digits: 3 | 4): string {
+  const min = 10 ** (digits - 1);
+  return `Q-${year}-${Math.floor(min + Math.random() * min * 9)}`;
+}
+
+/** Whether any quote already carries this id. `first()`, never `unique()`:
+ * rows written before ids were claimed transactionally may already hold a
+ * duplicate, and a check for collisions must not itself throw on one. */
+async function requestIdTaken(
+  ctx: MutationCtx,
+  requestId: string,
+): Promise<boolean> {
+  const existing = await ctx.db
+    .query("quotes")
+    .withIndex("by_requestId", (q) => q.eq("requestId", requestId))
+    .first();
+  return existing !== null;
+}
+
+/**
+ * The id this quote will be filed under: the caller's preference when it is
+ * free, otherwise a generated one that is not in use.
+ *
+ * Must run inside the inserting mutation. Convex mutations are transactional,
+ * so a check here and the insert that follows cannot be interleaved with
+ * another submission; choosing an id in the action and inserting later could
+ * be, which is exactly how two quotes came to share one.
+ */
+async function claimRequestId(
+  ctx: MutationCtx,
+  preferred: string | undefined,
+): Promise<string> {
+  if (preferred && !(await requestIdTaken(ctx, preferred))) return preferred;
+  const year = new Date().getFullYear();
+  for (const digits of [3, 4] as const) {
+    for (let attempt = 0; attempt < ID_ATTEMPTS_PER_WIDTH; attempt++) {
+      const candidate = randomRequestId(year, digits);
+      if (!(await requestIdTaken(ctx, candidate))) return candidate;
+    }
+  }
+  // Bounded on purpose: no unbounded loop, and a duplicate is never the
+  // fallback. Reaching this needs ~9900 quotes in one year.
+  throw new ConvexError(
+    "We could not file your request. Call us and we will take it down.",
   );
 }
 
@@ -83,7 +136,9 @@ const clipOpt = (s: string | undefined, n: number) => {
 
 export const insertQuote = internalMutation({
   args: {
-    requestId: v.string(),
+    /** The id to file this under if it is free; a fresh one is generated
+     * when it is taken or absent. The stored id comes back in the return. */
+    requestId: v.optional(v.string()),
     name: v.string(),
     company: v.optional(v.string()),
     phone: v.string(),
@@ -93,13 +148,16 @@ export const insertQuote = internalMutation({
     estimate: v.optional(v.any()),
     slot: v.string(),
   },
-  returns: v.id("quotes"),
+  returns: v.object({ id: v.id("quotes"), requestId: v.string() }),
   handler: async (ctx, args) => {
-    return await ctx.db.insert("quotes", {
+    const requestId = await claimRequestId(ctx, args.requestId);
+    const id = await ctx.db.insert("quotes", {
       ...args,
+      requestId,
       status: "new",
       createdAt: Date.now(),
     });
+    return { id, requestId };
   },
 });
 
@@ -367,10 +425,12 @@ async function runSubmit(
     }
   }
 
-  const requestId =
-    args.requestId && /^Q-\d{4}-\d{3,4}$/.test(args.requestId)
+  // A well-formed client id is a preference, not a promise: insertQuote keeps
+  // it only if no quote holds it already.
+  const preferredRequestId =
+    args.requestId && REQUEST_ID_FORMAT.test(args.requestId)
       ? args.requestId
-      : makeRequestId();
+      : undefined;
 
   // Prefer the server-side draft for this job type (it keeps the dollars a
   // low-confidence customer never saw); fall back to validating whatever the client sent.
@@ -396,8 +456,7 @@ async function runSubmit(
     }
   }
 
-  const payload: QuotePayload = {
-    requestId,
+  const quote = {
     name: clip(args.name, 120),
     company: clipOpt(args.company, 120),
     phone: clip(args.phone, 40),
@@ -421,10 +480,14 @@ async function runSubmit(
     slot: clip(args.slot, 80),
   };
 
-  await ctx.runMutation(internal.quotes.insertQuote, {
-    ...payload,
+  // The mutation owns the id, so the row, the reply and the emails all use
+  // the one it actually claimed.
+  const { requestId } = await ctx.runMutation(internal.quotes.insertQuote, {
+    ...quote,
+    requestId: preferredRequestId,
     files: files.length ? files : undefined,
   });
+  const payload: QuotePayload = { requestId, ...quote };
   // Download links go in Eric's email only; the row keeps the storage ids.
   if (fileLinks.length) payload.files = fileLinks;
   if (competitorLink) payload.competitorFile = competitorLink;
