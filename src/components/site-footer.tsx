@@ -16,12 +16,12 @@ import {
 
 const SERVICE_LINKS = [
   { href: "/services/fabrication", label: "Fabrication" },
+  { href: "/services/cnc-plasma-cutting", label: "CNC plasma cutting" },
   { href: "/services/structural", label: "Staircases & handrail" },
   { href: "/services/pipe", label: "Pipe welding" },
   { href: "/services/equipment", label: "Heavy equipment repair" },
   { href: "/services/mobile", label: "Mobile welding" },
   { href: "/services/emergency", label: "Emergency & on-call" },
-  { href: "/services/cnc-plasma-cutting", label: "CNC plasma cutting" },
 ];
 
 const SERVICE_AREA_LINKS = [
