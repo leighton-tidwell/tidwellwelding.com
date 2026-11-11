@@ -13,8 +13,12 @@ import {
 import {
   EMAIL,
   LEGAL_NAME,
+  LOCALITY,
   PHONE_DISPLAY,
+  POSTAL_CODE,
+  REGION,
   SITE_URL,
+  STREET_ADDRESS,
 } from "../src/lib/business";
 import { formatPhone } from "./emailTemplates";
 import {
@@ -111,12 +115,11 @@ const keepContactWhole = (word: string) =>
     ? [word]
     : (word.match(new RegExp(`.{1,${CONTACT_LINE_CHARS}}`, "g")) ?? [word]);
 
-function contactLinesFor(phone?: string, email?: string): string[] {
-  const lines = phone ? [formatPhone(phone)] : [];
-  if (!email) return lines;
+function emailLinesFor(email?: string): string[] {
+  if (!email) return [];
   const at = email.indexOf("@");
-  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [...lines, email];
-  return [...lines, email.slice(0, at), email.slice(at)];
+  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [email];
+  return [email.slice(0, at), email.slice(at)];
 }
 
 const styles = StyleSheet.create({
@@ -147,7 +150,7 @@ const styles = StyleSheet.create({
   rule: { height: 2, backgroundColor: RED, marginTop: 10, marginBottom: 12 },
 
   // Meta grid ---------------------------------------------------------------
-  metaRow: { flexDirection: "row", gap: 16 },
+  metaRow: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
   metaLine: {
     flex: 1,
     flexDirection: "row",
@@ -355,23 +358,19 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   });
 
   const { customer } = input;
-  const contactLines = contactLinesFor(customer.phone, customer.email);
+  const emailLines = emailLinesFor(customer.email);
 
   const leftFields: Array<[string, MetaValue]> = [
     ["BILL TO", customer.company ?? customer.name],
     // Blank rather than echoing the company: this row names a person, and
     // repeating the business name reads as a data-entry mistake.
     ["CONTACT", customer.contact ?? ""],
-    ["PHONE / EMAIL", contactLines],
-    ["JOB / PO #", input.jobPo ?? ""],
+    ["PHONE", customer.phone ? formatPhone(customer.phone) : ""],
+    ["EMAIL", emailLines],
   ];
   const rightFields: Array<[string, string]> = [
     ["INVOICE #", input.number],
     ["DATE", formatDate(input.issuedAt)],
-    [
-      "DUE DATE",
-      input.dueAt === undefined ? input.terms : formatDate(input.dueAt),
-    ],
     ["TERMS", input.terms],
   ];
 
@@ -405,6 +404,10 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
             <Text style={styles.invoiceWord}>INVOICE</Text>
             <Text style={styles.bizName}>{LEGAL_NAME}</Text>
             <Text style={styles.bizLine}>Eric Tidwell, Owner</Text>
+            <Text style={styles.bizLine}>{STREET_ADDRESS}</Text>
+            <Text style={styles.bizLine}>
+              {`${LOCALITY}, ${REGION} ${POSTAL_CODE}`}
+            </Text>
             <Text style={styles.bizLine}>{PHONE_DISPLAY}</Text>
             <Text style={styles.bizLine}>{EMAIL}</Text>
             <Text style={styles.bizLine}>
