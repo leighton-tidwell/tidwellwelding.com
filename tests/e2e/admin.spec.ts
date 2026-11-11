@@ -10,6 +10,7 @@ test.describe.configure({ timeout: 180_000 });
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { extractText } from "../../convex/pdfText";
 import { ADMIN_URL } from "./admin-url";
 
 type Credentials = {
@@ -370,6 +371,9 @@ test.describe("invoicing, end to end", () => {
     const name = uniqueName("Download");
     await page.getByRole("button", { name: "Customers" }).click();
     await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Phone").fill("8175550142");
+    await page.getByLabel("Email").fill("billing@example.com");
+    await page.getByLabel("Address").fill("1200 Test Road, Granbury TX 76048");
     await page.getByRole("button", { name: "Save customer" }).click();
     await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
 
@@ -377,6 +381,7 @@ test.describe("invoicing, end to end", () => {
     await page.getByLabel("Customer").selectOption({ label: name });
     await page.getByRole("button", { name: "Create invoice" }).click();
 
+    await page.getByLabel("Job / PO #").fill("PO-7731");
     const row = page.getByRole("group", { name: "Line item 1" });
     await row.getByLabel("Qty").fill("4");
     await row.getByLabel("Unit").selectOption("hr");
@@ -403,6 +408,23 @@ test.describe("invoicing, end to end", () => {
     const bytes = Buffer.concat(chunks);
     expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
     expect(bytes.byteLength).toBeGreaterThan(1000);
+
+    // The deployed backend renders what the owner asked for: shop address in
+    // the header, the customer's email and address, JOB / PO # where the due
+    // date used to be.
+    const text = await extractText(new Uint8Array(bytes));
+    for (const expected of [
+      "4889 Glen Rose Highway, Ste 400",
+      "EMAIL",
+      "billing@example.com",
+      "ADDRESS",
+      "1200 Test Road, Granbury TX 76048",
+      "JOB / PO #",
+      "PO-7731",
+    ]) {
+      expect(text, `missing from PDF: ${expected}`).toContain(expected);
+    }
+    expect(text).not.toContain("DUE DATE");
 
     // And it recovers: the button comes back for a second download.
     await expect(button).toBeEnabled({ timeout: 30_000 });

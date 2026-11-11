@@ -13,8 +13,12 @@ import {
 import {
   EMAIL,
   LEGAL_NAME,
+  LOCALITY,
   PHONE_DISPLAY,
+  POSTAL_CODE,
+  REGION,
   SITE_URL,
+  STREET_ADDRESS,
 } from "../src/lib/business";
 import { formatPhone } from "./emailTemplates";
 import {
@@ -111,12 +115,11 @@ const keepContactWhole = (word: string) =>
     ? [word]
     : (word.match(new RegExp(`.{1,${CONTACT_LINE_CHARS}}`, "g")) ?? [word]);
 
-function contactLinesFor(phone?: string, email?: string): string[] {
-  const lines = phone ? [formatPhone(phone)] : [];
-  if (!email) return lines;
+function emailLinesFor(email?: string): string[] {
+  if (!email) return [];
   const at = email.indexOf("@");
-  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [...lines, email];
-  return [...lines, email.slice(0, at), email.slice(at)];
+  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [email];
+  return [email.slice(0, at), email.slice(at)];
 }
 
 const styles = StyleSheet.create({
@@ -144,7 +147,7 @@ const styles = StyleSheet.create({
   },
   bizName: { fontFamily: "Helvetica-Bold", fontSize: 9.5, marginBottom: 2 },
   bizLine: { color: GREY, fontSize: 8.5, marginBottom: 1.5 },
-  rule: { height: 2, backgroundColor: RED, marginTop: 10, marginBottom: 12 },
+  rule: { height: 2, backgroundColor: RED, marginTop: 8, marginBottom: 8 },
 
   // Meta grid ---------------------------------------------------------------
   metaRow: { flexDirection: "row", gap: 16 },
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 0.6,
     borderColor: HAIRLINE,
-    minHeight: 21,
+    minHeight: 19,
     alignItems: "center",
     overflow: "hidden",
   },
@@ -165,14 +168,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   metaLabelText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: GREY },
-  metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 5 },
+  metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 3 },
   metaValueText: { fontSize: 8.5, maxLines: 1, textOverflow: "ellipsis" },
   // Phone and email each get their own line and never truncate: a cut-off
   // email address is useless on an invoice.
   metaValueFull: { fontSize: 8.5 },
 
   // Line item table ---------------------------------------------------------
-  table: { marginTop: 12, borderWidth: 0.6, borderColor: HAIRLINE },
+  table: { marginTop: 10, borderWidth: 0.6, borderColor: HAIRLINE },
   tHead: { flexDirection: "row", backgroundColor: BLACK },
   tHeadText: {
     fontSize: 6.5,
@@ -355,23 +358,20 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   });
 
   const { customer } = input;
-  const contactLines = contactLinesFor(customer.phone, customer.email);
+  const emailLines = emailLinesFor(customer.email);
 
   const leftFields: Array<[string, MetaValue]> = [
     ["BILL TO", customer.company ?? customer.name],
     // Blank rather than echoing the company: this row names a person, and
     // repeating the business name reads as a data-entry mistake.
     ["CONTACT", customer.contact ?? ""],
-    ["PHONE / EMAIL", contactLines],
-    ["JOB / PO #", input.jobPo ?? ""],
+    ["PHONE", customer.phone ? formatPhone(customer.phone) : ""],
+    ["EMAIL", emailLines],
   ];
   const rightFields: Array<[string, string]> = [
     ["INVOICE #", input.number],
     ["DATE", formatDate(input.issuedAt)],
-    [
-      "DUE DATE",
-      input.dueAt === undefined ? input.terms : formatDate(input.dueAt),
-    ],
+    ["JOB / PO #", input.jobPo ?? ""],
     ["TERMS", input.terms],
   ];
 
@@ -405,6 +405,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
             <Text style={styles.invoiceWord}>INVOICE</Text>
             <Text style={styles.bizName}>{LEGAL_NAME}</Text>
             <Text style={styles.bizLine}>Eric Tidwell, Owner</Text>
+            <Text style={styles.bizLine}>
+              {`${STREET_ADDRESS} · ${LOCALITY}, ${REGION} ${POSTAL_CODE}`}
+            </Text>
             <Text style={styles.bizLine}>{PHONE_DISPLAY}</Text>
             <Text style={styles.bizLine}>{EMAIL}</Text>
             <Text style={styles.bizLine}>
@@ -427,6 +430,9 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
               </View>
             );
           })}
+          <View style={styles.metaRow}>
+            <MetaLine label="ADDRESS" value={customer.address ?? ""} />
+          </View>
         </View>
 
         <View style={styles.table}>

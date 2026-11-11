@@ -142,11 +142,12 @@ describe("the reference invoice", () => {
       "INVOICE",
       "BILL TO",
       "CONTACT",
-      "PHONE / EMAIL",
-      "JOB / PO #",
+      "PHONE",
+      "EMAIL",
+      "ADDRESS",
       "INVOICE #",
       "DATE",
-      "DUE DATE",
+      "JOB / PO #",
       "TERMS",
     ]) {
       expect(text, `missing label: ${label}`).toContain(label);
@@ -154,6 +155,8 @@ describe("the reference invoice", () => {
 
     expect(text).toContain("Bishop Fabrication LLC");
     expect(text).toContain("(972) 999-7505");
+    expect(text).toContain("dale@bishopfab.com");
+    expect(text).toContain("4100 County Road 1004, Joshua TX 76058");
     expect(text).toContain("TSWS-082626");
     expect(text).toContain("Dual Swing Gate");
   });
@@ -162,6 +165,8 @@ describe("the reference invoice", () => {
     const text = await extractText(await renderInvoicePdf(REFERENCE));
 
     expect(text).toContain("Tidwell Specialty Welding Services");
+    expect(text).toContain("4889 Glen Rose Highway, Ste 400");
+    expect(text).toContain("Granbury, TX 76048");
     expect(text).toContain("(817) 894-6357");
     expect(text).toContain("eric@tidwellwelding.com");
   });

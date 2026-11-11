@@ -20,6 +20,7 @@ export const EMAIL_MAILTO = `mailto:${EMAIL}`;
 
 /** Service-area business: street address hidden, locality shown. */
 export const LOCALITY = "Granbury";
+export const STREET_ADDRESS = "4889 Glen Rose Highway, Ste 400";
 export const REGION = "TX";
 export const POSTAL_CODE = "76048";
 
