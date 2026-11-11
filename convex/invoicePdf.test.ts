@@ -147,6 +147,7 @@ describe("the reference invoice", () => {
       "ADDRESS",
       "INVOICE #",
       "DATE",
+      "JOB / PO #",
       "TERMS",
     ]) {
       expect(text, `missing label: ${label}`).toContain(label);
@@ -157,6 +158,7 @@ describe("the reference invoice", () => {
     expect(text).toContain("dale@bishopfab.com");
     expect(text).toContain("4100 County Road 1004, Joshua TX 76058");
     expect(text).toContain("TSWS-082626");
+    expect(text).toContain("Dual Swing Gate");
   });
 
   it("carries the business details from src/lib/business.ts", async () => {

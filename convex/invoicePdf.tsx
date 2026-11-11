@@ -371,6 +371,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   const rightFields: Array<[string, string]> = [
     ["INVOICE #", input.number],
     ["DATE", formatDate(input.issuedAt)],
+    ["JOB / PO #", input.jobPo ?? ""],
     ["TERMS", input.terms],
   ];
 
@@ -418,21 +419,14 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
         <View style={styles.rule} />
 
         {/* Paired by row, not by column, so a taller left cell (two contact
-            lines) stretches its right-hand neighbour and the rules line up.
-            The left column has one field more than the right, so the odd row
-            gets an empty cell: without it that field would run the full width
-            and read as the address row below. */}
+            lines) stretches its right-hand neighbour and the rules line up. */}
         <View>
           {leftFields.map(([label, value], i) => {
             const right = rightFields[i];
             return (
               <View key={label} style={styles.metaRow}>
                 <MetaLine label={label} value={value} />
-                {right ? (
-                  <MetaLine label={right[0]} value={right[1]} />
-                ) : (
-                  <View style={styles.metaLine} />
-                )}
+                {right && <MetaLine label={right[0]} value={right[1]} />}
               </View>
             );
           })}
