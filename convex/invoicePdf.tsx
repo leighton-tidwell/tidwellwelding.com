@@ -147,16 +147,16 @@ const styles = StyleSheet.create({
   },
   bizName: { fontFamily: "Helvetica-Bold", fontSize: 9.5, marginBottom: 2 },
   bizLine: { color: GREY, fontSize: 8.5, marginBottom: 1.5 },
-  rule: { height: 2, backgroundColor: RED, marginTop: 10, marginBottom: 12 },
+  rule: { height: 2, backgroundColor: RED, marginTop: 8, marginBottom: 8 },
 
   // Meta grid ---------------------------------------------------------------
-  metaRow: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
+  metaRow: { flexDirection: "row", gap: 16 },
   metaLine: {
     flex: 1,
     flexDirection: "row",
     borderBottomWidth: 0.6,
     borderColor: HAIRLINE,
-    minHeight: 21,
+    minHeight: 19,
     alignItems: "center",
     overflow: "hidden",
   },
@@ -168,14 +168,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
   },
   metaLabelText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: GREY },
-  metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 5 },
+  metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 3 },
   metaValueText: { fontSize: 8.5, maxLines: 1, textOverflow: "ellipsis" },
   // Phone and email each get their own line and never truncate: a cut-off
   // email address is useless on an invoice.
   metaValueFull: { fontSize: 8.5 },
 
   // Line item table ---------------------------------------------------------
-  table: { marginTop: 12, borderWidth: 0.6, borderColor: HAIRLINE },
+  table: { marginTop: 10, borderWidth: 0.6, borderColor: HAIRLINE },
   tHead: { flexDirection: "row", backgroundColor: BLACK },
   tHeadText: {
     fontSize: 6.5,
@@ -404,9 +404,8 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
             <Text style={styles.invoiceWord}>INVOICE</Text>
             <Text style={styles.bizName}>{LEGAL_NAME}</Text>
             <Text style={styles.bizLine}>Eric Tidwell, Owner</Text>
-            <Text style={styles.bizLine}>{STREET_ADDRESS}</Text>
             <Text style={styles.bizLine}>
-              {`${LOCALITY}, ${REGION} ${POSTAL_CODE}`}
+              {`${STREET_ADDRESS} · ${LOCALITY}, ${REGION} ${POSTAL_CODE}`}
             </Text>
             <Text style={styles.bizLine}>{PHONE_DISPLAY}</Text>
             <Text style={styles.bizLine}>{EMAIL}</Text>
@@ -419,17 +418,27 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
         <View style={styles.rule} />
 
         {/* Paired by row, not by column, so a taller left cell (two contact
-            lines) stretches its right-hand neighbour and the rules line up. */}
+            lines) stretches its right-hand neighbour and the rules line up.
+            The left column has one field more than the right, so the odd row
+            gets an empty cell: without it that field would run the full width
+            and read as the address row below. */}
         <View>
           {leftFields.map(([label, value], i) => {
             const right = rightFields[i];
             return (
               <View key={label} style={styles.metaRow}>
                 <MetaLine label={label} value={value} />
-                {right && <MetaLine label={right[0]} value={right[1]} />}
+                {right ? (
+                  <MetaLine label={right[0]} value={right[1]} />
+                ) : (
+                  <View style={styles.metaLine} />
+                )}
               </View>
             );
           })}
+          <View style={styles.metaRow}>
+            <MetaLine label="ADDRESS" value={customer.address ?? ""} />
+          </View>
         </View>
 
         <View style={styles.table}>

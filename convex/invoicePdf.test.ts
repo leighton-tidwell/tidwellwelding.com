@@ -144,6 +144,7 @@ describe("the reference invoice", () => {
       "CONTACT",
       "PHONE",
       "EMAIL",
+      "ADDRESS",
       "INVOICE #",
       "DATE",
       "TERMS",
@@ -154,6 +155,7 @@ describe("the reference invoice", () => {
     expect(text).toContain("Bishop Fabrication LLC");
     expect(text).toContain("(972) 999-7505");
     expect(text).toContain("dale@bishopfab.com");
+    expect(text).toContain("4100 County Road 1004, Joshua TX 76058");
     expect(text).toContain("TSWS-082626");
   });
 
