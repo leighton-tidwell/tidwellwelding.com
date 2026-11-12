@@ -149,6 +149,61 @@ describe("packing slips", () => {
     ).rejects.toThrow(/zero or more/);
   });
 
+  test("billing a slip makes an invoice of what shipped, once", async () => {
+    const t = setup();
+    const token = await signedIn(t);
+    const id = await t.mutation(api.packingSlips.create, {
+      token,
+      customerId: await customer(t, token),
+    });
+    await t.mutation(api.packingSlips.update, {
+      token,
+      id,
+      poNumber: "4701230782",
+      lineItems: [
+        {
+          partNumber: "1512-2914",
+          description: "skid frame",
+          qty: 84,
+          unit: "EA",
+        },
+        { partNumber: "1512-5557", description: "", qty: 19, unit: "pcs" },
+      ],
+    });
+
+    const invoiceId = await t.mutation(api.invoices.createFromPackingSlip, {
+      token,
+      packingSlipId: id,
+    });
+    const invoice = await t.query(api.invoices.get, { token, id: invoiceId });
+    expect(invoice?.jobPo).toBe("4701230782");
+    expect(invoice?.lineItems).toEqual([
+      {
+        qty: 84,
+        unit: "ea",
+        description: "1512-2914 skid frame",
+        rateCents: 0,
+        taxable: true,
+      },
+      {
+        qty: 19,
+        unit: "ea",
+        description: "1512-5557",
+        rateCents: 0,
+        taxable: true,
+      },
+    ]);
+    const slip = await t.query(api.packingSlips.get, { token, id });
+    expect(slip?.invoice?._id).toBe(invoiceId);
+
+    await expect(
+      t.mutation(api.invoices.createFromPackingSlip, {
+        token,
+        packingSlipId: id,
+      }),
+    ).rejects.toThrow(/already billed/);
+  });
+
   test("nothing is readable without a session", async () => {
     const t = setup();
     await expect(

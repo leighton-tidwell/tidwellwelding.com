@@ -160,6 +160,7 @@ export function PackingSlipEditor({
   const slip = useQuery(api.packingSlips.get, { token, id });
   const update = useMutation(api.packingSlips.update);
   const generatePdf = useAction(api.packingSlipPdfAction.generate);
+  const makeInvoice = useMutation(api.invoices.createFromPackingSlip);
 
   // Seeded from the server once, then local until saved, like the invoice.
   const [edit, setEdit] = useState<Form | null>(null);
@@ -244,7 +245,7 @@ export function PackingSlipEditor({
 
       {fromInvoice === null ? null : (
         <p className="admin-note">
-          Copied from invoice{" "}
+          Invoice{" "}
           <button
             type="button"
             className="admin-linkish"
@@ -365,6 +366,17 @@ export function PackingSlipEditor({
           generate={download}
           filename={`${slip.number}.pdf`}
         />
+        {fromInvoice === null ? (
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              await save();
+              onOpenInvoice(await makeInvoice({ token, packingSlipId: id }));
+            }}
+          >
+            <Icon name="file-text" /> Make invoice
+          </Button>
+        ) : null}
       </div>
     </>
   );

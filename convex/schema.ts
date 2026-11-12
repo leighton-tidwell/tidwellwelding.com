@@ -246,7 +246,7 @@ export default defineSchema({
   packingSlips: defineTable({
     number: v.string(),
     customerId: v.id("customers"),
-    // The invoice it was copied from, when it was.
+    // The invoice for this shipment, whichever of the two came first.
     invoiceId: v.optional(v.id("invoices")),
     shipToName: v.string(),
     shipToAddress: v.optional(v.string()),

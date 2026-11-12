@@ -564,13 +564,47 @@ test.describe("packing slips", () => {
     await expect(page.locator("h1.admin-title")).toContainText(/^PS-\d{6}/, {
       timeout: 15_000,
     });
-    await expect(page.getByText(/Copied from invoice TSWS-/)).toBeVisible();
+    await expect(page.getByText(/Invoice TSWS-/)).toBeVisible();
     await expect(page.getByLabel("PO #")).toHaveValue("PO-5521");
     const slipRow = page.getByRole("group", { name: "Line item 1" });
     await expect(slipRow.getByLabel("Description")).toHaveValue(
       "Gate hinge brackets",
     );
     await expect(slipRow.getByLabel("Qty")).toHaveValue("12");
+    // Already linked to its invoice, so it can't be billed again.
+    await expect(
+      page.getByRole("button", { name: "Make invoice" }),
+    ).toHaveCount(0);
+  });
+
+  test("a packing slip makes an invoice of what shipped", async ({ page }) => {
+    await signIn(page);
+
+    const name = uniqueName("InvoiceFromSlip");
+    await page.getByRole("button", { name: "Customers" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByRole("button", { name: "Save customer" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Packing slips" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create packing slip" }).click();
+    await page.getByLabel("PO #").fill("PO-8812");
+    const row = page.getByRole("group", { name: "Line item 1" });
+    await row.getByLabel("Part / stock #").fill("1512-2914");
+    await row.getByLabel("Description").fill("skid frame");
+    await row.getByLabel("Qty").fill("84");
+
+    await page.getByRole("button", { name: "Make invoice" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^TSWS-\d{6}/, {
+      timeout: 15_000,
+    });
+    await expect(page.getByLabel("Job / PO #")).toHaveValue("PO-8812");
+    const invoiceRow = page.getByRole("group", { name: "Line item 1" });
+    await expect(
+      invoiceRow.getByLabel("Description of work / materials"),
+    ).toHaveValue("1512-2914 skid frame");
+    await expect(invoiceRow.getByLabel("Qty")).toHaveValue("84");
   });
 });
 
