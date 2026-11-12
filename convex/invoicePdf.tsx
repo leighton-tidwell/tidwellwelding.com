@@ -1,25 +1,7 @@
 "use node";
 
-import {
-  Document,
-  Font,
-  Image,
-  Page,
-  renderToBuffer,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
-import {
-  EMAIL,
-  LEGAL_NAME,
-  LOCALITY,
-  PHONE_DISPLAY,
-  POSTAL_CODE,
-  REGION,
-  SITE_URL,
-  STREET_ADDRESS,
-} from "../src/lib/business";
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { LEGAL_NAME } from "../src/lib/business";
 import { formatPhone } from "./emailTemplates";
 import {
   computeInvoiceTotals,
@@ -28,6 +10,20 @@ import {
   type InvoiceLine,
   lineAmountCents,
 } from "./invoiceMath";
+import {
+  base,
+  cell,
+  emailLinesFor,
+  formatDate,
+  GREY,
+  Letterhead,
+  MetaLine,
+  type MetaValue,
+  NoteLines,
+  RED,
+  renderWithFiller,
+  SHADE,
+} from "./pdfLayout";
 
 /**
  * Invoice PDF rendering.
@@ -71,189 +67,16 @@ export type InvoicePdfInput = {
   suppressFillerRows?: boolean;
 };
 
-/**
- * Break words that have no natural break point. A part number or a URL has no
- * spaces, so without this the layout engine keeps it whole and lets it run
- * across the neighbouring columns — the exact defect this renderer replaced.
- *
- * Only genuinely long tokens are split. Returning chunks for a short word (say
- * "$175.00/hr") makes the engine drop the trailing piece, so the threshold sits
- * well above any rate or amount the invoice prints.
- */
-const MAX_TOKEN = 24;
-
-Font.registerHyphenationCallback((word) => {
-  if (word.length <= MAX_TOKEN) return [word];
-  const parts: string[] = [];
-  for (let i = 0; i < word.length; i += MAX_TOKEN) {
-    parts.push(word.slice(i, i + MAX_TOKEN));
-  }
-  return parts;
-});
-
-/** The shop's brand red. */
-const RED = "#C90314";
-const BLACK = "#000000";
-const GREY = "#6B6B6B";
-const SHADE = "#EFEFEF";
-const HAIRLINE = "#C8C8C8";
-
-/**
- * Upper bound on filler rows to try. Anything past a full sheet is pointless.
- */
-const MAX_FILLER_ROWS = 12;
-
-/**
- * About as many characters as fit on one line of a meta cell. A longer email
- * wraps at its "@" instead of mid-word, where the engine would add a hyphen
- * that reads as part of the address.
- */
-const CONTACT_LINE_CHARS = 32;
-
-const keepContactWhole = (word: string) =>
-  word.length <= CONTACT_LINE_CHARS
-    ? [word]
-    : (word.match(new RegExp(`.{1,${CONTACT_LINE_CHARS}}`, "g")) ?? [word]);
-
-function emailLinesFor(email?: string): string[] {
-  if (!email) return [];
-  const at = email.indexOf("@");
-  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [email];
-  return [email.slice(0, at), email.slice(at)];
-}
-
 const styles = StyleSheet.create({
-  page: {
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingHorizontal: 48,
-    fontSize: 9,
-    fontFamily: "Helvetica",
-    color: BLACK,
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  // Header ------------------------------------------------------------------
-  header: { flexDirection: "row", justifyContent: "space-between" },
-  logo: { width: 140, height: 62, objectFit: "contain" },
-  headerRight: { alignItems: "flex-end", maxWidth: 300 },
-  invoiceWord: {
-    fontSize: 30,
-    fontFamily: "Helvetica-Bold",
-    color: RED,
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  bizName: { fontFamily: "Helvetica-Bold", fontSize: 9.5, marginBottom: 2 },
-  bizLine: { color: GREY, fontSize: 8.5, marginBottom: 1.5 },
-  rule: { height: 2, backgroundColor: RED, marginTop: 8, marginBottom: 8 },
-
-  // Meta grid ---------------------------------------------------------------
-  metaRow: { flexDirection: "row", gap: 16 },
-  metaLine: {
-    flex: 1,
-    flexDirection: "row",
-    borderBottomWidth: 0.6,
-    borderColor: HAIRLINE,
-    minHeight: 19,
-    alignItems: "center",
-    overflow: "hidden",
-  },
-  metaLabel: {
-    width: 88,
-    alignSelf: "stretch",
-    justifyContent: "center",
-    backgroundColor: SHADE,
-    paddingHorizontal: 7,
-  },
-  metaLabelText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: GREY },
-  metaValue: { flex: 1, paddingHorizontal: 9, paddingVertical: 3 },
-  metaValueText: { fontSize: 8.5, maxLines: 1, textOverflow: "ellipsis" },
-  // Phone and email each get their own line and never truncate: a cut-off
-  // email address is useless on an invoice.
-  metaValueFull: { fontSize: 8.5 },
-
-  // Line item table ---------------------------------------------------------
-  table: { marginTop: 10, borderWidth: 0.6, borderColor: HAIRLINE },
-  tHead: { flexDirection: "row", backgroundColor: BLACK },
-  tHeadText: {
-    fontSize: 6.5,
-    fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
-  tRow: {
-    flexDirection: "row",
-    borderTopWidth: 0.6,
-    borderColor: HAIRLINE,
-    minHeight: 26,
-    alignItems: "center",
-  },
-  cQty: {
-    width: 72,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRightWidth: 0.6,
-    borderColor: HAIRLINE,
-    alignSelf: "stretch",
-    justifyContent: "center",
-  },
-  cDesc: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 7,
-    borderRightWidth: 0.6,
-    borderColor: HAIRLINE,
-    alignSelf: "stretch",
-    justifyContent: "center",
-  },
-  cRate: {
-    width: 96,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRightWidth: 0.6,
-    borderColor: HAIRLINE,
-    alignSelf: "stretch",
-    justifyContent: "center",
-  },
-  cTax: {
-    width: 76,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    borderRightWidth: 0.6,
-    borderColor: HAIRLINE,
-    alignSelf: "stretch",
-    justifyContent: "center",
-  },
-  cAmount: {
-    width: 96,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignSelf: "stretch",
-    justifyContent: "center",
-  },
-  cellCentre: { fontSize: 8.5, textAlign: "center" },
-  cellText: { fontSize: 8.5 },
+  cQty: cell(72),
+  cDesc: cell(),
+  cRate: cell(96),
+  cTax: cell(76),
+  cAmount: cell(96, true),
 
   // Foot: notes beside totals ----------------------------------------------
   foot: { flexDirection: "row", marginTop: 12, gap: 12 },
   notes: { flex: 1 },
-  notesHead: {
-    backgroundColor: SHADE,
-    paddingVertical: 4,
-    paddingHorizontal: 7,
-  },
-  notesHeadText: { fontSize: 6.5, fontFamily: "Helvetica-Bold", color: RED },
-  notesBody: { paddingTop: 4 },
-  notesLine: {
-    borderBottomWidth: 0.6,
-    borderColor: HAIRLINE,
-    minHeight: 12,
-    justifyContent: "flex-end",
-    paddingBottom: 1,
-  },
-  notesText: { fontSize: 8 },
 
   totals: { width: 246 },
   totalRow: {
@@ -285,32 +108,11 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
   },
-
-  // Footer ------------------------------------------------------------------
-  // In normal flow, not absolutely positioned: an absolute footer sitting in
-  // the page's bottom padding counts as overflow and forces an extra page.
-  footer: { marginTop: "auto", paddingTop: 10, textAlign: "center" },
-  thanks: {
-    fontSize: 10,
-    fontFamily: "Helvetica-Bold",
-    color: RED,
-    marginBottom: 3,
-  },
-  smallPrint: { fontSize: 6.5, color: GREY, lineHeight: 1.3 },
 });
 
 const FOOTER_SMALL_PRINT =
   `Make checks payable to ${LEGAL_NAME}. Customer is responsible for approved ` +
   "labor, materials, applicable taxes, and agreed travel or mobilization charges.";
-
-function formatDate(ms: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(ms));
-}
 
 function formatPercent(basisPoints: number): string {
   return `${(basisPoints / 100).toFixed(2).replace(/\.00$/, "")}%`;
@@ -319,34 +121,6 @@ function formatPercent(basisPoints: number): string {
 /** Whole numbers print bare; part-hours keep their decimals. */
 function formatQty(qty: number): string {
   return Number.isInteger(qty) ? String(qty) : String(qty);
-}
-
-/** A string is one truncated line; an array prints every entry in full. */
-type MetaValue = string | string[];
-
-function MetaLine({ label, value }: { label: string; value: MetaValue }) {
-  return (
-    <View style={styles.metaLine}>
-      <View style={styles.metaLabel}>
-        <Text style={styles.metaLabelText}>{label}</Text>
-      </View>
-      <View style={styles.metaValue}>
-        {typeof value === "string" ? (
-          <Text style={styles.metaValueText}>{value}</Text>
-        ) : (
-          value.map((line) => (
-            <Text
-              key={line}
-              style={styles.metaValueFull}
-              hyphenationCallback={keepContactWhole}
-            >
-              {line}
-            </Text>
-          ))
-        )}
-      </View>
-    </View>
-  );
 }
 
 function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
@@ -394,29 +168,8 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
 
   return (
     <Document>
-      <Page size="LETTER" style={styles.page}>
-        <View style={styles.header} fixed={false}>
-          {input.logoPngBytes ? (
-            <Image style={styles.logo} src={Buffer.from(input.logoPngBytes)} />
-          ) : (
-            <View style={styles.logo} />
-          )}
-          <View style={styles.headerRight}>
-            <Text style={styles.invoiceWord}>INVOICE</Text>
-            <Text style={styles.bizName}>{LEGAL_NAME}</Text>
-            <Text style={styles.bizLine}>Eric Tidwell, Owner</Text>
-            <Text style={styles.bizLine}>
-              {`${STREET_ADDRESS} · ${LOCALITY}, ${REGION} ${POSTAL_CODE}`}
-            </Text>
-            <Text style={styles.bizLine}>{PHONE_DISPLAY}</Text>
-            <Text style={styles.bizLine}>{EMAIL}</Text>
-            <Text style={styles.bizLine}>
-              {SITE_URL.replace(/^https?:\/\//, "")}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.rule} />
+      <Page size="LETTER" style={base.page}>
+        <Letterhead title="INVOICE" logoPngBytes={input.logoPngBytes} />
 
         {/* Paired by row, not by column, so a taller left cell (two contact
             lines) stretches its right-hand neighbour and the rules line up. */}
@@ -424,60 +177,60 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
           {leftFields.map(([label, value], i) => {
             const right = rightFields[i];
             return (
-              <View key={label} style={styles.metaRow}>
+              <View key={label} style={base.metaRow}>
                 <MetaLine label={label} value={value} />
                 {right && <MetaLine label={right[0]} value={right[1]} />}
               </View>
             );
           })}
-          <View style={styles.metaRow}>
+          <View style={base.metaRow}>
             <MetaLine label="ADDRESS" value={customer.address ?? ""} />
           </View>
         </View>
 
-        <View style={styles.table}>
+        <View style={base.table}>
           {/* `fixed` repeats the head on every page react-pdf creates. */}
-          <View style={styles.tHead} fixed>
+          <View style={base.tHead} fixed>
             <View style={styles.cQty}>
-              <Text style={styles.tHeadText}>QTY / HRS</Text>
+              <Text style={base.tHeadText}>QTY / HRS</Text>
             </View>
             <View style={styles.cDesc}>
-              <Text style={styles.tHeadText}>
+              <Text style={base.tHeadText}>
                 DESCRIPTION OF WORK / MATERIALS
               </Text>
             </View>
             <View style={styles.cRate}>
-              <Text style={styles.tHeadText}>RATE</Text>
+              <Text style={base.tHeadText}>RATE</Text>
             </View>
             <View style={styles.cTax}>
-              <Text style={styles.tHeadText}>TAX</Text>
+              <Text style={base.tHeadText}>TAX</Text>
             </View>
             <View style={styles.cAmount}>
-              <Text style={styles.tHeadText}>AMOUNT</Text>
+              <Text style={base.tHeadText}>AMOUNT</Text>
             </View>
           </View>
 
           {input.lineItems.map((line, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: static PDF render, rows never reorder.
-            <View style={styles.tRow} key={`line-${i}`} wrap={false}>
+            <View style={base.tRow} key={`line-${i}`} wrap={false}>
               <View style={styles.cQty}>
-                <Text style={styles.cellCentre}>{formatQty(line.qty)}</Text>
+                <Text style={base.cellCentre}>{formatQty(line.qty)}</Text>
               </View>
               <View style={styles.cDesc}>
-                <Text style={styles.cellText}>{line.description}</Text>
+                <Text style={base.cellText}>{line.description}</Text>
               </View>
               <View style={styles.cRate}>
-                <Text style={styles.cellCentre}>
+                <Text style={base.cellCentre}>
                   {formatRate(line.rateCents, line.unit)}
                 </Text>
               </View>
               <View style={styles.cTax}>
-                <Text style={styles.cellCentre}>
+                <Text style={base.cellCentre}>
                   {line.taxable ? "Yes" : "No"}
                 </Text>
               </View>
               <View style={styles.cAmount}>
-                <Text style={styles.cellCentre}>
+                <Text style={base.cellCentre}>
                   {formatMoney(lineAmountCents(line))}
                 </Text>
               </View>
@@ -486,21 +239,21 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
 
           {Array.from({ length: fillerCount }, (_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: blank filler rows; position is the identity.
-            <View style={styles.tRow} key={`filler-${i}`} wrap={false}>
+            <View style={base.tRow} key={`filler-${i}`} wrap={false}>
               <View style={styles.cQty}>
-                <Text style={styles.cellCentre}> </Text>
+                <Text style={base.cellCentre}> </Text>
               </View>
               <View style={styles.cDesc}>
-                <Text style={styles.cellText}> </Text>
+                <Text style={base.cellText}> </Text>
               </View>
               <View style={styles.cRate}>
-                <Text style={styles.cellCentre}> </Text>
+                <Text style={base.cellCentre}> </Text>
               </View>
               <View style={styles.cTax}>
-                <Text style={styles.cellCentre}> </Text>
+                <Text style={base.cellCentre}> </Text>
               </View>
               <View style={styles.cAmount}>
-                <Text style={styles.cellCentre}> </Text>
+                <Text style={base.cellCentre}> </Text>
               </View>
             </View>
           ))}
@@ -508,21 +261,10 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
 
         <View style={styles.foot} wrap={false}>
           <View style={styles.notes}>
-            <View style={styles.notesHead}>
-              <Text style={styles.notesHeadText}>NOTES / WORK PERFORMED</Text>
+            <View style={base.notesHead}>
+              <Text style={base.notesHeadText}>NOTES / WORK PERFORMED</Text>
             </View>
-            <View style={styles.notesBody}>
-              {Array.from({ length: noteLineCount }, (_, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: fixed ruled lines; position is the identity.
-                <View style={styles.notesLine} key={`note-${i}`}>
-                  {i === 0 && noteText ? (
-                    <Text style={styles.notesText}>{noteText}</Text>
-                  ) : (
-                    <Text style={styles.notesText}> </Text>
-                  )}
-                </View>
-              ))}
-            </View>
+            <NoteLines text={noteText} lines={noteLineCount} />
           </View>
 
           <View style={styles.totals}>
@@ -548,84 +290,20 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.thanks}>Thank you for your business.</Text>
-          <Text style={styles.smallPrint}>{FOOTER_SMALL_PRINT}</Text>
+        <View style={base.footer}>
+          <Text style={base.thanks}>Thank you for your business.</Text>
+          <Text style={base.smallPrint}>{FOOTER_SMALL_PRINT}</Text>
         </View>
       </Page>
     </Document>
   );
 }
 
-/**
- * Pages in a rendered document. react-pdf writes an uncompressed page tree, so
- * the /Count entry is readable without pulling in a PDF parser.
- */
-function pageCountOf(bytes: Uint8Array): number {
-  const text = Buffer.from(bytes).toString("latin1");
-  let max = 0;
-  for (const [, count] of text.matchAll(/\/Count\s+(\d+)/g)) {
-    max = Math.max(max, Number(count));
-  }
-  return max || 1;
-}
-
-/** Render once and report how many pages the document needs. */
-async function renderPages(input: InvoicePdfInput): Promise<{
-  bytes: Uint8Array;
-  pages: number;
-}> {
-  const buffer = await renderToBuffer(<InvoiceDocument input={input} />);
-  const bytes = new Uint8Array(buffer);
-  return { bytes, pages: pageCountOf(bytes) };
-}
-
 export async function renderInvoicePdf(
   input: InvoicePdfInput,
 ): Promise<Uint8Array> {
-  // An explicit count means the caller is measuring; render exactly that.
-  if (input.fillerRows !== undefined) {
-    return (await renderPages(input)).bytes;
-  }
-
-  // Measure the document's natural length first. Guessing row heights from
-  // character counts is what previously padded an invoice with blank rows
-  // until the totals were pushed onto a second, nearly empty page.
-  const bare = await renderPages({ ...input, fillerRows: 0 });
-  if (input.suppressFillerRows) return bare.bytes;
-
-  // Then take the most filler that still fits in that many pages. Each step is
-  // a real render, so the answer accounts for wrapping, long descriptions and
-  // every other thing an estimate gets wrong.
-  //
-  // Page count is monotone non-decreasing in the filler count: a blank row can
-  // only push later content further down the document, never pull it back. So
-  // the counts that fit form a prefix of 0..MAX_FILLER_ROWS and the largest one
-  // can be found without rendering every count in between.
-  //
-  // Probe the maximum first. On any invoice whose line items already fill a
-  // page, no filler count adds a page, so that settles it in one extra render
-  // -- the case that used to cost all MAX_FILLER_ROWS renders. Only when the
-  // maximum does spill do we bisect the range below it for the boundary.
-  const maxFiller = await renderPages({
-    ...input,
-    fillerRows: MAX_FILLER_ROWS,
-  });
-  if (maxFiller.pages <= bare.pages) return maxFiller.bytes;
-
-  let best = bare;
-  let low = 1;
-  let high = MAX_FILLER_ROWS - 1;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const candidate = await renderPages({ ...input, fillerRows: mid });
-    if (candidate.pages > bare.pages) {
-      high = mid - 1;
-    } else {
-      best = candidate;
-      low = mid + 1;
-    }
-  }
-
-  return best.bytes;
+  return renderWithFiller(
+    (fillerRows) => <InvoiceDocument input={{ ...input, fillerRows }} />,
+    { fillerRows: input.fillerRows, suppress: input.suppressFillerRows },
+  );
 }

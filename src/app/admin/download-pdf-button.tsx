@@ -83,7 +83,7 @@ export default function DownloadPdfButton({
       {/* Progress for screen readers. Polite so it never interrupts typing. */}
       <span role="status" aria-live="polite" className="admin-sr-only">
         {phase === "working" ? "Building the PDF" : null}
-        {phase === "ready" ? "Your invoice PDF is ready and downloading" : null}
+        {phase === "ready" ? "Your PDF is ready and downloading" : null}
       </span>
 
       {phase === "failed" ? (

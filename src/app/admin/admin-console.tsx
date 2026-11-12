@@ -9,6 +9,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
+import { PackingSlipEditor, PackingSlipList } from "./packing-slips";
 import QuoteDetail from "./quote-detail";
 import { useAdminSession } from "./use-admin-session";
 import "./admin.css";
@@ -19,7 +20,9 @@ type View =
   | { name: "quote"; id: Id<"quotes"> }
   | { name: "customers" }
   | { name: "customer"; id: Id<"customers"> }
-  | { name: "invoice"; id: Id<"invoices"> };
+  | { name: "invoice"; id: Id<"invoices"> }
+  | { name: "slips" }
+  | { name: "slip"; id: Id<"packingSlips"> };
 
 export default function AdminConsole() {
   const { token, ready, signIn, signOut } = useAdminSession();
@@ -142,6 +145,17 @@ function Console({
           </Button>
           <Button
             variant={
+              view.name === "slips" || view.name === "slip"
+                ? "primary"
+                : "secondary"
+            }
+            size="sm"
+            onClick={() => setView({ name: "slips" })}
+          >
+            Packing slips
+          </Button>
+          <Button
+            variant={
               view.name === "quotes" || view.name === "quote"
                 ? "primary"
                 : "secondary"
@@ -203,6 +217,21 @@ function Console({
             id={view.id}
             onBack={() => setView({ name: "invoices" })}
             onOpenQuote={(id) => setView({ name: "quote", id })}
+            onOpenSlip={(id) => setView({ name: "slip", id })}
+          />
+        )}
+        {view.name === "slips" && (
+          <PackingSlipList
+            token={token}
+            onOpen={(id) => setView({ name: "slip", id })}
+          />
+        )}
+        {view.name === "slip" && (
+          <PackingSlipEditor
+            token={token}
+            id={view.id}
+            onBack={() => setView({ name: "slips" })}
+            onOpenInvoice={(id) => setView({ name: "invoice", id })}
           />
         )}
       </main>
@@ -829,17 +858,20 @@ function InvoiceEditor({
   id,
   onBack,
   onOpenQuote,
+  onOpenSlip,
 }: {
   token: string;
   id: Id<"invoices">;
   onBack: () => void;
   onOpenQuote: (id: Id<"quotes">) => void;
+  onOpenSlip: (id: Id<"packingSlips">) => void;
 }) {
   const invoice = useQuery(api.invoices.get, { token, id });
   const laborRate = useQuery(api.settings.getLaborRateAdmin, { token });
   const update = useMutation(api.invoices.update);
   const setStatus = useMutation(api.invoices.setStatus);
   const generatePdf = useAction(api.invoicePdfAction.generate);
+  const makeSlip = useMutation(api.packingSlips.createFromInvoice);
 
   const [lines, setLines] = useState<EditorLine[] | null>(null);
   const [saved, setSaved] = useState(true);
@@ -1027,6 +1059,15 @@ function InvoiceEditor({
           generate={download}
           filename={`${invoice.number}.pdf`}
         />
+        <Button
+          variant="secondary"
+          onClick={async () => {
+            await save();
+            onOpenSlip(await makeSlip({ token, invoiceId: id }));
+          }}
+        >
+          <Icon name="truck" /> Make packing slip
+        </Button>
       </div>
 
       <div className="admin-sticky-total">

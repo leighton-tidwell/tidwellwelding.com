@@ -483,6 +483,97 @@ test.describe("invoicing, end to end", () => {
   });
 });
 
+test.describe("packing slips", () => {
+  test("fill one in from its own tab and download the PDF", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    const name = uniqueName("Ryerson");
+    await page.getByRole("button", { name: "Customers" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByLabel("Address").fill("1200 Test Road, Granbury TX 76048");
+    await page.getByRole("button", { name: "Save customer" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Packing slips" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create packing slip" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^PS-\d{6}/, {
+      timeout: 15_000,
+    });
+
+    // Ship-to starts as the customer and can be changed.
+    await expect(page.getByLabel("Ship to", { exact: true })).toHaveValue(name);
+    await page.getByLabel("Ship to", { exact: true }).fill("Voltagrid");
+    await page.getByLabel("PO #").fill("4701230782");
+    await page.getByLabel("Shipped via").fill("Truck");
+    await page.getByLabel("Total packages").fill("15");
+    const row = page.getByRole("group", { name: "Line item 1" });
+    await row.getByLabel("Part / stock #").fill("1512-2914");
+    await row.getByLabel("Qty").fill("84");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+    await page.getByRole("button", { name: /Download PDF/ }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^PS-\d{6}(-\d+)?\.pdf$/);
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of await download.createReadStream())
+      chunks.push(chunk as Buffer);
+    const text = await extractText(new Uint8Array(Buffer.concat(chunks)));
+    for (const expected of [
+      "PACKING SLIP",
+      "Voltagrid",
+      "1200 Test Road, Granbury TX 76048",
+      "4701230782",
+      "Truck",
+      "15",
+      "1512-2914",
+      "84",
+      "RECEIVED BY",
+    ]) {
+      expect(text, `missing from PDF: ${expected}`).toContain(expected);
+    }
+  });
+
+  test("an invoice makes a packing slip with its PO and goods", async ({
+    page,
+  }) => {
+    await signIn(page);
+
+    const name = uniqueName("SlipFromInvoice");
+    await page.getByRole("button", { name: "Customers" }).click();
+    await page.getByLabel("Name").fill(name);
+    await page.getByRole("button", { name: "Save customer" }).click();
+    await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Invoices" }).click();
+    await page.getByLabel("Customer").selectOption({ label: name });
+    await page.getByRole("button", { name: "Create invoice" }).click();
+    await page.getByLabel("Job / PO #").fill("PO-5521");
+    const row = page.getByRole("group", { name: "Line item 1" });
+    await row.getByLabel("Qty").fill("12");
+    await row
+      .getByLabel("Description of work / materials")
+      .fill("Gate hinge brackets");
+    await row.getByLabel("Rate").fill("40.00");
+
+    await page.getByRole("button", { name: "Make packing slip" }).click();
+    await expect(page.locator("h1.admin-title")).toContainText(/^PS-\d{6}/, {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(/Copied from invoice TSWS-/)).toBeVisible();
+    await expect(page.getByLabel("PO #")).toHaveValue("PO-5521");
+    const slipRow = page.getByRole("group", { name: "Line item 1" });
+    await expect(slipRow.getByLabel("Description")).toHaveValue(
+      "Gate hinge brackets",
+    );
+    await expect(slipRow.getByLabel("Qty")).toHaveValue("12");
+  });
+});
+
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

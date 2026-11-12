@@ -241,4 +241,35 @@ export default defineSchema({
     .index("by_customer", ["customerId", "createdAt"])
     .index("by_quote", ["quoteId"])
     .index("by_createdAt", ["createdAt"]),
+
+  // Goes in the box with a delivery: what shipped, no prices.
+  packingSlips: defineTable({
+    number: v.string(),
+    customerId: v.id("customers"),
+    // The invoice it was copied from, when it was.
+    invoiceId: v.optional(v.id("invoices")),
+    shipToName: v.string(),
+    shipToAddress: v.optional(v.string()),
+    shippedAt: v.number(),
+    poNumber: v.optional(v.string()),
+    jobProject: v.optional(v.string()),
+    shippedVia: v.optional(v.string()),
+    tracking: v.optional(v.string()),
+    packages: v.optional(v.string()),
+    lineItems: v.array(
+      v.object({
+        partNumber: v.string(),
+        description: v.string(),
+        qty: v.number(),
+        unit: v.string(),
+      }),
+    ),
+    notes: v.optional(v.string()),
+    pdfStorageId: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_number", ["number"])
+    .index("by_invoice", ["invoiceId"])
+    .index("by_createdAt", ["createdAt"]),
 });
