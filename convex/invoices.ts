@@ -114,6 +114,48 @@ export const create = mutation({
   },
 });
 
+const UNITS = ["hr", "ea", "ft", "lb", "lot"] as const;
+
+/** Bill what shipped: the slip's customer, PO and lines, rates left at zero
+ * for Eric to fill in. The slip then points at this invoice so it can't be
+ * billed twice. */
+export const createFromPackingSlip = mutation({
+  args: { token: v.string(), packingSlipId: v.id("packingSlips") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.token);
+    const slip = await ctx.db.get(args.packingSlipId);
+    if (!slip) throw new Error("That packing slip no longer exists");
+    if (slip.invoiceId) throw new Error("That packing slip is already billed");
+    if (!(await ctx.db.get(slip.customerId)))
+      throw new Error("That packing slip's customer no longer exists");
+
+    const now = Date.now();
+    const id = await ctx.db.insert("invoices", {
+      number: await nextInvoiceNumber(ctx, now),
+      status: "draft",
+      customerId: slip.customerId,
+      jobPo: slip.poNumber,
+      issuedAt: now,
+      dueAt: now,
+      terms: DEFAULT_TERMS,
+      lineItems: slip.lineItems.map((line) => ({
+        qty: line.qty,
+        unit: UNITS.find((u) => u === line.unit.toLowerCase()) ?? "ea",
+        description: `${line.partNumber} ${line.description}`.trim(),
+        rateCents: 0,
+        taxable: true,
+      })),
+      discountCents: 0,
+      taxRateBasisPoints: DEFAULT_TAX_BASIS_POINTS,
+      paymentsCents: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.patch(slip._id, { invoiceId: id, updatedAt: now });
+    return id;
+  },
+});
+
 export const update = mutation({
   args: {
     token: v.string(),
