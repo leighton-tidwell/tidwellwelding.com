@@ -153,6 +153,6 @@ describe("packing slips", () => {
     const t = setup();
     await expect(
       t.query(api.packingSlips.list, { token: "not-a-session" }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/Not signed in/);
   });
 });
