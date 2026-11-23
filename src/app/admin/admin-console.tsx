@@ -7,8 +7,10 @@ import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { INVOICE_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
+import NotesField from "./notes-field";
 import { PackingSlipEditor, PackingSlipList } from "./packing-slips";
 import QuoteDetail from "./quote-detail";
 import { useAdminSession } from "./use-admin-session";
@@ -877,12 +879,15 @@ function InvoiceEditor({
   const [saved, setSaved] = useState(true);
   const [jobPoEdit, setJobPoEdit] = useState<string | null>(null);
   const [dueDateEdit, setDueDateEdit] = useState<string | null>(null);
+  const [notesEdit, setNotesEdit] = useState<string | null>(null);
 
   // Seeded from the server until Eric types, same as the line items.
   const jobPo = jobPoEdit ?? invoice?.jobPo ?? "";
   const dueDate =
     dueDateEdit ??
     (invoice?.dueAt === undefined ? "" : toDateInputValue(invoice.dueAt));
+
+  const notes = notesEdit ?? invoice?.notes ?? "";
 
   const setJobPo = setJobPoEdit;
   const setDueDate = setDueDateEdit;
@@ -924,12 +929,15 @@ function InvoiceEditor({
       id,
       lineItems: payload,
       jobPo: jobPo.trim(),
+      // Untouched notes stay as stored, so a note saved before the box had a
+      // limit cannot block saving the rest of the invoice.
+      ...(notesEdit === null ? {} : { notes: notesEdit.trim() }),
       ...(fromDateInputValue(dueDate) === null
         ? {}
         : { dueAt: fromDateInputValue(dueDate) as number }),
     });
     setSaved(true);
-  }, [editorLines, update, token, id, jobPo, dueDate]);
+  }, [editorLines, update, token, id, jobPo, notesEdit, dueDate]);
 
   const download = useCallback(async () => {
     // Save first so the PDF can never disagree with what is on screen.
@@ -1016,6 +1024,19 @@ function InvoiceEditor({
           laborRate={laborRate ?? null}
           onChange={(next) => {
             setLines(next);
+            setSaved(false);
+          }}
+        />
+      </div>
+
+      <div className="admin-card">
+        <h2 className="admin-card__title">Notes</h2>
+        <NotesField
+          label="Notes / work performed"
+          box={INVOICE_NOTES}
+          value={notes}
+          onChange={(value) => {
+            setNotesEdit(value);
             setSaved(false);
           }}
         />

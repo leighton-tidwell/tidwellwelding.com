@@ -3,6 +3,7 @@ import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
 import { computeInvoiceTotals } from "./invoiceMath";
+import { assertNoteFits, INVOICE_NOTES } from "./noteLines";
 
 /** Granbury, TX combined rate (6.25% state + 2% local), in basis points. */
 export const DEFAULT_TAX_BASIS_POINTS = 825;
@@ -192,6 +193,7 @@ export const update = mutation({
     if (args.customerId !== undefined && !(await ctx.db.get(args.customerId))) {
       throw new Error("That customer no longer exists");
     }
+    assertNoteFits(args.notes, INVOICE_NOTES, "invoice");
 
     const patch: Record<string, unknown> = { updatedAt: Date.now() };
     for (const key of [

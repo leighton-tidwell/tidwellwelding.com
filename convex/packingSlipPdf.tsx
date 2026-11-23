@@ -3,6 +3,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { PHONE_DISPLAY } from "../src/lib/business";
 import { formatPhone } from "./emailTemplates";
+import { PACKING_SLIP_NOTES } from "./noteLines";
 import {
   base,
   cell,
@@ -150,7 +151,7 @@ function PackingSlipDocument({ input }: { input: PackingSlipPdfInput }) {
           <View style={base.notesHead}>
             <Text style={base.notesHeadText}>NOTES / INSTRUCTIONS</Text>
           </View>
-          <NoteLines text={input.notes ?? ""} lines={3} />
+          <NoteLines text={input.notes ?? ""} box={PACKING_SLIP_NOTES} />
 
           <View style={styles.signRow}>
             <View style={{ flex: 2 }}>

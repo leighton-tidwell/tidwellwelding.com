@@ -10,6 +10,7 @@ import {
   type InvoiceLine,
   lineAmountCents,
 } from "./invoiceMath";
+import { INVOICE_NOTES } from "./noteLines";
 import {
   base,
   cell,
@@ -163,8 +164,6 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
   ];
 
   const fillerCount = input.fillerRows ?? 0;
-  const noteLineCount = 5;
-  const noteText = input.notes ?? "";
 
   return (
     <Document>
@@ -264,7 +263,7 @@ function InvoiceDocument({ input }: { input: InvoicePdfInput }) {
             <View style={base.notesHead}>
               <Text style={base.notesHeadText}>NOTES / WORK PERFORMED</Text>
             </View>
-            <NoteLines text={noteText} lines={noteLineCount} />
+            <NoteLines text={input.notes ?? ""} box={INVOICE_NOTES} />
           </View>
 
           <View style={styles.totals}>

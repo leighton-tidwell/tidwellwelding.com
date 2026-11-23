@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type InvoicePdfInput, renderInvoicePdf } from "./invoicePdf";
+import { clipNote, INVOICE_NOTES, wrapNote } from "./noteLines";
 import { countPages, extractText, extractTextRuns } from "./pdfText";
 
 /**
@@ -312,6 +313,25 @@ describe("long and awkward text", () => {
     expect(runs).toContain(email);
   });
 
+  it("fills the email line and breaks only an address too wide for it", async () => {
+    const runsFor = async (email: string) =>
+      extractTextRuns(
+        await renderInvoicePdf({
+          ...REFERENCE,
+          customer: { name: "American Refrigeration", email },
+        }),
+      );
+
+    // From a real invoice: this fits the cell, yet printed as "cfore" over
+    // the rest of the address.
+    const fits = "cfore@americanrefrigerationusa.com";
+    expect(await runsFor(fits)).toContain(fits);
+
+    const wide = await runsFor("accounts.payable@americanrefrigerationusa.com");
+    expect(wide).toContain("accounts.payable@");
+    expect(wide).toContain("americanrefrigerationusa.com");
+  });
+
   it("handles a large amount without truncating the digits", async () => {
     const text = await extractText(
       await renderInvoicePdf({
@@ -511,6 +531,36 @@ describe("edge cases", () => {
 
     expect(await countPages(bytes)).toBe(1);
     expect(await extractText(bytes)).toContain("NOTES / WORK PERFORMED");
+  });
+
+  it("prints a full notes box one line to a rule", async () => {
+    // Capitals and kerned pairs (AV, To, Wa) are where the renderer's measure
+    // of a line is most likely to differ from the wrap's.
+    const notes = clipNote(
+      "AVAILABLE TODAY: Wall-mounted WAVE gate, Type 304 stainless. ".repeat(
+        12,
+      ),
+      INVOICE_NOTES,
+    );
+    const lines = wrapNote(notes, INVOICE_NOTES.width);
+    expect(lines).toHaveLength(INVOICE_NOTES.lines);
+
+    const bytes = await renderInvoicePdf({ ...REFERENCE, notes });
+
+    // A line the renderer wrapped again would come back as two runs, and
+    // would have spilled off its rule to do it.
+    const runs = await extractTextRuns(bytes);
+    for (const line of lines) expect(runs).toContain(line);
+    expect(await countPages(bytes)).toBe(1);
+  });
+
+  it("prints every line of an older note longer than the box", async () => {
+    const notes = "one\ntwo\nthree\nfour\nfive\nsix\nseven";
+    const bytes = await renderInvoicePdf({ ...REFERENCE, notes });
+
+    const runs = await extractTextRuns(bytes);
+    for (const line of notes.split("\n")) expect(runs).toContain(line);
+    expect(await countPages(bytes)).toBe(1);
   });
 
   it("shows a discount and payments when they carry a value", async () => {

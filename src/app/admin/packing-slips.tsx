@@ -6,7 +6,9 @@ import { Button, Icon, Input, Select } from "@/components/ds";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { PACKING_SLIP_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
+import NotesField from "./notes-field";
 
 type SlipLine = {
   key: string;
@@ -193,7 +195,11 @@ export function PackingSlipEditor({
       shippedVia: form.shippedVia.trim(),
       tracking: form.tracking.trim(),
       packages: form.packages.trim(),
-      notes: form.notes.trim(),
+      // Untouched notes stay as stored, so a note saved before the box had a
+      // limit cannot block saving the rest of the slip.
+      ...(form.notes === (slip?.notes ?? "")
+        ? {}
+        : { notes: form.notes.trim() }),
       lineItems: form.lines
         .filter(
           (line) =>
@@ -207,7 +213,7 @@ export function PackingSlipEditor({
         })),
     });
     setSaved(true);
-  }, [form, update, token, id]);
+  }, [form, slip, update, token, id]);
 
   const download = useCallback(async () => {
     await save();
@@ -345,10 +351,9 @@ export function PackingSlipEditor({
 
       <div className="admin-card">
         <h2 className="admin-card__title">Notes</h2>
-        <Input
+        <NotesField
           label="Notes / instructions"
-          multiline
-          rows={3}
+          box={PACKING_SLIP_NOTES}
           value={form.notes}
           onChange={(value) => set({ notes: value })}
         />

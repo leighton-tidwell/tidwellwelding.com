@@ -19,6 +19,7 @@ import {
   SITE_URL,
   STREET_ADDRESS,
 } from "../src/lib/business";
+import { type NoteBox, printableNote, wrapEmail, wrapNote } from "./noteLines";
 
 /**
  * The parts every shop document shares: the letterhead, the labelled meta grid,
@@ -58,23 +59,25 @@ export const HAIRLINE = "#C8C8C8";
  */
 const MAX_FILLER_ROWS = 12;
 
+/** Point size of a value in the meta grid (`base.metaValueFull`). */
+const META_FONT_SIZE = 8.5;
+
 /**
- * About as many characters as fit on one line of a meta cell. A longer email
- * wraps at its "@" instead of mid-word, where the engine would add a hyphen
- * that reads as part of the address.
+ * Width of a meta value's text in points: half the 516pt page less the 16pt
+ * gap between the columns, less the 88pt label and 9pt padding on each side.
  */
-const CONTACT_LINE_CHARS = 32;
+const META_VALUE_WIDTH = 144;
 
-const keepContactWhole = (word: string) =>
-  word.length <= CONTACT_LINE_CHARS
-    ? [word]
-    : (word.match(new RegExp(`.{1,${CONTACT_LINE_CHARS}}`, "g")) ?? [word]);
+/**
+ * The contact lines are already broken to fit, so the engine is told every
+ * word is whole. Left to hyphenate, it adds a "-" that reads as part of the
+ * address.
+ */
+const keepContactWhole = (word: string) => [word];
 
+/** The customer's email on as few lines as the cell allows. */
 export function emailLinesFor(email?: string): string[] {
-  if (!email) return [];
-  const at = email.indexOf("@");
-  if (email.length <= CONTACT_LINE_CHARS || at <= 0) return [email];
-  return [email.slice(0, at), email.slice(at)];
+  return wrapEmail(email ?? "", META_VALUE_WIDTH, META_FONT_SIZE);
 }
 
 export const base = StyleSheet.create({
@@ -127,7 +130,7 @@ export const base = StyleSheet.create({
   metaValueText: { fontSize: 8.5, maxLines: 1, textOverflow: "ellipsis" },
   // Phone and email each get their own line and never truncate: a cut-off
   // email address is useless on an invoice.
-  metaValueFull: { fontSize: 8.5 },
+  metaValueFull: { fontSize: META_FONT_SIZE },
 
   // Table -------------------------------------------------------------------
   table: { marginTop: 10, borderWidth: 0.6, borderColor: HAIRLINE },
@@ -268,18 +271,21 @@ export function Letterhead({
   );
 }
 
-/** Ruled lines with the note text on the first. */
-export function NoteLines({ text, lines }: { text: string; lines: number }) {
+/**
+ * The note on ruled lines, one printed line per rule. The text is wrapped here
+ * rather than by the layout engine so no rule ever holds more than one line.
+ * A note longer than the box (one saved before the editor enforced the fit)
+ * gets extra rules rather than losing its end.
+ */
+export function NoteLines({ text, box }: { text: string; box: NoteBox }) {
+  const wrapped = wrapNote(printableNote(text), box.width);
+  const count = Math.max(box.lines, wrapped.length);
   return (
-    <View style={base.notesBody}>
-      {Array.from({ length: lines }, (_, i) => (
+    <View style={[base.notesBody, { width: box.width }]}>
+      {Array.from({ length: count }, (_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: fixed ruled lines; position is the identity.
         <View style={base.notesLine} key={`note-${i}`}>
-          {i === 0 && text ? (
-            <Text style={base.notesText}>{text}</Text>
-          ) : (
-            <Text style={base.notesText}> </Text>
-          )}
+          <Text style={base.notesText}>{wrapped[i] || " "}</Text>
         </View>
       ))}
     </View>
