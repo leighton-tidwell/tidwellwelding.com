@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { clipNote, PACKING_SLIP_NOTES, wrapNote } from "./noteLines";
 import {
   type PackingSlipPdfInput,
   renderPackingSlipPdf,
 } from "./packingSlipPdf";
-import { countPages, extractText } from "./pdfText";
+import { countPages, extractText, extractTextRuns } from "./pdfText";
 
 const SLIP: PackingSlipPdfInput = {
   number: "PS-110926",
@@ -29,6 +30,24 @@ const SLIP: PackingSlipPdfInput = {
 };
 
 describe("the packing slip PDF", () => {
+  it("prints a full notes box one line to a rule", async () => {
+    const notes = clipNote(
+      "Welded corners each item; stack flat, AVOID strapping over Type 304. ".repeat(
+        12,
+      ),
+      PACKING_SLIP_NOTES,
+    );
+    const lines = wrapNote(notes, PACKING_SLIP_NOTES.width);
+    expect(lines).toHaveLength(PACKING_SLIP_NOTES.lines);
+
+    const bytes = await renderPackingSlipPdf({ ...SLIP, notes });
+
+    // A line the renderer wrapped again would come back as two runs.
+    const runs = await extractTextRuns(bytes);
+    for (const line of lines) expect(runs).toContain(line);
+    expect(await countPages(bytes)).toBe(1);
+  });
+
   it("prints Eric's sample slip on one page with every field", async () => {
     const bytes = await renderPackingSlipPdf(SLIP);
     expect(await countPages(bytes)).toBe(1);

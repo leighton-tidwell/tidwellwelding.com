@@ -195,7 +195,11 @@ export function PackingSlipEditor({
       shippedVia: form.shippedVia.trim(),
       tracking: form.tracking.trim(),
       packages: form.packages.trim(),
-      notes: form.notes.trim(),
+      // Untouched notes stay as stored, so a note saved before the box had a
+      // limit cannot block saving the rest of the slip.
+      ...(form.notes === (slip?.notes ?? "")
+        ? {}
+        : { notes: form.notes.trim() }),
       lineItems: form.lines
         .filter(
           (line) =>
@@ -209,7 +213,7 @@ export function PackingSlipEditor({
         })),
     });
     setSaved(true);
-  }, [form, update, token, id]);
+  }, [form, slip, update, token, id]);
 
   const download = useCallback(async () => {
     await save();

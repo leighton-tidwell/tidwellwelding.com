@@ -1,6 +1,6 @@
 // How a note is laid onto the ruled lines of a shop document. Pure, with no
 // Convex or react-pdf imports: the admin editor loads this file too, so the
-// box Eric types into and the PDF he downloads break lines at the same words.
+// box Eric types into counts and cuts off lines exactly as the PDF prints them.
 //
 // The PDF draws each wrapped line as its own text on its own rule. Leaving the
 // wrapping to the layout engine is what put a whole note on the first rule and
@@ -142,6 +142,17 @@ export function printableNote(text: string): string {
 /** Whether the note fits on the box's ruled lines. */
 export function noteFits(text: string, box: NoteBox): boolean {
   return wrapNote(text, box.width).length <= box.lines;
+}
+
+/** Refuse a note that would not fit: the server's side of the editor's limit. */
+export function assertNoteFits(
+  text: string | undefined,
+  box: NoteBox,
+  document: string,
+): void {
+  if (text !== undefined && !noteFits(text, box)) {
+    throw new Error(`Notes must fit the lines printed on the ${document}`);
+  }
 }
 
 /** The longest leading part of the note that fits the box. */

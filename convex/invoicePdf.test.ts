@@ -554,6 +554,15 @@ describe("edge cases", () => {
     expect(await countPages(bytes)).toBe(1);
   });
 
+  it("prints every line of an older note longer than the box", async () => {
+    const notes = "one\ntwo\nthree\nfour\nfive\nsix\nseven";
+    const bytes = await renderInvoicePdf({ ...REFERENCE, notes });
+
+    const runs = await extractTextRuns(bytes);
+    for (const line of notes.split("\n")) expect(runs).toContain(line);
+    expect(await countPages(bytes)).toBe(1);
+  });
+
   it("shows a discount and payments when they carry a value", async () => {
     const text = await extractText(
       await renderInvoicePdf({

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, test } from "vitest";
@@ -38,6 +38,30 @@ describe("NotesField", () => {
     await user.type(field, "WWW");
 
     expect(field).toHaveValue("W".repeat(24));
+  });
+
+  test("refuses text typed into the middle of a full note", () => {
+    const full = `${"W".repeat(12)}\n${"W".repeat(12)}`;
+    render(<Harness initial={full} />);
+    const field = screen.getByLabelText("Notes");
+
+    // Clipping this to fit would keep the new letter and drop the last one.
+    fireEvent.change(field, { target: { value: `WWWM${full.slice(3)}` } });
+
+    expect(field).toHaveValue(full);
+  });
+
+  test("lets an over-long note be cut down a character at a time", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={"one\ntwo\nthree\nfour"} />);
+    const field = screen.getByLabelText("Notes");
+    expect(
+      screen.getByText(/Too long: 4 lines, and 2 print/),
+    ).toBeInTheDocument();
+
+    await user.type(field, "{Backspace}");
+
+    expect(field).toHaveValue("one\ntwo\nthree\nfou");
   });
 
   test("drops characters the PDF cannot print", async () => {

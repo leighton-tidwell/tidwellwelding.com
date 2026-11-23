@@ -118,6 +118,32 @@ describe("packing slips", () => {
     ]);
   });
 
+  test("notes longer than the slip's printed lines are refused", async () => {
+    const t = setup();
+    const token = await signedIn(t);
+    const id = await t.mutation(api.packingSlips.create, {
+      token,
+      customerId: await customer(t, token),
+    });
+
+    await expect(
+      t.mutation(api.packingSlips.update, {
+        token,
+        id,
+        notes: "one\ntwo\nthree\nfour",
+      }),
+    ).rejects.toThrow("Notes must fit");
+
+    await t.mutation(api.packingSlips.update, {
+      token,
+      id,
+      notes: "one\ntwo\nthree",
+    });
+    expect((await t.query(api.packingSlips.get, { token, id }))?.notes).toBe(
+      "one\ntwo\nthree",
+    );
+  });
+
   test("edits are saved and a negative quantity is refused", async () => {
     const t = setup();
     const token = await signedIn(t);
