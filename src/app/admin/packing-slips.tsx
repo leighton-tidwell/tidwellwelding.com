@@ -6,7 +6,9 @@ import { Button, Icon, Input, Select } from "@/components/ds";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { PACKING_SLIP_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
+import NotesField from "./notes-field";
 
 type SlipLine = {
   key: string;
@@ -345,10 +347,9 @@ export function PackingSlipEditor({
 
       <div className="admin-card">
         <h2 className="admin-card__title">Notes</h2>
-        <Input
+        <NotesField
           label="Notes / instructions"
-          multiline
-          rows={3}
+          box={PACKING_SLIP_NOTES}
           value={form.notes}
           onChange={(value) => set({ notes: value })}
         />

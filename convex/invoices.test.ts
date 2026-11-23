@@ -557,6 +557,32 @@ describe("invoices — access control", () => {
     ).rejects.toThrow();
   });
 
+  test("notes longer than the invoice's printed lines are refused", async () => {
+    const t = convexTestWithLimiter();
+    const token = await signedIn(t);
+    const customerId = await t.mutation(api.customers.create, {
+      token,
+      name: "Boyd",
+    });
+    const id = await t.mutation(api.invoices.create, { token, customerId });
+
+    await expect(
+      t.mutation(api.invoices.update, {
+        token,
+        id,
+        notes: "one\ntwo\nthree\nfour\nfive\nsix",
+      }),
+    ).rejects.toThrow("Notes must fit");
+
+    await t.mutation(api.invoices.update, {
+      token,
+      id,
+      notes: "one\ntwo\nthree\nfour\nfive",
+    });
+    const saved = await t.query(api.invoices.get, { token, id });
+    expect(saved?.notes).toBe("one\ntwo\nthree\nfour\nfive");
+  });
+
   test("an invoice cannot reference a customer that does not exist", async () => {
     const t = convexTestWithLimiter();
     const token = await signedIn(t);

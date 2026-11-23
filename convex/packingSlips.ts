@@ -9,6 +9,7 @@ import {
 } from "./_generated/server";
 import { requireAdmin } from "./auth";
 import { invoiceDateStamp } from "./invoices";
+import { noteFits, PACKING_SLIP_NOTES } from "./noteLines";
 
 const lineItemValidator = v.object({
   partNumber: v.string(),
@@ -106,6 +107,12 @@ export const update = mutation({
     await requireAdmin(ctx, token);
     if (!(await ctx.db.get(id)))
       throw new Error("That packing slip no longer exists");
+    if (
+      fields.notes !== undefined &&
+      !noteFits(fields.notes, PACKING_SLIP_NOTES)
+    ) {
+      throw new Error("Notes must fit the lines printed on the packing slip");
+    }
     for (const line of fields.lineItems ?? []) {
       if (!Number.isFinite(line.qty) || line.qty < 0) {
         throw new Error(`Line quantity must be zero or more, got ${line.qty}`);
