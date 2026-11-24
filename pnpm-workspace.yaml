@@ -4,3 +4,11 @@ allowBuilds:
   esbuild: true
   workerd: true
   unrs-resolver: true # native resolver used by eslint-plugin-import
+
+# Security floor for a transitive dep whose parent still pins a vulnerable range.
+# Drop it once `pnpm audit` is clean without it.
+overrides:
+  # @opennextjs/cloudflare 1.20.18 pins glob ^13, and every glob 13 release is
+  # hit by GHSA advisories fixed in 14.0.2 (glob 14 also lifts minimatch to 11).
+  # Opennext only imports glob() and globSync(), which glob 14 keeps.
+  glob: ^14.0.2

@@ -4,6 +4,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      # Pinned so the Monday 10:00 Central Claude routine that rolls these
+      # PRs into one upgrade always runs after they open.
+      day: monday
+      time: "08:00"
+      timezone: America/Chicago
     open-pull-requests-limit: 5
     groups:
       # Everything non-breaking in one PR.
@@ -19,6 +24,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      # Pinned so the Monday 10:00 Central Claude routine that rolls these
+      # PRs into one upgrade always runs after they open.
+      day: monday
+      time: "08:00"
+      timezone: America/Chicago
     groups:
       actions:
         patterns: ["*"]
