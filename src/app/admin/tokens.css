@@ -1,0 +1,147 @@
+/**
+ * Admin console design tokens, scoped to `.adm` so nothing reaches the public
+ * site. Values follow the taste-skill system (github.com/Leonxlnx/taste-skill:
+ * references/system.md, layout-v4.md, motion.md, library/type.json):
+ *
+ * - A neutral interface with one accent. The accent fills the primary button
+ *   and marks the current place, links and focus. Status colours appear only
+ *   where they carry meaning.
+ * - Geist for text and Geist Mono for figures. Weights are 400 and 500.
+ *   Nothing is under 13px.
+ * - A 4px spacing scale, 44px buttons, 48px fields.
+ * - Motion at 150/120/90ms that touches only colour, transform and opacity.
+ *
+ * The accent is the business's brand red for now, kept in one token so it
+ * can become a per-workspace setting later.
+ *
+ * Contrast, checked by hand (axe guards it in CI):
+ * - Light: ink 18:1; ink-2 5.8:1 on the ground; accent 6.0:1 on white and
+ *   white on accent 6.0:1.
+ * - Dark: ink 16:1; ink-2 6.3:1; accent text 6.1:1; white on the dark-mode
+ *   accent 5.4:1.
+ */
+
+.adm {
+  /* ---- accent: one token to swap per workspace later --------------------- */
+  --adm-accent: #c90314;
+  --adm-accent-hover: #b0020f;
+  --adm-accent-press: #96020d;
+  --adm-on-accent: #ffffff;
+  --adm-accent-ink: #c90314; /* accent used as text: links, counts */
+  --adm-accent-tint: rgba(201, 3, 20, 0.08);
+  --adm-accent-line: rgba(201, 3, 20, 0.32);
+
+  /* ---- type ------------------------------------------------------------- */
+  --adm-font: var(--font-admin), "Geist", system-ui, sans-serif;
+  --adm-mono: var(--font-admin-mono), "Geist Mono", ui-monospace, monospace;
+  --adm-text-label: 0.8125rem; /* 13: labels, meta, tags, tab labels */
+  --adm-text-small: 0.875rem; /* 14: field labels, secondary text */
+  --adm-text-body: 1rem; /* 16: body, inputs, rows */
+  --adm-text-lead: 1.125rem; /* 18: card titles on a phone */
+  --adm-text-title: 1.25rem; /* 20: card and panel titles */
+  --adm-text-h3: 1.5rem; /* 24: phone page title */
+  --adm-text-h2: 2rem; /* 32: desktop page title */
+  --adm-text-stat: 1.75rem; /* 28: stat figures on a phone */
+  --adm-text-stat-lg: 2.375rem; /* 38: stat figures on desktop */
+  --adm-weight: 400;
+  --adm-weight-medium: 500;
+  --adm-leading-tight: 1.15;
+  --adm-leading: 1.5;
+  --adm-tracking-display: -0.025em;
+
+  /* ---- space (taste --s-1 … --s-10) ------------------------------------- */
+  --adm-space-1: 4px;
+  --adm-space-2: 8px;
+  --adm-space-3: 12px;
+  --adm-space-4: 16px;
+  --adm-space-5: 24px;
+  --adm-space-6: 32px;
+  --adm-space-7: 48px;
+  --adm-space-8: 64px;
+
+  /* ---- shape ------------------------------------------------------------ */
+  --adm-radius-control: 8px;
+  --adm-radius-panel: 12px;
+  --adm-radius-card: 16px;
+  --adm-radius-pill: 999px;
+  --adm-hairline: 1px;
+  --adm-target: 44px;
+  --adm-field-h: 48px;
+  --adm-rail-w: 264px;
+  --adm-topbar-h: 56px;
+  --adm-tabbar-h: 64px;
+  --adm-content-max: 1200px;
+
+  /* ---- motion ----------------------------------------------------------- */
+  --adm-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --adm-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --adm-dur-in: 150ms;
+  --adm-dur-out: 120ms;
+  --adm-dur-press: 90ms;
+  --adm-dur-panel: 200ms;
+
+  /* ---- colour: light ---------------------------------------------------- */
+  --adm-ground: #f4f4f3;
+  --adm-surface: #ffffff;
+  --adm-raised: #fafaf9;
+  --adm-sunken: #efefed;
+  --adm-ink: #111214;
+  --adm-ink-2: #5f5f5e;
+  --adm-ink-3: #6b6b6b;
+  --adm-rule: rgba(17, 18, 20, 0.12);
+  --adm-rule-soft: rgba(17, 18, 20, 0.07);
+  --adm-control-edge: rgba(17, 18, 20, 0.22);
+  --adm-hover: rgba(17, 18, 20, 0.04);
+  --adm-select: #111214;
+  --adm-on-select: #ffffff;
+  --adm-rail: #fafaf9;
+  --adm-rail-on: #ffffff;
+  --adm-ok: #1d6b3f;
+  --adm-ok-tint: rgba(29, 107, 63, 0.09);
+  --adm-info: #1d5fae;
+  --adm-info-tint: rgba(29, 95, 174, 0.09);
+  --adm-danger: #b3261e;
+  --adm-danger-tint: rgba(179, 38, 30, 0.07);
+  --adm-focus: #c90314;
+  --adm-grid-dot: rgba(17, 18, 20, 0.09);
+
+  color-scheme: light;
+}
+
+/* ---- colour: dark --------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  .adm {
+    --adm-accent: #d40d1e;
+    --adm-accent-hover: #e01625;
+    --adm-accent-press: #b0020f;
+    --adm-accent-ink: #ff6b73;
+    --adm-accent-tint: rgba(255, 74, 85, 0.12);
+    --adm-accent-line: rgba(255, 107, 115, 0.4);
+
+    --adm-ground: #141516;
+    --adm-surface: #1c1d1f;
+    --adm-raised: #232427;
+    --adm-sunken: #111213;
+    --adm-ink: #eff0f1;
+    --adm-ink-2: #9c9ea3;
+    --adm-ink-3: #8b8d92;
+    --adm-rule: rgba(239, 240, 241, 0.12);
+    --adm-rule-soft: rgba(239, 240, 241, 0.07);
+    --adm-control-edge: rgba(239, 240, 241, 0.2);
+    --adm-hover: rgba(239, 240, 241, 0.05);
+    --adm-select: #eff0f1;
+    --adm-on-select: #141516;
+    --adm-rail: #0f1011;
+    --adm-rail-on: #1c1d1f;
+    --adm-ok: #6fd39a;
+    --adm-ok-tint: rgba(111, 211, 154, 0.1);
+    --adm-info: #7cb7ff;
+    --adm-info-tint: rgba(124, 183, 255, 0.1);
+    --adm-danger: #ff8a80;
+    --adm-danger-tint: rgba(255, 138, 128, 0.1);
+    --adm-focus: #ff6b73;
+    --adm-grid-dot: rgba(239, 240, 241, 0.07);
+
+    color-scheme: dark;
+  }
+}

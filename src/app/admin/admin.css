@@ -1,359 +1,1364 @@
 /**
- * Admin console styling. Mobile-first: the owner works from his phone on a job
- * site, so the small-screen layout is the real one and the desktop table is the
- * enhancement. Every value comes from the site's design tokens so the console
- * looks like the same shop as the public site.
+ * Admin console styling, built only on ./tokens.css and scoped under `.adm`
+ * so the public site never sees it. Mobile-first: the owner and the crew work
+ * from phones, so the small-screen layout is the real one.
+ *
+ * The design-system components (Button, Input, Select, Checkbox) keep their
+ * markup and behavior. Their brand skin lives in @layer components in
+ * globals.css, and these unlayered rules win over it inside the console.
+ *
+ * Hover styles sit inside `@media (hover: hover)` so a tap on a phone never
+ * leaves a control stuck in its hover state (taste-skill motion rules).
  */
 
-.admin-shell {
+/* ======================================================== base ========== */
+
+.adm {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-body);
+  font-weight: var(--adm-weight);
+  line-height: var(--adm-leading);
+  color: var(--adm-ink);
+  background: var(--adm-ground);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The site's global heading style (condensed, raked, upper case) is brand
+ * type; the console sets its headings in its own face. */
+.adm :is(h1, h2, h3, h4) {
+  font-family: var(--adm-font);
+  font-style: normal;
+  font-weight: var(--adm-weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.adm a:not(.tsws-btn) {
+  border-bottom: 0;
+  color: var(--adm-accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.adm ::selection {
+  background: var(--adm-accent-tint);
+  color: var(--adm-ink);
+}
+
+.adm :focus-visible {
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+.adm-blank {
   min-height: 100dvh;
-  background: var(--bg-page);
-  color: var(--text-body);
-  font-family: var(--font-body);
 }
 
-.admin-bar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--border-subtle);
+/* ==================================== design-system components, re-skinned */
+
+.adm .tsws-btn {
+  clip-path: none;
+  gap: var(--adm-space-2);
+  border-radius: var(--adm-radius-control);
+  font-family: var(--adm-font);
+  font-weight: var(--adm-weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: none;
+  transition:
+    background-color var(--adm-dur-in) var(--adm-ease),
+    border-color var(--adm-dur-in) var(--adm-ease),
+    color var(--adm-dur-in) var(--adm-ease),
+    transform var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-bar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-black);
-  letter-spacing: var(--tracking-wide);
-  color: var(--text-primary);
-  text-transform: uppercase;
+.adm .tsws-btn::after {
+  display: none;
 }
 
-.admin-bar__who {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
+.adm .tsws-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  transition-duration: var(--adm-dur-press);
 }
 
-.admin-main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px 16px 96px;
+.adm .tsws-btn:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
 }
 
-@media (min-width: 768px) {
-  .admin-main {
-    padding: 28px 24px 96px;
+.adm .tsws-btn--sm {
+  min-height: 36px;
+  padding: 0 var(--adm-space-4);
+  font-size: var(--adm-text-small);
+}
+
+.adm .tsws-btn--md {
+  min-height: var(--adm-target);
+  padding: 0 var(--adm-space-5);
+  font-size: var(--adm-text-body);
+}
+
+.adm .tsws-btn--primary {
+  background: var(--adm-accent);
+  color: var(--adm-on-accent);
+  border: var(--adm-hairline) solid transparent;
+}
+
+.adm .tsws-btn--primary:active:not(:disabled) {
+  background: var(--adm-accent-press);
+}
+
+.adm .tsws-btn--secondary {
+  background: var(--adm-surface);
+  color: var(--adm-ink);
+  border: var(--adm-hairline) solid var(--adm-control-edge);
+}
+
+.adm .tsws-btn--ghost {
+  background: transparent;
+  color: var(--adm-ink-2);
+  border: var(--adm-hairline) solid transparent;
+}
+
+.adm .tsws-btn--quiet {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  color: var(--adm-accent-ink);
+}
+
+.adm .tsws-btn--quiet .tsws-btn__label {
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.adm .tsws-btn:disabled {
+  opacity: 0.45;
+}
+
+@media (hover: hover) {
+  .adm .tsws-btn--primary:hover:not(:disabled) {
+    background: var(--adm-accent-hover);
+    transform: translateY(-1px);
+  }
+
+  .adm .tsws-btn--secondary:hover:not(:disabled),
+  .adm .tsws-btn--ghost:hover:not(:disabled) {
+    background: var(--adm-raised);
+    border-color: var(--adm-ink-3);
+    color: var(--adm-ink);
   }
 }
 
-/* --- Login / set-password ------------------------------------------------ */
+.adm .tsws-field {
+  gap: 6px;
+}
 
-.admin-gate {
+.adm .tsws-field__label {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-small);
+  font-weight: var(--adm-weight-medium);
+  line-height: var(--adm-leading-tight);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-field__req {
+  color: var(--adm-accent-ink);
+}
+
+.adm .tsws-field__hint,
+.adm .tsws-field__error {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-field__error {
+  color: var(--adm-danger);
+}
+
+.adm .tsws-control {
+  clip-path: none;
+  border-radius: var(--adm-radius-control);
+  background: var(--adm-surface);
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-control-edge);
+  transition: box-shadow var(--adm-dur-in) var(--adm-ease);
+}
+
+.adm .tsws-control--focused {
+  background: var(--adm-surface);
+  box-shadow:
+    inset 0 0 0 var(--adm-hairline) var(--adm-ink),
+    0 0 0 4px var(--adm-accent-tint);
+}
+
+.adm .tsws-control--error {
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-danger);
+}
+
+.adm .tsws-control__seam {
+  display: none;
+}
+
+.adm .tsws-control__input {
+  height: var(--adm-field-h);
+  padding: 0 var(--adm-space-4);
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-body);
+  color: var(--adm-ink);
+}
+
+.adm textarea.tsws-control__input {
+  height: auto;
+  padding: var(--adm-space-3) var(--adm-space-4);
+}
+
+.adm .tsws-control__input::placeholder {
+  color: var(--adm-ink-3);
+}
+
+.adm .tsws-control__adorn {
+  padding-left: var(--adm-space-4);
+  font-family: var(--adm-mono);
+  color: var(--adm-ink-3);
+}
+
+.adm .tsws-control--focused .tsws-control__adorn {
+  color: var(--adm-ink);
+}
+
+.adm .tsws-select {
+  padding-right: var(--adm-space-7);
+}
+
+.adm .tsws-select__chev {
+  right: var(--adm-space-4);
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-check {
+  align-items: center;
+  min-height: var(--adm-target);
+  font-size: var(--adm-text-body);
+  color: var(--adm-ink);
+}
+
+.adm .tsws-check__box {
+  clip-path: none;
+  border-radius: 5px;
+  background: var(--adm-surface);
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-control-edge);
+}
+
+.adm .tsws-check--checked .tsws-check__box {
+  background: var(--adm-accent);
+  box-shadow: none;
+}
+
+.adm .tsws-check__tick {
+  color: var(--adm-on-accent);
+}
+
+.adm .tsws-check:focus-within .tsws-check__box {
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .adm .tsws-control:not(.tsws-control--focused):hover {
+    box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-ink-3);
+  }
+
+  .adm .tsws-check:not(.tsws-check--checked):hover .tsws-check__box {
+    box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-ink-3);
+  }
+}
+
+/* ======================================================== shell ========= */
+
+/* Phone: a top bar with the workspace and sign-out, the sections pinned to the
+ * bottom of the screen as a tab bar, the page scrolling between them. */
+.adm-app {
   min-height: 100dvh;
-  display: grid;
+}
+
+.adm-side {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--adm-space-3);
+  height: var(--adm-topbar-h);
+  padding: 0 var(--adm-space-2) 0 var(--adm-space-4);
+  background: var(--adm-surface);
+  border-bottom: var(--adm-hairline) solid var(--adm-rule);
+}
+
+.adm-ws {
+  display: flex;
+  align-items: center;
+  gap: var(--adm-space-3);
+  min-width: 0;
+}
+
+.adm-ws__mark {
+  display: inline-grid;
   place-items: center;
-  padding: 24px 16px;
-  background: var(--bg-page);
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--adm-radius-control);
+  background: var(--adm-accent);
+  color: var(--adm-on-accent);
+  font-family: var(--adm-mono);
+  font-size: var(--adm-text-label);
+  font-weight: var(--adm-weight-medium);
+  letter-spacing: 0.02em;
 }
 
-.admin-gate__plate {
-  width: 100%;
-  max-width: 420px;
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  /* Chamfered plate corners, matching the site's cut-steel language. */
-  clip-path: polygon(
-    14px 0,
-    100% 0,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    0 100%,
-    0 14px
-  );
-  padding: 28px 24px;
-}
-
-.admin-gate__title {
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-black);
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin: 0 0 6px;
-}
-
-.admin-gate__sub {
-  font-size: var(--text-sm);
-  color: var(--steel-300);
-  margin: 0 0 22px;
-}
-
-.admin-gate__fields {
+.adm-ws__text {
   display: grid;
-  gap: 16px;
+  min-width: 0;
+  line-height: var(--adm-leading-tight);
 }
 
-.admin-gate__error {
-  margin-top: 14px;
-  padding: 10px 12px;
-  font-size: var(--text-sm);
-  color: var(--red-100);
-  background: var(--accent-quiet);
-  border-left: 3px solid var(--accent);
+.adm-ws__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
 }
 
-/* --- Page furniture ------------------------------------------------------ */
+.adm-ws__sub {
+  display: none;
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+}
 
-.admin-head {
+.adm-nav {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--adm-surface);
+  border-top: var(--adm-hairline) solid var(--adm-rule);
+}
+
+/* On a phone the groups flatten into one row of tabs. */
+.adm-nav__group,
+.adm-nav__list,
+.adm-nav__list li {
+  display: contents;
+}
+
+.adm-nav__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-nav__heading {
+  display: none;
+}
+
+.adm-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: var(--adm-tabbar-h);
+  padding: 0 var(--adm-space-1);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+  cursor: pointer;
+  transition: color var(--adm-dur-in) var(--adm-ease);
+}
+
+.adm-nav__item .tsws-icon {
+  box-sizing: content-box;
+  padding: 4px 16px;
+  border-radius: var(--adm-radius-pill);
+  transition: background-color var(--adm-dur-in) var(--adm-ease);
+}
+
+.adm-nav__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-nav__item[aria-current="page"] {
+  color: var(--adm-ink);
+  font-weight: var(--adm-weight-medium);
+}
+
+.adm-nav__item[aria-current="page"] .tsws-icon {
+  background: var(--adm-accent-tint);
+  color: var(--adm-accent-ink);
+}
+
+.adm-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--adm-space-2);
+  min-width: var(--adm-target);
+  min-height: var(--adm-target);
+  padding: 0 var(--adm-space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--adm-radius-control);
+  font: inherit;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
+  cursor: pointer;
+}
+
+/* Icon only in the phone's top bar; the button keeps its name in aria-label. */
+.adm-signout__label {
+  display: none;
+}
+
+.adm-main {
+  max-width: var(--adm-content-max);
+  margin: 0 auto;
+  padding: var(--adm-space-5) var(--adm-space-4)
+    calc(var(--adm-tabbar-h) + env(safe-area-inset-bottom) + var(--adm-space-7));
+}
+
+@media (hover: hover) {
+  .adm-nav__item:hover {
+    color: var(--adm-ink);
+  }
+
+  .adm-signout:hover {
+    color: var(--adm-ink);
+    background: var(--adm-hover);
+  }
+}
+
+/* Desktop: the top bar becomes a full-height sidebar, the tab bar folds into
+ * it as grouped lists, and sign-out drops to its foot. */
+@media (min-width: 900px) {
+  .adm-app {
+    display: grid;
+    grid-template-columns: var(--adm-rail-w) minmax(0, 1fr);
+    /* The rail colour runs the full height of a long page, not only the
+     * viewport-tall sticky sidebar. */
+    background-color: var(--adm-ground);
+    background-image: linear-gradient(
+      to right,
+      var(--adm-rail) calc(var(--adm-rail-w) - 1px),
+      var(--adm-rule) calc(var(--adm-rail-w) - 1px) var(--adm-rail-w),
+      var(--adm-ground) var(--adm-rail-w)
+    );
+  }
+
+  .adm-side {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    height: 100dvh;
+    padding: var(--adm-space-5) var(--adm-space-4);
+    background: var(--adm-rail);
+    border-bottom: 0;
+    border-right: var(--adm-hairline) solid var(--adm-rule);
+  }
+
+  .adm-ws {
+    padding: 0 var(--adm-space-2) var(--adm-space-6);
+  }
+
+  .adm-ws__mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .adm-ws__sub {
+    display: block;
+  }
+
+  .adm-ws__name {
+    white-space: normal;
+  }
+
+  .adm-nav {
+    position: static;
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    align-content: start;
+    gap: var(--adm-space-5);
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+
+  .adm-nav__group {
+    display: grid;
+    gap: var(--adm-space-1);
+  }
+
+  .adm-nav__list {
+    display: grid;
+    gap: 2px;
+  }
+
+  .adm-nav__list li {
+    display: list-item;
+  }
+
+  .adm-nav__heading {
+    display: block;
+    margin: 0;
+    padding: 0 var(--adm-space-3);
+    font-size: var(--adm-text-label);
+    color: var(--adm-ink-3);
+  }
+
+  .adm-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--adm-space-3);
+    height: 40px;
+    padding: 0 var(--adm-space-3);
+    border: var(--adm-hairline) solid transparent;
+    border-radius: var(--adm-radius-control);
+    font-size: var(--adm-text-body);
+  }
+
+  .adm-nav__item .tsws-icon {
+    padding: 0;
+    background: none;
+  }
+
+  .adm-nav__item[aria-current="page"] {
+    background: var(--adm-rail-on);
+    border-color: var(--adm-rule);
+  }
+
+  .adm-nav__item[aria-current="page"] .tsws-icon {
+    background: none;
+  }
+
+  .adm-signout {
+    margin-top: auto;
+    justify-content: flex-start;
+    gap: var(--adm-space-3);
+    padding: 0 var(--adm-space-3);
+    font-size: var(--adm-text-body);
+  }
+
+  .adm-signout__label {
+    display: inline;
+  }
+
+  .adm-main {
+    width: 100%;
+    padding: var(--adm-space-7) var(--adm-space-7) var(--adm-space-8);
+  }
+}
+
+@media (min-width: 900px) and (hover: hover) {
+  .adm-nav__item:hover {
+    background: var(--adm-hover);
+  }
+}
+
+/* ================================================== page furniture ====== */
+
+.adm-head {
+  margin-bottom: var(--adm-space-5);
+}
+
+.adm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--adm-target);
+  margin: calc(-1 * var(--adm-space-3)) 0 0 calc(-1 * var(--adm-space-2));
+  padding: 0 var(--adm-space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--adm-radius-control);
+  font: inherit;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
+  cursor: pointer;
+}
+
+.adm-head__row {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: var(--adm-space-3) var(--adm-space-4);
+}
+
+.adm-head__text {
+  min-width: 0;
 }
 
 .admin-title {
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-black);
-  letter-spacing: var(--tracking-tight);
-  text-transform: uppercase;
-  color: var(--text-primary);
+  margin: 0;
+  font-size: var(--adm-text-h3);
+  font-weight: var(--adm-weight-medium);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: var(--adm-tracking-display);
+  color: var(--adm-ink);
+  overflow-wrap: anywhere;
+}
+
+.adm-head__meta {
+  margin: var(--adm-space-1) 0 0;
+  color: var(--adm-ink-2);
+}
+
+@media (min-width: 900px) {
+  .adm-head {
+    margin-bottom: var(--adm-space-6);
+  }
+
+  .admin-title {
+    font-size: var(--adm-text-h2);
+  }
+}
+
+@media (hover: hover) {
+  .adm-back:hover {
+    color: var(--adm-ink);
+    background: var(--adm-hover);
+  }
+}
+
+.adm-figure {
+  font-family: var(--adm-mono);
+  font-size: var(--adm-text-title);
+  color: var(--adm-ink);
+}
+
+/* ---- stat strip: the figures a list opens with ------------------------- */
+
+.adm-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--adm-space-3);
+  margin: 0 0 var(--adm-space-3);
+}
+
+.adm-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--adm-space-1);
+  min-width: 0;
+  padding: var(--adm-space-4);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-card);
+}
+
+.adm-stat:first-child {
+  grid-column: 1 / -1;
+}
+
+.adm-stat__label {
+  display: flex;
+  align-items: center;
+  gap: var(--adm-space-2);
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+}
+
+.adm-stat__value {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-text-stat);
+  font-weight: var(--adm-weight-medium);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.03em;
+  color: var(--adm-ink);
+}
+
+.adm-stat--accent .adm-stat__value {
+  color: var(--adm-accent-ink);
+}
+
+.adm-stat--ok .adm-stat__label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--adm-ok);
+}
+
+.adm-stat--accent .adm-stat__label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--adm-accent);
+}
+
+@media (min-width: 640px) {
+  .adm-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--adm-space-5);
+    margin-bottom: var(--adm-space-5);
+  }
+
+  .adm-stat {
+    padding: var(--adm-space-5);
+  }
+
+  .adm-stat:first-child {
+    grid-column: auto;
+  }
+}
+
+@media (min-width: 900px) {
+  .adm-stat__value {
+    font-size: var(--adm-text-stat-lg);
+  }
+}
+
+/* ---- split: the work beside its summary -------------------------------- */
+
+.adm-split {
+  display: grid;
+  gap: var(--adm-space-3);
+  align-items: start;
+}
+
+.adm-split__main {
+  display: grid;
+  gap: var(--adm-space-3);
+  min-width: 0;
+}
+
+.adm-split__main > * {
+  margin-bottom: 0;
+}
+
+/* Phone: on a list screen the records come first and the "start a new" form
+ * after them; opening an existing job is the common task. */
+.adm-split--list > .adm-split__side {
+  order: 2;
+}
+
+@media (min-width: 640px) {
+  .adm-split,
+  .adm-split__main {
+    gap: var(--adm-space-5);
+  }
+}
+
+@media (min-width: 1100px) {
+  .adm-split {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .adm-split__side {
+    position: sticky;
+    top: var(--adm-space-7);
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .adm-split__main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .adm-split--list > .adm-split__side {
+    order: 0;
+  }
+}
+
+/* ---- cards ------------------------------------------------------------- */
+
+.admin-card {
+  margin-bottom: var(--adm-space-3);
+  padding: var(--adm-space-5);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-card);
+}
+
+.adm-split > .admin-card,
+.adm-split__main > .admin-card {
+  margin-bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  .admin-card {
+    padding: var(--adm-space-6);
+  }
+
+  .adm-split__side.admin-card,
+  .admin-summary {
+    padding: var(--adm-space-5);
+  }
+}
+
+.admin-card__title,
+.adm-section-title {
+  margin: 0 0 var(--adm-space-4);
+  font-size: var(--adm-text-lead);
+  font-weight: var(--adm-weight-medium);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.01em;
+  color: var(--adm-ink);
+}
+
+@media (min-width: 640px) {
+  .admin-card__title,
+  .adm-section-title {
+    font-size: var(--adm-text-title);
+  }
+}
+
+.adm-section-title {
   margin: 0;
 }
 
-.admin-eyebrow {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--steel-300);
-  margin: 0 0 4px;
+/* A side panel: status, totals and the document's actions, in one column. */
+.admin-summary {
+  display: grid;
+  gap: var(--adm-space-5);
+  padding: var(--adm-space-5);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-card);
 }
 
-.admin-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.admin-card__title {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin: 0 0 12px;
+.admin-summary > .admin-card__title {
+  margin: 0;
 }
 
 .admin-grid-2 {
   display: grid;
-  gap: 14px;
+  gap: var(--adm-space-4);
 }
 
 @media (min-width: 640px) {
   .admin-grid-2 {
     grid-template-columns: 1fr 1fr;
   }
+
+  .adm-split__side .admin-grid-2 {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* --- Lists --------------------------------------------------------------- */
+/* A picker and the button it feeds. */
+.admin-start {
+  display: grid;
+  gap: var(--adm-space-3);
+}
 
-/* Status filter chips ---------------------------------------------------- */
+.admin-note {
+  margin: 0;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
+}
 
-.admin-filters {
+.admin-actions + .admin-note {
+  margin-top: var(--adm-space-3);
+}
+
+.admin-origin {
+  padding: var(--adm-space-3) var(--adm-space-4);
+  background: var(--adm-sunken);
+  border-radius: var(--adm-radius-panel);
+}
+
+/* A button that reads as a link. */
+.admin-linkish {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-accent-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--adm-accent-line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.admin-download {
+  display: grid;
+  gap: var(--adm-space-2);
+}
+
+.admin-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--adm-space-2);
+  margin-top: var(--adm-space-5);
+}
+
+.admin-actions--stack {
+  display: grid;
+  margin-top: 0;
+}
+
+.admin-actions--stack .tsws-btn,
+.admin-actions--stack .admin-download {
+  width: 100%;
+}
+
+.admin-summary .admin-actions {
+  display: grid;
+}
+
+.admin-summary .admin-actions .tsws-btn {
+  width: 100%;
+}
+
+/* Phone: small buttons get the 44px touch floor too. */
+@media (max-width: 899px) {
+  .adm .tsws-btn--sm {
+    min-height: var(--adm-target);
+  }
+}
+
+.admin-gate__error {
+  margin: var(--adm-space-4) 0 0;
+  padding: var(--adm-space-3) var(--adm-space-4);
+  font-size: var(--adm-text-small);
+  color: var(--adm-danger);
+  background: var(--adm-danger-tint);
+  border: var(--adm-hairline) solid currentColor;
+  border-radius: var(--adm-radius-control);
+}
+
+.admin-gate__error a {
+  color: inherit;
+}
+
+.adm-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 var(--adm-space-2);
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+  background: var(--adm-sunken);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .admin-linkish:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* ====================================================== filters ========= */
+
+/* A segmented control: one sunken track, the chosen segment raised out of it. */
+.admin-filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: var(--adm-space-3);
+  padding: 3px;
+  background: var(--adm-sunken);
+  border-radius: calc(var(--adm-radius-control) + 3px);
 }
 
 .admin-filter {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  /* 44px on a phone, per the touch-target floor the rest of the console uses. */
+  gap: var(--adm-space-2);
   min-height: 36px;
-  padding: 0 12px;
-  font-family: var(--font-mono, inherit);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  color: var(--text-body);
+  padding: 0 var(--adm-space-3);
+  background: none;
+  border: var(--adm-hairline) solid transparent;
+  border-radius: var(--adm-radius-control);
+  font: inherit;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
+  text-transform: capitalize;
   cursor: pointer;
   transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    color 120ms ease;
-}
-
-.admin-filter:hover,
-.admin-filter:focus-visible {
-  border-color: var(--border-accent);
-  background: var(--surface-raised);
-  color: var(--text-primary);
+    background-color var(--adm-dur-in) var(--adm-ease),
+    color var(--adm-dur-in) var(--adm-ease);
 }
 
 .admin-filter--on {
-  background: var(--surface-raised);
-  border-color: var(--border-accent);
-  color: var(--text-primary);
+  background: var(--adm-surface);
+  border-color: var(--adm-rule);
+  color: var(--adm-ink);
+  font-weight: var(--adm-weight-medium);
 }
 
 .admin-filter__count {
-  font-size: 10px;
-  padding: 1px 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
+  font-family: var(--adm-mono);
+  font-size: var(--adm-text-label);
+  font-weight: var(--adm-weight);
+  color: var(--adm-ink-2);
 }
 
-.admin-filter--on .admin-filter__count {
-  background: rgba(255, 255, 255, 0.16);
+@media (max-width: 899px) {
+  .admin-filter {
+    min-height: var(--adm-target);
+  }
 }
 
-/* A button that reads as a link, for the "show all" escape hatch. */
-.admin-linkish {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--text-primary);
-  text-decoration: underline;
-  cursor: pointer;
+@media (hover: hover) {
+  .admin-filter:not(.admin-filter--on):hover {
+    color: var(--adm-ink);
+  }
 }
 
+/* A status as a pill: a dot and a word, tinted only where it means
+ * something. */
+.adm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--adm-radius-pill);
+  font-size: var(--adm-text-label);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink-2);
+  background: var(--adm-sunken);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.adm-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.adm-status--sent {
+  color: var(--adm-info);
+  background: var(--adm-info-tint);
+}
+
+.adm-status--paid {
+  color: var(--adm-ok);
+  background: var(--adm-ok-tint);
+}
+
+.adm-status--new {
+  color: var(--adm-accent-ink);
+  background: var(--adm-accent-tint);
+}
+
+.adm-status--void {
+  color: var(--adm-ink-3);
+  text-decoration: line-through;
+}
+
+/* ======================================================== lists ========= */
+
+/* One plate, rows ruled by hairlines, columns that line up: a ledger. */
 .admin-list {
-  display: grid;
-  gap: 10px;
+  overflow: hidden;
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-card);
+}
+
+.admin-list__head {
+  display: none;
 }
 
 .admin-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: var(--adm-space-3);
   width: 100%;
-  padding: 14px;
+  min-height: 68px;
+  padding: var(--adm-space-3) var(--adm-space-4);
   text-align: left;
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  color: var(--text-body);
+  background: none;
+  border: 0;
+  border-bottom: var(--adm-hairline) solid var(--adm-rule-soft);
+  font: inherit;
+  color: var(--adm-ink);
   cursor: pointer;
-  /* Touch target: never below 44px on a phone. */
-  min-height: 56px;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
+  transition: background-color var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-row:hover,
+.admin-row:last-child {
+  border-bottom: 0;
+}
+
 .admin-row:focus-visible {
-  border-color: var(--border-accent);
-  background: var(--surface-raised);
+  outline-offset: -2px;
 }
 
 .admin-row__main {
   display: grid;
-  gap: 3px;
+  flex: 1;
+  gap: 2px;
   min-width: 0;
 }
 
 .admin-row__title {
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
 }
 
 .admin-row__meta {
-  font-size: var(--text-xs);
-  /* --text-muted (#7b848b) measures 4.21:1 on --surface-raised, under the AA
-     4.5:1 floor this project holds. --steel-300 gives 5.46:1. */
-  color: var(--steel-300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
 }
 
-.admin-row__amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
+.admin-row__id {
+  font-family: var(--adm-mono);
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink);
   white-space: nowrap;
 }
 
-/* --- Status pills -------------------------------------------------------- */
-
-.admin-status {
-  display: inline-block;
-  padding: 3px 8px;
-  font-size: var(--text-3xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  border: 1px solid currentColor;
+.admin-row__amount {
+  font-family: var(--adm-mono);
+  white-space: nowrap;
+  color: var(--adm-ink);
+  text-align: right;
 }
 
-.admin-status--draft {
-  color: var(--steel-300);
-}
-.admin-status--sent {
-  color: var(--arc-blue);
-}
-.admin-status--paid {
-  color: var(--status-ok);
-}
-.admin-status--void {
-  color: var(--steel-300);
+.admin-row__chev {
+  color: var(--adm-ink-3);
 }
 
-/* --- Line items ---------------------------------------------------------- */
+.admin-row__avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--adm-sunken);
+  font-family: var(--adm-mono);
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+}
 
-.admin-lines {
+/* Nothing disappears, it cancels: a void invoice stays in the ledger, struck. */
+.admin-row--void .admin-row__id,
+.admin-row--void .admin-row__amount {
+  color: var(--adm-ink-3);
+  text-decoration: line-through;
+}
+
+/* Ledgers with columns. On a phone each row is two lines: the ID and amount
+ * on top, who and status under them. From 640px the columns line up under a
+ * header. */
+.admin-list--invoices .admin-row,
+.admin-list--quotes .admin-row,
+.admin-list--slips .admin-row {
   display: grid;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "id amount"
+    "main status";
+  align-items: center;
+  row-gap: var(--adm-space-1);
+}
+
+.admin-list--slips .admin-row {
+  grid-template-areas:
+    "id chev"
+    "main chev";
+}
+
+.admin-row .admin-row__id {
+  grid-area: id;
+}
+
+.admin-list--invoices .admin-row__main,
+.admin-list--quotes .admin-row__main,
+.admin-list--slips .admin-row__main {
+  grid-area: main;
+}
+
+.admin-list--invoices .admin-row__amount,
+.admin-list--quotes .admin-row__amount {
+  grid-area: amount;
+}
+
+.admin-list--invoices .adm-status,
+.admin-list--quotes .adm-status {
+  grid-area: status;
+  justify-self: end;
+}
+
+.admin-list--slips .admin-row__chev {
+  grid-area: chev;
+}
+
+@media (min-width: 640px) {
+  .admin-row {
+    padding: var(--adm-space-3) var(--adm-space-5);
+  }
+
+  .admin-list__head {
+    display: grid;
+    gap: var(--adm-space-3);
+    padding: var(--adm-space-3) var(--adm-space-5);
+    font-size: var(--adm-text-label);
+    color: var(--adm-ink-2);
+    background: var(--adm-raised);
+    border-bottom: var(--adm-hairline) solid var(--adm-rule);
+  }
+
+  .admin-list__num {
+    text-align: right;
+  }
+
+  .admin-list--invoices .admin-list__head,
+  .admin-list--invoices .admin-row {
+    grid-template-columns: 150px minmax(0, 1fr) 130px 96px;
+    grid-template-areas: "id main amount status";
+    column-gap: var(--adm-space-3);
+  }
+
+  .admin-list--quotes .admin-list__head,
+  .admin-list--quotes .admin-row {
+    grid-template-columns: 110px minmax(0, 1fr) 190px 96px;
+    grid-template-areas: "id main amount status";
+    column-gap: var(--adm-space-3);
+  }
+
+  .admin-list--slips .admin-row {
+    grid-template-columns: 150px minmax(0, 1fr) auto;
+    grid-template-areas: "id main chev";
+    column-gap: var(--adm-space-3);
+  }
+
+  .admin-list--invoices .adm-status,
+  .admin-list--quotes .adm-status {
+    justify-self: start;
+  }
+}
+
+@media (hover: hover) {
+  .admin-row:hover {
+    background: var(--adm-hover);
+  }
+}
+
+/* ================================================== line items ========= */
+
+/* The editor sits in a column whose width depends on the screen and the side
+ * panel, so the line grid answers to its own width, not the viewport's. */
+.admin-lines {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--adm-space-3);
 }
 
 .admin-line {
-  padding: 14px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-hairline);
+  padding: var(--adm-space-4);
+  background: var(--adm-raised);
+  border: var(--adm-hairline) solid var(--adm-rule-soft);
+  border-radius: var(--adm-radius-panel);
 }
 
 .admin-line-grid {
   display: grid;
-  gap: 12px;
-  /* Phone: every field full width and stacked. */
+  gap: var(--adm-space-3);
   grid-template-columns: 1fr;
 }
 
-@media (min-width: 720px) {
-  /* Desktop: the familiar qty / unit / description / rate row. */
+@container (min-width: 440px) {
   .admin-line-grid {
-    grid-template-columns: 80px 150px 1fr 140px;
-    align-items: start;
+    grid-template-columns: 88px minmax(0, 1fr) 150px;
+    grid-template-areas:
+      "qty unit rate"
+      "desc desc desc";
+  }
+
+  .admin-line-qty {
+    grid-area: qty;
+  }
+
+  .admin-line-unit {
+    grid-area: unit;
+  }
+
+  .admin-line-desc {
+    grid-area: desc;
+  }
+
+  .admin-line-rate {
+    grid-area: rate;
   }
 
   .admin-line-grid--slip {
-    grid-template-columns: 160px 1fr 90px 90px;
+    grid-template-columns: minmax(0, 1fr) 96px 96px;
+    grid-template-areas:
+      "part qty uom"
+      "desc desc desc";
+  }
+
+  .admin-slip-part {
+    grid-area: part;
+  }
+
+  .admin-slip-desc {
+    grid-area: desc;
+  }
+
+  .admin-slip-qty {
+    grid-area: qty;
+  }
+
+  .admin-slip-uom {
+    grid-area: uom;
+  }
+}
+
+@container (min-width: 760px) {
+  .admin-line-grid {
+    grid-template-columns: 80px 210px minmax(0, 1fr) 140px;
+    grid-template-areas: "qty unit desc rate";
+  }
+
+  .admin-line-grid--slip {
+    grid-template-columns: 160px minmax(0, 1fr) 90px 90px;
+    grid-template-areas: "part desc qty uom";
   }
 }
 
@@ -361,121 +1366,288 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-hairline);
+  gap: var(--adm-space-3);
+  margin-top: var(--adm-space-3);
+  padding-top: var(--adm-space-2);
+  border-top: var(--adm-hairline) solid var(--adm-rule-soft);
 }
 
 .admin-line-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
   margin-left: auto;
+  font-family: var(--adm-mono);
+  color: var(--adm-ink);
 }
 
-/* --- Totals -------------------------------------------------------------- */
+/* ======================================================== totals ======== */
 
 .admin-totals {
   display: grid;
-  gap: 8px;
-  margin-left: auto;
-  max-width: 380px;
+  gap: var(--adm-space-2);
 }
 
 .admin-total-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
-  font-size: var(--text-sm);
+  gap: var(--adm-space-4);
+  font-size: var(--adm-text-small);
 }
 
 .admin-total-row__label {
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--steel-300);
+  color: var(--adm-ink-2);
 }
 
 .admin-total-row__value {
-  font-family: var(--font-mono);
-  color: var(--text-body);
+  font-family: var(--adm-mono);
+  color: var(--adm-ink);
 }
 
 .admin-total-row--balance {
-  margin-top: 6px;
-  padding: 12px 14px;
-  background: var(--accent);
-  color: var(--text-on-accent);
+  flex-wrap: wrap;
+  margin-top: var(--adm-space-2);
+  padding-top: var(--adm-space-4);
+  border-top: var(--adm-hairline) solid var(--adm-rule);
 }
 
-.admin-total-row--balance .admin-total-row__label,
+.admin-total-row--balance .admin-total-row__label {
+  font-size: var(--adm-text-body);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+}
+
 .admin-total-row--balance .admin-total-row__value {
-  color: var(--text-on-accent);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-base);
+  font-family: var(--adm-font);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-text-stat);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.03em;
 }
 
-/* Sticky total bar so the number stays visible while editing on a phone. */
+/* Phone: the balance stays on screen while editing, above the tab bar. */
 .admin-sticky-total {
   position: sticky;
-  bottom: 0;
-  z-index: 15;
+  bottom: calc(var(--adm-tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 20;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin: 0 -16px;
-  padding: 12px 16px;
-  background: var(--surface-card);
-  border-top: 2px solid var(--accent);
+  gap: var(--adm-space-3);
+  margin: var(--adm-space-5) calc(-1 * var(--adm-space-4)) 0;
+  padding: var(--adm-space-3) var(--adm-space-4);
+  background: var(--adm-surface);
+  border-top: var(--adm-hairline) solid var(--adm-rule);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .admin-sticky-total {
     display: none;
   }
 }
 
 .admin-sticky-total__label {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
 }
 
 .admin-sticky-total__value {
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--adm-weight-medium);
+  font-size: var(--adm-text-h3);
+  color: var(--adm-ink);
 }
 
-/* --- Actions ------------------------------------------------------------- */
+/* ============================================== login / set-password ==== */
 
-.admin-actions {
+/* Engineering-paper dots behind the plate: the one texture in the console,
+ * kept to the door. */
+.admin-gate {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--adm-space-5) var(--adm-space-4);
+  background-color: var(--adm-ground);
+  background-image: radial-gradient(var(--adm-grid-dot) 1px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+.admin-gate__plate {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--adm-space-6) var(--adm-space-5);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-card);
+}
+
+@media (min-width: 640px) {
+  .admin-gate__plate {
+    padding: var(--adm-space-6);
+  }
+}
+
+.admin-gate__ws {
+  display: flex;
+  align-items: center;
+  gap: var(--adm-space-3);
+  margin: 0 0 var(--adm-space-6);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+}
+
+.admin-gate__title {
+  margin: 0 0 var(--adm-space-2);
+  font-size: var(--adm-text-h3);
+  font-weight: var(--adm-weight-medium);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: var(--adm-tracking-display);
+  color: var(--adm-ink);
+}
+
+@media (min-width: 640px) {
+  .admin-gate__title {
+    font-size: var(--adm-text-h2);
+  }
+}
+
+.admin-gate__sub {
+  max-width: 62ch;
+  margin: 0 0 var(--adm-space-6);
+  color: var(--adm-ink-2);
+}
+
+.admin-gate__fields {
+  display: grid;
+  gap: var(--adm-space-4);
+}
+
+/* ======================================================= quotes ========= */
+
+.admin-fields {
+  display: grid;
+  gap: var(--adm-space-4);
+  margin: var(--adm-space-4) 0 0;
+}
+
+@media (min-width: 640px) {
+  .admin-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-fields--stack,
+.adm-split__side .admin-fields {
+  grid-template-columns: 1fr;
+}
+
+.admin-card__title + .admin-fields,
+.admin-summary > .admin-fields {
+  margin-top: 0;
+}
+
+.admin-field {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.admin-field__label {
+  font-size: var(--adm-text-label);
+  color: var(--adm-ink-2);
+}
+
+.admin-field__value {
+  margin: 0;
+  color: var(--adm-ink);
+  overflow-wrap: anywhere;
+}
+
+/* The customer's own words. Whitespace kept: they often type a list. */
+.admin-quote-desc {
+  max-width: 62ch;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--adm-ink);
+}
+
+.admin-estimate {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  align-items: center;
+  gap: var(--adm-space-3);
 }
 
-/* Small buttons default to 34px tall, which is under the 44px touch target
- * guidance. The owner works from a phone on a job site, so the console's own
- * controls get a floor. */
-@media (max-width: 767px) {
-  .admin-actions .tsws-btn--sm,
-  .admin-bar .tsws-btn--sm {
-    min-height: 44px;
-  }
+.admin-quote-range {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-text-stat);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.03em;
+  color: var(--adm-ink);
+}
 
-  .admin-filter {
-    min-height: 44px;
+.admin-estimate__title {
+  margin: var(--adm-space-1) 0 var(--adm-space-3);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+}
+
+.admin-quote-lines {
+  display: grid;
+  margin: var(--adm-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--adm-hairline) solid var(--adm-rule-soft);
+}
+
+.admin-quote-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--adm-space-3);
+  padding: var(--adm-space-2) 0;
+  color: var(--adm-ink);
+  border-bottom: var(--adm-hairline) solid var(--adm-rule-soft);
+}
+
+.admin-quote-lines + .admin-card__title {
+  margin-top: var(--adm-space-5);
+}
+
+.admin-files {
+  display: grid;
+  gap: var(--adm-space-2);
+}
+
+.admin-file {
+  display: grid;
+  gap: var(--adm-space-3);
+  padding: var(--adm-space-3) var(--adm-space-4);
+  border: var(--adm-hairline) solid var(--adm-rule-soft);
+  border-radius: var(--adm-radius-panel);
+}
+
+@media (min-width: 640px) {
+  .admin-file {
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 }
 
-/* --- Download spinner ---------------------------------------------------- */
+.admin-file__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-file .admin-row__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  white-space: normal;
+}
+
+/* ================================================ download button ======= */
 
 .admin-spinner {
   display: inline-block;
@@ -494,28 +1666,72 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .admin-spinner {
-    animation-duration: 2400ms;
-  }
+/* ================================== loading, empty and error states ===== */
+
+/* Static placeholders: no shimmer loop (taste skill: no loop without a way to
+ * pause it). */
+.adm-loading {
+  display: grid;
+  gap: var(--adm-space-2);
 }
 
-.admin-empty {
-  padding: 32px 16px;
+.adm-loading__bar {
+  height: 64px;
+  border-radius: var(--adm-radius-panel);
+  background: var(--adm-sunken);
+}
+
+.adm-loading__bar:nth-child(3) {
+  opacity: 0.7;
+}
+
+.adm-loading__bar:nth-child(4) {
+  opacity: 0.45;
+}
+
+.adm-empty,
+.adm-error {
+  padding: var(--adm-space-7) var(--adm-space-5);
   text-align: center;
-  color: var(--steel-300);
-  font-size: var(--text-sm);
-  border: 1px dashed var(--border-subtle);
+  border: var(--adm-hairline) dashed var(--adm-rule);
+  border-radius: var(--adm-radius-card);
 }
 
-.admin-note {
-  font-size: var(--text-xs);
-  color: var(--steel-300);
-  line-height: var(--leading-body);
+.adm-empty__title {
+  margin: 0;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
 }
 
-/* Visible to screen readers only. Used for the download progress announcement,
- * where the visual cue is the button's own spinner. */
+.adm-empty__body {
+  max-width: 44ch;
+  margin: var(--adm-space-1) auto 0;
+  font-size: var(--adm-text-small);
+  color: var(--adm-ink-2);
+}
+
+.adm-error {
+  display: flex;
+  gap: var(--adm-space-3);
+  align-items: flex-start;
+  padding: var(--adm-space-5);
+  text-align: left;
+  color: var(--adm-danger);
+  background: var(--adm-danger-tint);
+  border: var(--adm-hairline) solid currentColor;
+}
+
+.adm-error__text {
+  display: grid;
+  justify-items: start;
+  gap: var(--adm-space-3);
+}
+
+.adm-error .adm-empty__body {
+  margin: 0;
+}
+
+/* Visible to screen readers only. */
 .admin-sr-only {
   position: absolute;
   width: 1px;
@@ -528,116 +1744,8 @@
   border: 0;
 }
 
-.admin-download {
-  display: grid;
-  gap: 8px;
-}
-
-/* --- Quotes inbox -------------------------------------------------------- */
-
-/* Quote statuses come from the submit path as free-form strings; "new" is what
- * every fresh request carries, so it gets the live accent. Anything else falls
- * back to the bare pill above. */
-.admin-status--new {
-  color: var(--arc-blue);
-}
-
-/* Label-over-value pairs. Stacked on a phone, two up once there is room —
- * same breakpoint as .admin-grid-2 so the cards line up. */
-.admin-fields {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-@media (min-width: 640px) {
-  .admin-fields {
-    grid-template-columns: 1fr 1fr;
+@media (prefers-reduced-motion: reduce) {
+  .admin-spinner {
+    animation-duration: 2400ms;
   }
-}
-
-.admin-field {
-  display: grid;
-  gap: 2px;
-}
-
-.admin-field__label {
-  font-size: var(--text-3xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
-}
-
-.admin-field__value {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-/* The customer's own words. Whitespace is preserved: they often type a list. */
-.admin-quote-desc {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  line-height: var(--leading-body);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.admin-quote-range {
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  color: var(--text-primary);
-}
-
-.admin-quote-lines {
-  display: grid;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.admin-quote-lines li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.admin-files {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-/* One attachment: name and size, then its own download button. Stacked on a
- * phone so the button stays a full-width tap target. */
-.admin-file {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-subtle);
-}
-
-@media (min-width: 640px) {
-  .admin-file {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-  }
-}
-
-.admin-file__main {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* "Worth asking" follows the line-item list directly; without this the heading
- * sits flush against the last row and reads as part of it. */
-.admin-quote-lines + .admin-card__title {
-  margin-top: 18px;
 }

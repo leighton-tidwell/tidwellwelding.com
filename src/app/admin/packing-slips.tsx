@@ -9,6 +9,7 @@ import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { PACKING_SLIP_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
 import NotesField from "./notes-field";
+import { countOf, EmptyState, LoadingState, PageHeader } from "./shell";
 
 type SlipLine = {
   key: string;
@@ -81,27 +82,34 @@ export function PackingSlipList({
 
   return (
     <>
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Shipping</p>
-          <h1 className="admin-title">Packing slips</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Packing slips"
+        meta={
+          slips === undefined || slips.length === 0
+            ? "What went out the door, and to whom."
+            : countOf(slips.length, "slip")
+        }
+      />
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Start a new packing slip</h2>
-        {options.length === 0 ? (
-          <p className="admin-note">Add a customer first.</p>
-        ) : (
-          <div className="admin-grid-2">
-            <Select
-              label="Customer"
-              options={options}
-              placeholder="Pick a customer"
-              value={customerId}
-              onChange={setCustomerId}
-            />
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
+      <div className="adm-split adm-split--list">
+        <section
+          className="admin-card adm-split__side"
+          aria-labelledby="new-slip"
+        >
+          <h2 className="admin-card__title" id="new-slip">
+            Start a new packing slip
+          </h2>
+          {options.length === 0 ? (
+            <p className="admin-note">Add a customer first.</p>
+          ) : (
+            <div className="admin-start">
+              <Select
+                label="Customer"
+                options={options}
+                placeholder="Pick a customer"
+                value={customerId}
+                onChange={setCustomerId}
+              />
               <Button
                 disabled={!customerId}
                 onClick={async () => {
@@ -112,38 +120,45 @@ export function PackingSlipList({
                   onOpen(id);
                 }}
               >
-                <Icon name="truck" /> Create packing slip
+                <Icon name="plus" /> Create packing slip
               </Button>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </section>
 
-      {slips === undefined ? (
-        <p className="admin-note">Loading…</p>
-      ) : slips.length === 0 ? (
-        <p className="admin-empty">No packing slips yet.</p>
-      ) : (
-        <div className="admin-list">
-          {slips.map((slip) => (
-            <button
-              key={slip._id}
-              type="button"
-              className="admin-row"
-              onClick={() => onOpen(slip._id)}
-            >
-              <span className="admin-row__main">
-                <span className="admin-row__title">{slip.number}</span>
-                <span className="admin-row__meta">
-                  {slip.customerName} → {slip.shipToName} ·{" "}
-                  {slip.lineItems.length} line
-                  {slip.lineItems.length === 1 ? "" : "s"}
-                </span>
-              </span>
-            </button>
-          ))}
+        <div className="adm-split__main">
+          {slips === undefined ? (
+            <LoadingState />
+          ) : slips.length === 0 ? (
+            <EmptyState title="No packing slips yet">
+              Start one above, or make one from an invoice.
+            </EmptyState>
+          ) : (
+            <div className="admin-list admin-list--slips">
+              {slips.map((slip) => (
+                <button
+                  key={slip._id}
+                  type="button"
+                  className="admin-row"
+                  onClick={() => onOpen(slip._id)}
+                >
+                  <span className="admin-row__id">{slip.number}</span>
+                  <span className="admin-row__main">
+                    <span className="admin-row__title">
+                      {slip.customerName}
+                    </span>
+                    <span className="admin-row__meta">
+                      To {slip.shipToName} · {slip.lineItems.length} line
+                      {slip.lineItems.length === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                  <Icon name="chevron-right" className="admin-row__chev" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 }
@@ -220,10 +235,15 @@ export function PackingSlipEditor({
     return await generatePdf({ token, id });
   }, [save, generatePdf, token, id]);
 
-  if (slip === undefined || (slip && !form))
-    return <p className="admin-note">Loading…</p>;
+  if (slip === undefined || (slip && !form)) return <LoadingState rows={5} />;
   if (slip === null || !form)
-    return <p className="admin-empty">That packing slip is gone.</p>;
+    return (
+      <EmptyState title="That packing slip is gone">
+        <button type="button" className="admin-linkish" onClick={onBack}>
+          Back to packing slips
+        </button>
+      </EmptyState>
+    );
 
   const fromInvoice = slip.invoice;
   const field = (label: string, key: keyof Omit<Form, "lines">) => (
@@ -236,21 +256,14 @@ export function PackingSlipEditor({
 
   return (
     <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All packing slips
-        </Button>
-      </div>
-
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">{slip.customerName}</p>
-          <h1 className="admin-title">{slip.number}</h1>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: "All packing slips", onClick: onBack }}
+        title={slip.number}
+        meta={slip.customerName}
+      />
 
       {fromInvoice === null ? null : (
-        <p className="admin-note">
+        <p className="admin-note admin-origin">
           Invoice{" "}
           <button
             type="button"
@@ -262,126 +275,157 @@ export function PackingSlipEditor({
         </p>
       )}
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Ship to</h2>
-        <div className="admin-grid-2">
-          {field("Ship to", "shipToName")}
-          {field("Delivery address", "shipToAddress")}
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Shipment</h2>
-        <div className="admin-grid-2">
-          <Input
-            label="Ship date"
-            type="date"
-            value={form.shipDate}
-            onChange={(value) => set({ shipDate: value })}
-          />
-          {field("PO #", "poNumber")}
-          {field("Job / project #", "jobProject")}
-          {field("Shipped via", "shippedVia")}
-          {field("Tracking / BOL #", "tracking")}
-          {field("Total packages", "packages")}
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">What shipped</h2>
-        <div className="admin-lines">
-          {form.lines.map((line, index) => (
-            // biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the grid.
-            <div
-              key={line.key}
-              role="group"
-              aria-label={`Line item ${index + 1}`}
-              className="admin-line"
-            >
-              <div className="admin-line-grid admin-line-grid--slip">
-                <Input
-                  label="Part / stock #"
-                  value={line.partNumber}
-                  onChange={(value) => setLine(index, { partNumber: value })}
-                />
-                <Input
-                  label="Description"
-                  value={line.description}
-                  onChange={(value) => setLine(index, { description: value })}
-                />
-                <Input
-                  label="Qty"
-                  value={line.qty}
-                  inputMode="decimal"
-                  onChange={(value) => setLine(index, { qty: value })}
-                />
-                <Input
-                  label="UOM"
-                  value={line.unit}
-                  onChange={(value) => setLine(index, { unit: value })}
-                />
-              </div>
-              <div className="admin-line-foot">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={form.lines.length <= 1}
-                  onClick={() =>
-                    set({ lines: form.lines.filter((_, i) => i !== index) })
-                  }
-                  aria-label={`Remove line ${index + 1}`}
-                >
-                  <Icon name="x" /> Remove
-                </Button>
-              </div>
+      <div className="adm-split adm-split--editor">
+        <div className="adm-split__main">
+          <div className="admin-card">
+            <h2 className="admin-card__title">Ship to</h2>
+            <div className="admin-grid-2">
+              {field("Ship to", "shipToName")}
+              {field("Delivery address", "shipToAddress")}
             </div>
-          ))}
-          <Button
-            variant="secondary"
-            onClick={() =>
-              set({
-                lines: [...form.lines, emptySlipLine(`line-${Date.now()}`)],
-              })
-            }
-          >
-            <Icon name="plus" /> Add line
-          </Button>
+          </div>
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">Shipment</h2>
+            <div className="admin-grid-2">
+              <Input
+                label="Ship date"
+                type="date"
+                value={form.shipDate}
+                onChange={(value) => set({ shipDate: value })}
+              />
+              {field("PO #", "poNumber")}
+              {field("Job / project #", "jobProject")}
+              {field("Shipped via", "shippedVia")}
+              {field("Tracking / BOL #", "tracking")}
+              {field("Total packages", "packages")}
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">What shipped</h2>
+            <div className="admin-lines">
+              {form.lines.map((line, index) => (
+                // biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the grid.
+                <div
+                  key={line.key}
+                  role="group"
+                  aria-label={`Line item ${index + 1}`}
+                  className="admin-line"
+                >
+                  <div className="admin-line-grid admin-line-grid--slip">
+                    <Input
+                      label="Part / stock #"
+                      className="admin-slip-part"
+                      value={line.partNumber}
+                      onChange={(value) =>
+                        setLine(index, { partNumber: value })
+                      }
+                    />
+                    <Input
+                      label="Description"
+                      className="admin-slip-desc"
+                      value={line.description}
+                      onChange={(value) =>
+                        setLine(index, { description: value })
+                      }
+                    />
+                    <Input
+                      label="Qty"
+                      className="admin-slip-qty"
+                      value={line.qty}
+                      inputMode="decimal"
+                      onChange={(value) => setLine(index, { qty: value })}
+                    />
+                    <Input
+                      label="UOM"
+                      className="admin-slip-uom"
+                      value={line.unit}
+                      onChange={(value) => setLine(index, { unit: value })}
+                    />
+                  </div>
+                  <div className="admin-line-foot">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={form.lines.length <= 1}
+                      onClick={() =>
+                        set({ lines: form.lines.filter((_, i) => i !== index) })
+                      }
+                      aria-label={`Remove line ${index + 1}`}
+                    >
+                      <Icon name="x" /> Remove
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  set({
+                    lines: [...form.lines, emptySlipLine(`line-${Date.now()}`)],
+                  })
+                }
+              >
+                <Icon name="plus" /> Add line
+              </Button>
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">Notes</h2>
+            <NotesField
+              label="Notes / instructions"
+              box={PACKING_SLIP_NOTES}
+              value={form.notes}
+              onChange={(value) => set({ notes: value })}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Notes</h2>
-        <NotesField
-          label="Notes / instructions"
-          box={PACKING_SLIP_NOTES}
-          value={form.notes}
-          onChange={(value) => set({ notes: value })}
-        />
-      </div>
-
-      <div className="admin-actions">
-        <Button
-          variant="secondary"
-          onClick={() => void save()}
-          disabled={saved}
+        <aside
+          className="adm-split__side admin-summary"
+          aria-label="Packing slip actions"
         >
-          {saved ? "Saved" : "Save changes"}
-        </Button>
-        <DownloadPdfButton
-          generate={download}
-          filename={`${slip.number}.pdf`}
-        />
-        {fromInvoice === null ? (
-          <Button
-            variant="secondary"
-            onClick={async () => {
-              await save();
-              onOpenInvoice(await makeInvoice({ token, packingSlipId: id }));
-            }}
-          >
-            <Icon name="file-text" /> Make invoice
-          </Button>
-        ) : null}
+          <dl className="admin-fields admin-fields--stack">
+            <div className="admin-field">
+              <dt className="admin-field__label">Customer</dt>
+              <dd className="admin-field__value">{slip.customerName}</dd>
+            </div>
+            <div className="admin-field">
+              <dt className="admin-field__label">Lines</dt>
+              <dd className="admin-field__value">
+                {countOf(form.lines.length, "line")}
+              </dd>
+            </div>
+          </dl>
+          <div className="admin-actions admin-actions--stack">
+            <DownloadPdfButton
+              generate={download}
+              filename={`${slip.number}.pdf`}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => void save()}
+              disabled={saved}
+            >
+              {saved ? "Saved" : "Save changes"}
+            </Button>
+            {fromInvoice === null ? (
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await save();
+                  onOpenInvoice(
+                    await makeInvoice({ token, packingSlipId: id }),
+                  );
+                }}
+              >
+                <Icon name="file-text" /> Make invoice
+              </Button>
+            ) : null}
+          </div>
+        </aside>
       </div>
     </>
   );
