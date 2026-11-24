@@ -80,8 +80,8 @@ e2e-remote: ## E2E against a deployed site, minus @live specs: make e2e-remote U
 smoke: ## Read-only page checks against a deployed site, one at a time: make smoke URL=https://...
 	$(REMOTE) pnpm exec playwright test --no-deps --workers=1 tests/e2e/smoke.spec.ts tests/e2e/seo.spec.ts
 
-screenshot: up seed ## Screenshot a local page: make screenshot URL=/quote [VIEWPORT=phone] [ADMIN=1]
-	URL="$(URL)" VIEWPORT="$(VIEWPORT)" ADMIN="$(ADMIN)" node scripts/screenshot.mjs
+screenshot: up seed ## Screenshot a local page: make screenshot URL=/quote [VIEWPORT=phone] [ADMIN=1] [CLICK="A|B"]
+	URL="$(URL)" VIEWPORT="$(VIEWPORT)" ADMIN="$(ADMIN)" CLICK="$(CLICK)" node scripts/screenshot.mjs
 
 pr-size: ## Fail if this branch is over 500 lines / 10 files without an explainer
 	node scripts/check-pr-size.mjs

@@ -10,6 +10,7 @@
 
 import type * as adminQuotes from "../adminQuotes.js";
 import type * as auth from "../auth.js";
+import type * as businesses from "../businesses.js";
 import type * as chat from "../chat.js";
 import type * as customers from "../customers.js";
 import type * as emailTemplates from "../emailTemplates.js";
@@ -23,7 +24,10 @@ import type * as invoicePdf from "../invoicePdf.js";
 import type * as invoicePdfAction from "../invoicePdfAction.js";
 import type * as invoicePdfData from "../invoicePdfData.js";
 import type * as invoices from "../invoices.js";
+import type * as lib_businesses from "../lib/businesses.js";
+import type * as lib_financials from "../lib/financials.js";
 import type * as market from "../market.js";
+import type * as noteLines from "../noteLines.js";
 import type * as packingSlipPdf from "../packingSlipPdf.js";
 import type * as packingSlipPdfAction from "../packingSlipPdfAction.js";
 import type * as packingSlips from "../packingSlips.js";
@@ -46,6 +50,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   adminQuotes: typeof adminQuotes;
   auth: typeof auth;
+  businesses: typeof businesses;
   chat: typeof chat;
   customers: typeof customers;
   emailTemplates: typeof emailTemplates;
@@ -59,7 +64,10 @@ declare const fullApi: ApiFromModules<{
   invoicePdfAction: typeof invoicePdfAction;
   invoicePdfData: typeof invoicePdfData;
   invoices: typeof invoices;
+  "lib/businesses": typeof lib_businesses;
+  "lib/financials": typeof lib_financials;
   market: typeof market;
+  noteLines: typeof noteLines;
   packingSlipPdf: typeof packingSlipPdf;
   packingSlipPdfAction: typeof packingSlipPdfAction;
   packingSlips: typeof packingSlips;

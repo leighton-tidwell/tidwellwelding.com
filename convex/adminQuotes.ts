@@ -8,6 +8,7 @@ import {
   DEFAULT_TERMS,
   nextInvoiceNumber,
 } from "./invoices";
+import { ensureBusinessForCustomer } from "./lib/businesses";
 import { readLaborRate } from "./settings";
 
 /**
@@ -305,7 +306,7 @@ export const createCustomerFromQuote = mutation({
     }),
   ),
   handler: async (ctx, { token, id, linkTo, createAnyway }) => {
-    await requireAdmin(ctx, token);
+    const userId = await requireAdmin(ctx, token);
     const quote = await ctx.db.get(id);
     if (!quote) throw new Error("That quote no longer exists");
 
@@ -351,6 +352,8 @@ export const createCustomerFromQuote = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    const customer = await ctx.db.get(customerId);
+    if (customer) await ensureBusinessForCustomer(ctx, customer, userId);
     await ctx.db.patch(id, { customerId });
     return { outcome: "created" as const, customerId };
   },
