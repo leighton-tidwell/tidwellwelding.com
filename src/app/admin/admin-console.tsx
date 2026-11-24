@@ -8,6 +8,7 @@ import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { INVOICE_NOTES } from "../../../convex/noteLines";
+import BusinessDetail from "./business-detail";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
 import NotesField from "./notes-field";
@@ -206,11 +207,12 @@ function Console({
           />
         )}
         {view.name === "customer" && (
-          <CustomerDetail
+          <BusinessDetail
             token={token}
-            id={view.id}
+            customerId={view.id}
             onBack={() => setView({ name: "customers" })}
             onOpenInvoice={(id) => setView({ name: "invoice", id })}
+            onOpenSlip={(id) => setView({ name: "slip", id })}
           />
         )}
         {view.name === "invoice" && (
@@ -756,88 +758,6 @@ function CustomerList({
                 </span>
               </span>
               <Icon name="chevron-right" />
-            </button>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function CustomerDetail({
-  token,
-  id,
-  onBack,
-  onOpenInvoice,
-}: {
-  token: string;
-  id: Id<"customers">;
-  onBack: () => void;
-  onOpenInvoice: (id: Id<"invoices">) => void;
-}) {
-  const summary = useQuery(api.customers.summary, { token, id });
-  const invoices = useQuery(api.invoices.listForCustomer, {
-    token,
-    customerId: id,
-  });
-
-  if (summary === undefined) return <p className="admin-note">Loading…</p>;
-
-  return (
-    <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All customers
-        </Button>
-      </div>
-
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Customer</p>
-          <h1 className="admin-title">{summary.customer.name}</h1>
-        </div>
-        <Badge>{formatMoney(summary.billedCents)} billed</Badge>
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Details</h2>
-        <p className="admin-note">
-          {[
-            summary.customer.company,
-            summary.customer.contact,
-            summary.customer.phone,
-            summary.customer.email,
-            summary.customer.address,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "No details saved."}
-        </p>
-      </div>
-
-      <h2 className="admin-card__title">Invoices</h2>
-      {invoices === undefined ? (
-        <p className="admin-note">Loading…</p>
-      ) : invoices.length === 0 ? (
-        <p className="admin-empty">Nothing billed to this customer yet.</p>
-      ) : (
-        <div className="admin-list">
-          {invoices.map((invoice) => (
-            <button
-              key={invoice._id}
-              type="button"
-              className="admin-row"
-              onClick={() => onOpenInvoice(invoice._id)}
-            >
-              <span className="admin-row__main">
-                <span className="admin-row__title">{invoice.number}</span>
-                <span className="admin-row__meta">
-                  {new Date(invoice.issuedAt).toLocaleDateString("en-US")}
-                </span>
-              </span>
-              <span className="admin-row__amount">
-                {formatMoney(invoice.totals.balanceCents)}
-              </span>
-              <StatusPill status={invoice.status} />
             </button>
           ))}
         </div>

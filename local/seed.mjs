@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Seeds the LOCAL Convex backend with a named owner account and realistic
-// customers, invoices and quotes. Goes through the real functions, so the data
-// is shaped exactly like production's. Refuses any backend that isn't local.
+// customers (as businesses with contacts), invoices and quotes. Goes through
+// the real functions, so the data is shaped exactly like production's. Refuses any backend that isn't local.
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference as fn } from "convex/server";
 import { OWNER } from "./owner.mjs";
@@ -56,6 +56,26 @@ const customerIds = [];
 for (const c of customers) {
   customerIds.push(await mutation("customers:create", { token, ...c }));
 }
+
+// Bishop Fabrication has two people on file, and its point of contact moved
+// from Dale to the shop foreman, so the business page has history to show.
+const bishopId = await convex.query(fn("businesses:forCustomer"), {
+  token,
+  customerId: customerIds[0],
+});
+const foremanId = await mutation("businesses:addContact", {
+  token,
+  businessId: bishopId,
+  name: "Marcus Reed",
+  title: "Shop foreman",
+  phone: "8175550177",
+  email: "marcus@bishopfab.test",
+});
+await mutation("businesses:setPrimaryContact", {
+  token,
+  businessId: bishopId,
+  contactId: foremanId,
+});
 
 const invoices = [
   {
@@ -141,5 +161,6 @@ await mutation("quotes:insertQuote", {
 
 console.log(
   `seed: owner ${OWNER.email} / ${OWNER.password}, ` +
-    `${customers.length} customers, ${invoices.length} invoices, 1 quote`,
+    `${customers.length} customers (one with two contacts), ` +
+    `${invoices.length} invoices, 1 quote`,
 );

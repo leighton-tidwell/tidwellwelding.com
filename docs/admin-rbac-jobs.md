@@ -57,6 +57,14 @@ A permission says _what kind_ of thing you can touch; scope says _which rows_. E
 - Each business has a primary contact, and each job can pin its own. Changing either writes a row to `contactHistory` (subject, contact, from, to, changedBy), so you can see that the POC on an ongoing contract changed and when.
 - The business page is Eric's customer view: its contacts, every job, and (with `financials.read`) every quote, invoice and balance.
 
+How it is built (PR 2):
+
+- Each business wraps exactly one `customers` row (`businesses.customerId`). That row stays the bill-to record: invoices and packing slips keep their `customerId` and their PDFs read it unchanged. `convex/lib/businesses.ts` writes edits through in both directions (business name, address, notes and primary contact down to the customer; the Customers screen's edits up to the business), so the two never drift. PR 4 can move references to `businessId` and retire `customers` once jobs exist.
+- Backfill: `businesses:backfillFromCustomers` is idempotent and paged. A customer with a company becomes that company with its `name` (or `contact`) as primary; one without a company is its own business and contact; one with nobody to reach gets no contact. It only reads customers, so no bill-to changes. Run it once per deployment until `isDone`. Saving or opening a customer also creates its business, so nothing waits on it.
+- `contactHistory` rows carry `subjectType` (`business` or `job`), `businessId` (always, so a business page can list its jobs' changes), `jobId` (a string until the `jobs` table exists), `fromContactId`, `toContactId`, `changedBy` (absent for the backfill) and `changedAt`. The first primary is logged as a change from nobody.
+- Contacts are deactivated, never deleted, so history keeps its names. The primary can't be deactivated, and an inactive contact can't be made primary.
+- Invoice amounts on the business page go through `invoiceAmountsFor` in `convex/lib/financials.ts`, the one place `financials.read` will gate.
+
 ## Jobs
 
 - `jobs`: number (`J-0001`), business, title, status, manager, primary contact, site address, PO, dates.

@@ -2,6 +2,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./auth";
 import { computeInvoiceTotals } from "./invoiceMath";
+import {
+  deleteBusinessForCustomer,
+  ensureBusinessForCustomer,
+  mirrorCustomerEdit,
+} from "./lib/businesses";
 
 /** Trim and reject empty required text so a blank name cannot be saved. */
 function requireText(value: string, label: string): string {
@@ -28,9 +33,9 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    const userId = await requireAdmin(ctx, args.token);
     const now = Date.now();
-    return await ctx.db.insert("customers", {
+    const id = await ctx.db.insert("customers", {
       name: requireText(args.name, "customer name"),
       company: optionalText(args.company),
       contact: optionalText(args.contact),
@@ -41,6 +46,9 @@ export const create = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    const customer = await ctx.db.get(id);
+    if (customer) await ensureBusinessForCustomer(ctx, customer, userId);
+    return id;
   },
 });
 
@@ -57,7 +65,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    const userId = await requireAdmin(ctx, args.token);
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("That customer no longer exists");
 
@@ -76,6 +84,19 @@ export const update = mutation({
       if (args[key] !== undefined) patch[key] = optionalText(args[key]);
     }
     await ctx.db.patch(args.id, patch);
+    const updated = await ctx.db.get(args.id);
+    if (updated) {
+      await mirrorCustomerEdit(
+        ctx,
+        updated,
+        {
+          contact: args.contact !== undefined,
+          email: args.email !== undefined,
+          phone: args.phone !== undefined,
+        },
+        userId,
+      );
+    }
   },
 });
 
@@ -128,6 +149,7 @@ export const remove = mutation({
   args: { token: v.string(), id: v.id("customers") },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.token);
+    await deleteBusinessForCustomer(ctx, args.id);
     await ctx.db.delete(args.id);
   },
 });

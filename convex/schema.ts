@@ -192,6 +192,51 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
 
+  // A business is who Eric works for; contacts are the people there. Each
+  // business wraps exactly one `customers` row, which stays the bill-to record
+  // invoices and packing slips point at, so no existing reference moves. Edits
+  // made here are written through to that row (see convex/lib/businesses.ts).
+  businesses: defineTable({
+    name: v.string(),
+    address: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("archived")),
+    customerId: v.id("customers"),
+    // Optional: a customer saved with no contact, email or phone has nobody
+    // to make primary yet.
+    primaryContactId: v.optional(v.id("contacts")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["name"])
+    .index("by_customer", ["customerId"]),
+
+  contacts: defineTable({
+    businessId: v.id("businesses"),
+    name: v.string(),
+    title: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    // Deactivated, never deleted, so contact history keeps its names.
+    active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_business", ["businessId", "createdAt"]),
+
+  // Every change of a primary contact, for a business or (from PR 4) a job.
+  // businessId is set for both, so a business page can show its jobs' changes
+  // too. jobId is a string until the jobs table exists; PR 4 makes it an id.
+  contactHistory: defineTable({
+    subjectType: v.union(v.literal("business"), v.literal("job")),
+    businessId: v.id("businesses"),
+    jobId: v.optional(v.string()),
+    fromContactId: v.optional(v.id("contacts")),
+    toContactId: v.optional(v.id("contacts")),
+    // Absent for the backfill, which no person ran.
+    changedBy: v.optional(v.id("adminUsers")),
+    changedAt: v.number(),
+  }).index("by_business", ["businessId", "changedAt"]),
+
   // Money is integer cents throughout. Totals are always recomputed from the
   // line items server-side; a client-supplied total is never trusted.
   invoices: defineTable({
@@ -271,5 +316,6 @@ export default defineSchema({
   })
     .index("by_number", ["number"])
     .index("by_invoice", ["invoiceId"])
+    .index("by_customer", ["customerId", "createdAt"])
     .index("by_createdAt", ["createdAt"]),
 });

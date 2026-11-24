@@ -3,6 +3,9 @@
 //   make screenshot URL=/quote            desktop
 //   make screenshot URL=/quote VIEWPORT=phone
 //   make screenshot URL=/admin ADMIN=1    signed in as the seeded owner
+//   make screenshot URL=/admin ADMIN=1 CLICK="Customers|Dale Bishop"
+//                                         then click each text, in order, for
+//                                         screens with no URL of their own
 // Starts `next dev` if nothing is serving WEB_PORT, and stops it afterwards.
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
@@ -50,9 +53,19 @@ try {
     await page.getByRole("heading", { name: "Invoices" }).waitFor();
   }
   await page.goto(`${base}${route}`, { waitUntil: "networkidle" });
+  const clicks = (process.env.CLICK || "").split("|").filter(Boolean);
+  for (const text of clicks) {
+    await page.getByText(text, { exact: true }).first().click();
+    // Convex data arrives over a websocket, which networkidle can't see; the
+    // admin screens say "Loading…" until it lands.
+    await page.getByText("Loading…").first().waitFor({ state: "hidden" });
+  }
   mkdirSync(".screenshots", { recursive: true });
   const slug =
-    route.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "home";
+    [route, ...clicks]
+      .join("-")
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-|-$/g, "") || "home";
   const file = `.screenshots/${slug}-${phone ? "phone" : "desktop"}.png`;
   await page.screenshot({ path: file, fullPage: true });
   console.log(file);
