@@ -195,7 +195,34 @@ describe("customer backfill", () => {
     expect(page?.invoices.map((i) => i.number)).toEqual(["TSWS-010126"]);
     expect(page?.invoices[0]?.amounts?.totalCents).toBe(19000);
     expect(page?.packingSlips.map((s) => s.number)).toEqual(["PS-010126"]);
+    expect(page?.billedCents).toBe(19000);
   });
+});
+
+test("editing a backfilled business leaves its invoice bill-to alone", async () => {
+  const t = setup();
+  const token = await signedIn(t);
+  const rows = await legacyRows(t);
+  const before = await t.query(internal.invoicePdfData.loadForPdf, {
+    token,
+    id: rows.invoice,
+  });
+  await backfillAll(t);
+  const bishop = await businessFor(t, rows.company);
+  if (!bishop) throw new Error("no business");
+
+  // Dale was read as the primary but never had a CONTACT line of his own.
+  await t.mutation(api.businesses.update, {
+    token,
+    id: bishop._id,
+    notes: "Net 30 since 2025",
+  });
+
+  const after = await t.query(internal.invoicePdfData.loadForPdf, {
+    token,
+    id: rows.invoice,
+  });
+  expect(after.input.customer).toEqual(before.input.customer);
 });
 
 describe("primary contact", () => {
@@ -348,6 +375,23 @@ describe("primary contact", () => {
       name: "Dale Bishop",
       email: "dale@bishopfab.test",
     });
+  });
+
+  test("renaming the person on the customer row renames the primary they became", async () => {
+    const t = setup();
+    const { token, customerId, businessId } = await bishopBusiness(t);
+
+    await t.mutation(api.customers.update, {
+      token,
+      id: customerId,
+      name: "Dale R. Bishop",
+    });
+
+    const page = await t.query(api.businesses.get, { token, id: businessId });
+    const primary = page?.contacts.find(
+      (c) => c._id === page.business.primaryContactId,
+    );
+    expect(primary?.name).toBe("Dale R. Bishop");
   });
 
   test("business calls need a signed-in session", async () => {

@@ -138,14 +138,21 @@ export const get = query({
       .order("desc")
       .collect();
     const invoices = [];
+    // Null when the caller may not see money. Voided invoices are listed but
+    // never counted, or the total would lie.
+    let billedCents: number | null = 0;
     for (const invoice of invoiceDocs) {
+      // TODO(rbac): financials.read is decided inside the helper.
+      const amounts = await invoiceAmountsFor(ctx, userId, invoice);
+      if (amounts === null) billedCents = null;
+      else if (billedCents !== null && invoice.status !== "void")
+        billedCents += amounts.totalCents;
       invoices.push({
         _id: invoice._id,
         number: invoice.number,
         status: invoice.status,
         issuedAt: invoice.issuedAt,
-        // TODO(rbac): financials.read is decided inside the helper.
-        amounts: await invoiceAmountsFor(ctx, userId, invoice),
+        amounts,
       });
     }
 
@@ -160,6 +167,7 @@ export const get = query({
       contacts,
       history,
       invoices,
+      billedCents,
       packingSlips: slips.map((slip) => ({
         _id: slip._id,
         number: slip.number,

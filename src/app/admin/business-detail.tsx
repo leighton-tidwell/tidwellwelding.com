@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Button, Icon, Input } from "@/components/ds";
 import { formatMoney } from "@/lib/invoice-format";
 import { api } from "../../../convex/_generated/api";
@@ -39,21 +39,13 @@ export default function BusinessDetail({
     </div>
   );
 
-  if (businessId === undefined) return <p className="admin-note">Loading…</p>;
-  if (businessId === null) {
-    // Only a customer the backfill has not reached yet lands here.
-    return (
-      <>
-        {back}
-        <p className="admin-empty">This customer has no contacts set up yet.</p>
-        <div className="admin-actions">
-          <Button onClick={() => void ensure({ token, customerId })}>
-            Set up contacts
-          </Button>
-        </div>
-      </>
-    );
-  }
+  // A customer the backfill has not reached yet gets its business on open,
+  // and the query above then picks it up.
+  useEffect(() => {
+    if (businessId === null) void ensure({ token, customerId });
+  }, [businessId, ensure, token, customerId]);
+
+  if (!businessId) return <p className="admin-note">Loading…</p>;
   return (
     <>
       {back}
@@ -83,7 +75,8 @@ function BusinessPage({
   if (page === null)
     return <p className="admin-empty">That business no longer exists.</p>;
 
-  const { business, contacts, history, invoices, packingSlips } = page;
+  const { business, contacts, history, invoices, billedCents, packingSlips } =
+    page;
   return (
     <>
       <div className="admin-head">
@@ -91,12 +84,19 @@ function BusinessPage({
           <p className="admin-eyebrow">Business</p>
           <h1 className="admin-title">{business.name}</h1>
         </div>
-        {business.status === "archived" ? (
-          <Badge variant="idle">Archived</Badge>
-        ) : null}
+        <span className="admin-actions" style={{ marginTop: 0 }}>
+          {business.status === "archived" ? (
+            <Badge variant="idle">Archived</Badge>
+          ) : null}
+          {billedCents !== null ? (
+            <Badge>{formatMoney(billedCents)} billed</Badge>
+          ) : null}
+        </span>
       </div>
 
-      <DetailsCard token={token} business={business} />
+      {/* Keyed on updatedAt so a save from elsewhere refills the form instead
+          of being overwritten by stale values. */}
+      <DetailsCard key={business.updatedAt} token={token} business={business} />
       <ContactsCard token={token} business={business} contacts={contacts} />
 
       <div className="admin-card">
@@ -230,13 +230,18 @@ function DetailsCard({
         </Button>
         <Button
           variant="quiet"
-          onClick={() =>
-            void update({
-              token,
-              id: business._id,
-              status: business.status === "active" ? "archived" : "active",
-            })
-          }
+          onClick={async () => {
+            setError("");
+            try {
+              await update({
+                token,
+                id: business._id,
+                status: business.status === "active" ? "archived" : "active",
+              });
+            } catch {
+              setError("Could not change the status. Try again.");
+            }
+          }}
         >
           {business.status === "active" ? "Archive" : "Restore"}
         </Button>

@@ -6,20 +6,9 @@ import {
   deleteBusinessForCustomer,
   ensureBusinessForCustomer,
   mirrorCustomerEdit,
+  optionalText,
+  requireText,
 } from "./lib/businesses";
-
-/** Trim and reject empty required text so a blank name cannot be saved. */
-function requireText(value: string, label: string): string {
-  const trimmed = value.trim();
-  if (trimmed === "") throw new Error(`A ${label} is required`);
-  return trimmed;
-}
-
-function optionalText(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  const trimmed = value.trim();
-  return trimmed === "" ? undefined : trimmed;
-}
 
 export const create = mutation({
   args: {
@@ -88,8 +77,10 @@ export const update = mutation({
     if (updated) {
       await mirrorCustomerEdit(
         ctx,
+        existing,
         updated,
         {
+          name: args.name !== undefined,
           contact: args.contact !== undefined,
           email: args.email !== undefined,
           phone: args.phone !== undefined,

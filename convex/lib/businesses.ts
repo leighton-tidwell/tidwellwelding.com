@@ -112,6 +112,21 @@ export async function recordPrimaryChange(
 }
 
 /**
+ * The CONTACT line for the bill-to. A primary who is the customer's own name
+ * on a row that never had a separate contact is how the backfill read it, so
+ * it stays blank and the PDF doesn't print the same name twice.
+ */
+function contactLineFor(
+  customer: Doc<"customers">,
+  primary: Doc<"contacts"> | null,
+): string | undefined {
+  if (!primary) return undefined;
+  if (customer.contact === undefined && primary.name === customer.name)
+    return undefined;
+  return primary.name;
+}
+
+/**
  * Write a business's name, address and primary contact down to its customer
  * row, so the next invoice or packing slip PDF shows what the business page
  * shows. The name goes where the customer kept it: `company` when it had one.
@@ -131,7 +146,7 @@ export async function writeThroughToCustomer(
       : { name: business.name }),
     address: business.address,
     notes: business.notes,
-    contact: primary?.name,
+    contact: contactLineFor(customer, primary),
     email: primary?.email,
     phone: primary?.phone,
     updatedAt: Date.now(),
@@ -145,8 +160,10 @@ export async function writeThroughToCustomer(
  */
 export async function mirrorCustomerEdit(
   ctx: MutationCtx,
+  before: Doc<"customers">,
   customer: Doc<"customers">,
   supplied: {
+    name?: boolean;
     contact?: boolean;
     email?: boolean;
     phone?: boolean;
@@ -171,13 +188,27 @@ export async function mirrorCustomerEdit(
     updatedAt: now,
   });
 
-  if (!supplied.contact && !supplied.email && !supplied.phone) return;
   const primary = business.primaryContactId
     ? await ctx.db.get(business.primaryContactId)
     : null;
+  // Renaming the person on a row with no separate contact renames the primary
+  // the backfill read from it, but never someone else made primary since.
+  const renamesPrimary =
+    supplied.name === true &&
+    before.contact === undefined &&
+    primary?.name === before.name;
+  if (
+    !supplied.contact &&
+    !supplied.email &&
+    !supplied.phone &&
+    !renamesPrimary
+  )
+    return;
   if (primary) {
     await ctx.db.patch(primary._id, {
-      ...(supplied.contact ? { name: customer.contact ?? customer.name } : {}),
+      ...(supplied.contact || renamesPrimary
+        ? { name: customer.contact ?? customer.name }
+        : {}),
       ...(supplied.email ? { email: customer.email } : {}),
       ...(supplied.phone ? { phone: customer.phone } : {}),
       updatedAt: now,
