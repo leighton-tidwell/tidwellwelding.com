@@ -4,7 +4,9 @@ import { useMutation } from "convex/react";
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Input } from "@/components/ds";
+import { NAME } from "@/lib/business";
 import { api } from "../../../../convex/_generated/api";
+import "../tokens.css";
 import "../admin.css";
 
 const MIN_LENGTH = 12;
@@ -47,8 +49,9 @@ export default function SetPasswordForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <div className="admin-gate">
+      <div className="adm admin-gate">
         <div className="admin-gate__plate">
+          <p className="admin-gate__ws">{NAME}</p>
           <h1 className="admin-gate__title">You are set</h1>
           <p className="admin-gate__sub">
             Your password is saved. This link will not work again.
@@ -62,7 +65,7 @@ export default function SetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <div className="admin-gate">
+    <div className="adm admin-gate">
       <form
         className="admin-gate__plate"
         onSubmit={(event) => {
@@ -70,6 +73,7 @@ export default function SetPasswordForm({ token }: { token: string }) {
           void submit();
         }}
       >
+        <p className="admin-gate__ws">{NAME}</p>
         <h1 className="admin-gate__title">Pick a password</h1>
         <p className="admin-gate__sub">
           This link works once. After you save, it stops working for good.

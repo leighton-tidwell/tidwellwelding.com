@@ -1,0 +1,137 @@
+/**
+ * Admin console design tokens, following the taste-skill system
+ * (github.com/Leonxlnx/taste-skill, references/system.md and motion.md):
+ * body 16px and nothing under 13px, a 4px spacing grid, sharp radii for a
+ * working tool, one accent kept for actions, and short UI motion with no
+ * bounce. Scoped to `.adm`, the root class every admin
+ * screen carries, so nothing here reaches the public site, whose brand tokens
+ * stay in globals.css untouched.
+ *
+ * The world: soapstone on mill scale. A blue-black steel rail beside a
+ * chalk-light workspace, and paint-marker yellow used only where something can
+ * be pressed or where you are. Dark mode keeps the rail and turns the
+ * workspace to the plate itself.
+ *
+ * Contrast (checked by hand against each ground; axe guards it in CI):
+ * ink 13.8:1, ink-2 6.2:1, ink-3 4.6:1 on the ground; status inks 4.7:1+;
+ * rail text 12:1, rail muted 6.6:1; ink on marker yellow 9.7:1.
+ */
+
+.adm {
+  /* ---- type ------------------------------------------------------------- */
+  --adm-font: var(--font-admin), "Public Sans", system-ui, sans-serif;
+  /* Fixed sizes: product UI, not a poster. Nothing under 13px. */
+  --adm-text-xs: 0.8125rem; /* 13: UI labels, tags, tab labels */
+  --adm-text-sm: 0.875rem; /* 14: field labels, meta, notes */
+  --adm-text-md: 1rem; /* 16: body, inputs, rows */
+  --adm-text-lg: 1.125rem; /* 18: card titles */
+  --adm-text-xl: 1.5rem; /* 24: phone page title, figures */
+  --adm-text-2xl: 1.875rem; /* 30: desktop page title */
+  --adm-weight-regular: 400;
+  --adm-weight-medium: 500;
+  --adm-weight-semibold: 600;
+  --adm-weight-bold: 700;
+  --adm-leading-tight: 1.2;
+  --adm-leading: 1.5;
+
+  /* ---- space: a 4px grid ---------------------------------------------- */
+  --adm-space-1: 4px;
+  --adm-space-2: 8px;
+  --adm-space-3: 12px;
+  --adm-space-4: 16px;
+  --adm-space-5: 20px;
+  --adm-space-6: 24px;
+  --adm-space-8: 32px;
+  --adm-space-10: 40px;
+  --adm-space-12: 48px;
+
+  /* ---- shape ------------------------------------------------------------ */
+  /* The taste skill's "sharp" set, the one it gives working tools. */
+  --adm-radius-sm: 4px; /* controls */
+  --adm-radius-md: 6px; /* buttons, panels */
+  --adm-radius-lg: 8px; /* cards, lists */
+  --adm-radius-pill: 999px;
+  --adm-hairline: 1px;
+  --adm-target: 44px; /* touch floor and button height, WCAG 2.2 */
+  --adm-field-h: 48px;
+  --adm-rail-w: 248px;
+  --adm-topbar-h: 56px;
+  --adm-tabbar-h: 64px;
+  --adm-content-max: 1040px;
+
+  /* ---- motion ----------------------------------------------------------- */
+  /* UI steps only touch colour, transform and opacity. No bounce. */
+  --adm-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --adm-dur-in: 150ms; /* hover in */
+  --adm-dur-out: 120ms;
+  --adm-dur-press: 90ms;
+
+  /* ---- color: light (chalk workspace) ----------------------------------- */
+  --adm-ground: #eeece6;
+  --adm-surface: #fbfaf7;
+  --adm-raised: #f4f2ec;
+  --adm-ink: #1b2125;
+  --adm-ink-2: #4f585e;
+  --adm-ink-3: #5f686d;
+  --adm-rule: rgba(27, 33, 37, 0.14);
+  --adm-rule-soft: rgba(27, 33, 37, 0.08);
+  --adm-control-edge: rgba(27, 33, 37, 0.32);
+  --adm-hover: rgba(27, 33, 37, 0.045);
+  --adm-select: #1b2125;
+  --adm-on-select: #fbfaf7;
+
+  /* The rail is mill scale in both modes. */
+  --adm-rail: #1e272c;
+  --adm-rail-ink: #e4e6e2;
+  --adm-rail-muted: #a2acb0;
+  --adm-rail-hover: rgba(228, 230, 226, 0.07);
+  --adm-rail-on: rgba(228, 230, 226, 0.12);
+
+  /* Paint marker: actions and "you are here" only. */
+  --adm-marker: #f0c23b;
+  --adm-marker-hover: #f5cf5c;
+  --adm-marker-press: #e2b021;
+  --adm-marker-edge: #c3960f;
+  --adm-on-marker: #1b2125;
+
+  --adm-ok: #2c7647;
+  --adm-info: #235d8c;
+  --adm-danger: #b3261e;
+  --adm-danger-tint: rgba(179, 38, 30, 0.08);
+  --adm-focus: #1b2125;
+
+  color-scheme: light;
+}
+
+/* ---- color: dark (the plate itself) ------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  .adm {
+    --adm-ground: #111619;
+    --adm-surface: #182024;
+    --adm-raised: #1f282d;
+    --adm-ink: #ebe9e3;
+    --adm-ink-2: #a9b1b4;
+    --adm-ink-3: #8d969a;
+    --adm-rule: rgba(235, 233, 227, 0.13);
+    --adm-rule-soft: rgba(235, 233, 227, 0.07);
+    --adm-control-edge: rgba(235, 233, 227, 0.3);
+    --adm-hover: rgba(235, 233, 227, 0.05);
+    --adm-select: #ebe9e3;
+    --adm-on-select: #111619;
+
+    --adm-rail: #0b0f11;
+
+    --adm-marker-edge: #f0c23b;
+
+    --adm-ok: #5cbf7e;
+    --adm-info: #7cb4e3;
+    --adm-danger: #f2867d;
+    --adm-danger-tint: rgba(242, 134, 125, 0.1);
+    --adm-focus: #f0c23b;
+
+    --adm-shadow-lift:
+      0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 20px -10px rgba(0, 0, 0, 0.6);
+
+    color-scheme: dark;
+  }
+}

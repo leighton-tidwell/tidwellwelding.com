@@ -1,8 +1,9 @@
 "use client";
 
-import { Badge, Button, Icon } from "@/components/ds";
+import { Button, Icon } from "@/components/ds";
 import { formatMoney } from "@/lib/invoice-format";
 import DownloadPdfButton from "./download-pdf-button";
+import { PageHeader, StatusMark } from "./shell";
 
 /** Mirrors what convex/adminQuotes.get returns. Kept as an explicit prop type
  * rather than inferred from the API so this stays a plain presentational
@@ -266,21 +267,12 @@ export default function QuoteDetail({
 
   return (
     <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All quotes
-        </Button>
-      </div>
-
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">{quote.job.type}</p>
-          <h1 className="admin-title">{quote.requestId}</h1>
-        </div>
-        <span className={`admin-status admin-status--${quote.status}`}>
-          {quote.status}
-        </span>
-      </div>
+      <PageHeader
+        back={{ label: "All quotes", onClick: onBack }}
+        title={quote.requestId}
+        meta={`${quote.job.type} · ${quote.name}`}
+        aside={<StatusMark status={quote.status} />}
+      />
 
       <div className="admin-card">
         <h2 className="admin-card__title">Who asked</h2>
@@ -338,16 +330,16 @@ export default function QuoteDetail({
           </p>
         ) : (
           <>
-            <div className="admin-head" style={{ marginBottom: 8 }}>
-              <div>
-                <p className="admin-eyebrow">{quote.estimate.title}</p>
-                <p className="admin-quote-range">
-                  {formatMoney(quote.estimate.dollarsLow * 100)} –{" "}
-                  {formatMoney(quote.estimate.dollarsHigh * 100)}
-                </p>
-              </div>
-              <Badge>{quote.estimate.confidence} confidence</Badge>
+            <div className="admin-estimate">
+              <p className="admin-quote-range">
+                {formatMoney(quote.estimate.dollarsLow * 100)} –{" "}
+                {formatMoney(quote.estimate.dollarsHigh * 100)}
+              </p>
+              <span className="adm-tag">
+                {quote.estimate.confidence} confidence
+              </span>
             </div>
+            <p className="admin-estimate__title">{quote.estimate.title}</p>
             <p className="admin-note">
               {quote.estimate.hoursLow}–{quote.estimate.hoursHigh} hours ·{" "}
               {quote.estimate.summary}
@@ -394,7 +386,7 @@ export default function QuoteDetail({
                     {file.competitor ? (
                       <>
                         {" "}
-                        <Badge>competitor quote</Badge>
+                        <span className="adm-tag">competitor quote</span>
                       </>
                     ) : null}
                   </span>

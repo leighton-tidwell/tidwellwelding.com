@@ -2,7 +2,8 @@
 
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
-import { Badge, Button, HazardBar, Icon, Input, Select } from "@/components/ds";
+import { Button, Icon, Input, Select } from "@/components/ds";
+import { NAME } from "@/lib/business";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
 import { api } from "../../../convex/_generated/api";
@@ -10,10 +11,20 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { INVOICE_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
+import { type SectionId, visibleSections } from "./nav";
 import NotesField from "./notes-field";
 import { PackingSlipEditor, PackingSlipList } from "./packing-slips";
 import QuoteDetail from "./quote-detail";
+import {
+  AdminShell,
+  countOf,
+  EmptyState,
+  LoadingState,
+  PageHeader,
+  StatusMark,
+} from "./shell";
 import { useAdminSession } from "./use-admin-session";
+import "./tokens.css";
 import "./admin.css";
 
 type View =
@@ -29,7 +40,7 @@ type View =
 export default function AdminConsole() {
   const { token, ready, signIn, signOut } = useAdminSession();
 
-  if (!ready) return <div className="admin-shell" />;
+  if (!ready) return <div className="adm adm-blank" />;
   if (!token) return <LoginScreen onSignedIn={signIn} />;
   return <Console token={token} onSignOut={signOut} />;
 }
@@ -64,7 +75,7 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
   };
 
   return (
-    <div className="admin-gate">
+    <div className="adm admin-gate">
       <form
         className="admin-gate__plate"
         onSubmit={(event) => {
@@ -72,9 +83,10 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
           void submit();
         }}
       >
+        <p className="admin-gate__ws">{NAME}</p>
         <h1 className="admin-gate__title">Shop admin</h1>
         <p className="admin-gate__sub">
-          Invoices for Tidwell Specialty Welding.
+          Sign in to quotes, invoices and slips.
         </p>
 
         <div className="admin-gate__fields">
@@ -109,6 +121,28 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
 
 /* -------------------------------------------------------------- console --- */
 
+/** Which nav section a screen belongs to, so detail screens keep their
+ * section lit. */
+const SECTION_OF: Record<View["name"], SectionId> = {
+  invoices: "invoices",
+  invoice: "invoices",
+  quotes: "quotes",
+  quote: "quotes",
+  customers: "customers",
+  customer: "customers",
+  slips: "slips",
+  slip: "slips",
+};
+
+/** Where each section's nav item lands. A section with no screen yet is never
+ * visible (see nav.ts), so it needs no entry. */
+const HOME_OF: Partial<Record<SectionId, View>> = {
+  invoices: { name: "invoices" },
+  quotes: { name: "quotes" },
+  customers: { name: "customers" },
+  slips: { name: "slips" },
+};
+
 function Console({
   token,
   onSignOut,
@@ -117,136 +151,98 @@ function Console({
   onSignOut: () => void;
 }) {
   const [view, setView] = useState<View>({ name: "invoices" });
+  const sections = useMemo(() => visibleSections(), []);
 
   return (
-    <div className="admin-shell">
-      <header className="admin-bar">
-        <span className="admin-bar__brand">
-          <Icon name="hard-hat" /> TSWS Admin
-        </span>
-        <span className="admin-bar__who">
-          <Button variant="quiet" size="sm" onClick={onSignOut}>
-            <Icon name="log-out" /> Sign out
-          </Button>
-        </span>
-      </header>
-      <HazardBar />
-
-      <nav
-        className="admin-main"
-        aria-label="Sections"
-        style={{ paddingBottom: 0 }}
-      >
-        <div className="admin-actions" style={{ marginTop: 0 }}>
-          <Button
-            variant={view.name === "invoices" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setView({ name: "invoices" })}
-          >
-            Invoices
-          </Button>
-          <Button
-            variant={
-              view.name === "slips" || view.name === "slip"
-                ? "primary"
-                : "secondary"
-            }
-            size="sm"
-            onClick={() => setView({ name: "slips" })}
-          >
-            Packing slips
-          </Button>
-          <Button
-            variant={
-              view.name === "quotes" || view.name === "quote"
-                ? "primary"
-                : "secondary"
-            }
-            size="sm"
-            onClick={() => setView({ name: "quotes" })}
-          >
-            Quotes
-          </Button>
-          <Button
-            variant={view.name === "customers" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setView({ name: "customers" })}
-          >
-            Customers
-          </Button>
-        </div>
-      </nav>
-
-      <main className="admin-main">
-        {view.name === "invoices" && (
-          <InvoiceList
-            token={token}
-            onOpen={(id) => setView({ name: "invoice", id })}
-          />
-        )}
-        {view.name === "quotes" && (
-          <QuoteList
-            token={token}
-            onOpen={(id) => setView({ name: "quote", id })}
-          />
-        )}
-        {view.name === "quote" && (
-          <QuoteInbox
-            token={token}
-            id={view.id}
-            onBack={() => setView({ name: "quotes" })}
-            onOpenCustomer={(id) => setView({ name: "customer", id })}
-            onOpenInvoice={(id) => setView({ name: "invoice", id })}
-          />
-        )}
-        {view.name === "customers" && (
-          <CustomerList
-            token={token}
-            onOpen={(id) => setView({ name: "customer", id })}
-          />
-        )}
-        {view.name === "customer" && (
-          <CustomerDetail
-            token={token}
-            id={view.id}
-            onBack={() => setView({ name: "customers" })}
-            onOpenInvoice={(id) => setView({ name: "invoice", id })}
-          />
-        )}
-        {view.name === "invoice" && (
-          <InvoiceEditor
-            token={token}
-            id={view.id}
-            onBack={() => setView({ name: "invoices" })}
-            onOpenQuote={(id) => setView({ name: "quote", id })}
-            onOpenSlip={(id) => setView({ name: "slip", id })}
-          />
-        )}
-        {view.name === "slips" && (
-          <PackingSlipList
-            token={token}
-            onOpen={(id) => setView({ name: "slip", id })}
-          />
-        )}
-        {view.name === "slip" && (
-          <PackingSlipEditor
-            token={token}
-            id={view.id}
-            onBack={() => setView({ name: "slips" })}
-            onOpenInvoice={(id) => setView({ name: "invoice", id })}
-          />
-        )}
-      </main>
-    </div>
+    <AdminShell
+      workspace={NAME}
+      sections={sections}
+      current={SECTION_OF[view.name]}
+      onNavigate={(id) => {
+        const home = HOME_OF[id];
+        if (home) setView(home);
+      }}
+      onSignOut={onSignOut}
+      screenKey={"id" in view ? `${view.name}:${view.id}` : view.name}
+    >
+      {view.name === "invoices" && (
+        <InvoiceList
+          token={token}
+          onOpen={(id) => setView({ name: "invoice", id })}
+        />
+      )}
+      {view.name === "quotes" && (
+        <QuoteList
+          token={token}
+          onOpen={(id) => setView({ name: "quote", id })}
+        />
+      )}
+      {view.name === "quote" && (
+        <QuoteInbox
+          token={token}
+          id={view.id}
+          onBack={() => setView({ name: "quotes" })}
+          onOpenCustomer={(id) => setView({ name: "customer", id })}
+          onOpenInvoice={(id) => setView({ name: "invoice", id })}
+        />
+      )}
+      {view.name === "customers" && (
+        <CustomerList
+          token={token}
+          onOpen={(id) => setView({ name: "customer", id })}
+        />
+      )}
+      {view.name === "customer" && (
+        <CustomerDetail
+          token={token}
+          id={view.id}
+          onBack={() => setView({ name: "customers" })}
+          onOpenInvoice={(id) => setView({ name: "invoice", id })}
+        />
+      )}
+      {view.name === "invoice" && (
+        <InvoiceEditor
+          token={token}
+          id={view.id}
+          onBack={() => setView({ name: "invoices" })}
+          onOpenQuote={(id) => setView({ name: "quote", id })}
+          onOpenSlip={(id) => setView({ name: "slip", id })}
+        />
+      )}
+      {view.name === "slips" && (
+        <PackingSlipList
+          token={token}
+          onOpen={(id) => setView({ name: "slip", id })}
+        />
+      )}
+      {view.name === "slip" && (
+        <PackingSlipEditor
+          token={token}
+          id={view.id}
+          onBack={() => setView({ name: "slips" })}
+          onOpenInvoice={(id) => setView({ name: "invoice", id })}
+        />
+      )}
+    </AdminShell>
   );
 }
 
 /* ------------------------------------------------------------- invoices --- */
 
-function StatusPill({ status }: { status: string }) {
-  return (
-    <span className={`admin-status admin-status--${status}`}>{status}</span>
-  );
+/** The line under the Invoices title. "Outstanding" is what has been sent
+ * and not yet paid; drafts have not been billed and void ones never will be. */
+function invoiceSummary(
+  invoices: { status: string; totals: { balanceCents: number } }[] | undefined,
+): string {
+  if (invoices === undefined || invoices.length === 0)
+    return "Every bill the shop sends.";
+  const outstanding = invoices
+    .filter((invoice) => invoice.status === "sent")
+    .reduce((sum, invoice) => sum + invoice.totals.balanceCents, 0);
+  const count = countOf(invoices.length, "invoice");
+  return outstanding === 0
+    ? `${count} · nothing outstanding`
+    : `${count} · ${formatMoney(outstanding)} outstanding`;
 }
 
 const STATUS_FILTERS = [
@@ -295,21 +291,18 @@ function InvoiceList({
 
   return (
     <>
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Billing</p>
-          <h1 className="admin-title">Invoices</h1>
-        </div>
-      </div>
+      <PageHeader title="Invoices" meta={invoiceSummary(invoices)} />
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Start a new invoice</h2>
+      <section className="admin-card" aria-labelledby="new-invoice">
+        <h2 className="admin-card__title" id="new-invoice">
+          Start a new invoice
+        </h2>
         {options.length === 0 ? (
           <p className="admin-note">
             Add a customer first, then bill them here.
           </p>
         ) : (
-          <div className="admin-grid-2">
+          <div className="admin-start">
             <Select
               label="Customer"
               options={options}
@@ -317,28 +310,28 @@ function InvoiceList({
               value={customerId}
               onChange={setCustomerId}
             />
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <Button
-                disabled={!customerId}
-                onClick={async () => {
-                  const id = await create({
-                    token,
-                    customerId: customerId as Id<"customers">,
-                  });
-                  onOpen(id);
-                }}
-              >
-                <Icon name="file-text" /> Create invoice
-              </Button>
-            </div>
+            <Button
+              disabled={!customerId}
+              onClick={async () => {
+                const id = await create({
+                  token,
+                  customerId: customerId as Id<"customers">,
+                });
+                onOpen(id);
+              }}
+            >
+              <Icon name="plus" /> Create invoice
+            </Button>
           </div>
         )}
-      </div>
+      </section>
 
       {invoices === undefined ? (
-        <p className="admin-note">Loading…</p>
+        <LoadingState />
       ) : invoices.length === 0 ? (
-        <p className="admin-empty">No invoices yet.</p>
+        <EmptyState title="No invoices yet">
+          Pick a customer above to start the first one.
+        </EmptyState>
       ) : (
         <>
           {/* biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the flex row. */}
@@ -371,23 +364,26 @@ function InvoiceList({
           </div>
 
           {shown.length === 0 ? (
-            <p className="admin-empty">
-              Nothing with that status.{" "}
+            <EmptyState title="Nothing with that status">
               <button
                 type="button"
                 className="admin-linkish"
                 onClick={() => setStatus("")}
               >
-                Show all
+                Show all invoices
               </button>
-            </p>
+            </EmptyState>
           ) : (
             <div className="admin-list">
               {shown.map((invoice) => (
                 <button
                   key={invoice._id}
                   type="button"
-                  className="admin-row"
+                  className={
+                    invoice.status === "void"
+                      ? "admin-row admin-row--void"
+                      : "admin-row"
+                  }
                   onClick={() => onOpen(invoice._id)}
                 >
                   <span className="admin-row__main">
@@ -400,7 +396,7 @@ function InvoiceList({
                   <span className="admin-row__amount">
                     {formatMoney(invoice.totals.balanceCents)}
                   </span>
-                  <StatusPill status={invoice.status} />
+                  <StatusMark status={invoice.status} />
                 </button>
               ))}
             </div>
@@ -444,17 +440,22 @@ function QuoteList({
 
   return (
     <>
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Work coming in</p>
-          <h1 className="admin-title">Quotes</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Quotes"
+        meta={
+          quotes === undefined || quotes.length === 0
+            ? "Requests from the website's quote form."
+            : `${countOf(quotes.length, "request")} from the website`
+        }
+      />
 
       {quotes === undefined ? (
-        <p className="admin-note">Loading…</p>
+        <LoadingState />
       ) : quotes.length === 0 ? (
-        <p className="admin-empty">No quote requests yet.</p>
+        <EmptyState title="No quote requests yet">
+          Requests sent from the website&rsquo;s quote form land here, with
+          their photos and the draft estimate.
+        </EmptyState>
       ) : (
         <>
           {statuses.length > 1 ? (
@@ -518,7 +519,7 @@ function QuoteList({
                   </span>
                 </span>
                 {quote.invoiceNumber !== undefined ? (
-                  <Badge>{quote.invoiceNumber}</Badge>
+                  <span className="adm-tag">{quote.invoiceNumber}</span>
                 ) : null}
                 {quote.dollarsLow !== undefined &&
                 quote.dollarsHigh !== undefined ? (
@@ -527,7 +528,7 @@ function QuoteList({
                     {formatMoney(quote.dollarsHigh * 100)}
                   </span>
                 ) : null}
-                <StatusPill status={quote.status} />
+                <StatusMark status={quote.status} />
               </button>
             ))}
           </div>
@@ -610,8 +611,15 @@ function QuoteInbox({
     }
   }, [busy, createInvoice, token, id, onOpenInvoice]);
 
-  if (quote === undefined) return <p className="admin-note">Loading…</p>;
-  if (quote === null) return <p className="admin-empty">That quote is gone.</p>;
+  if (quote === undefined) return <LoadingState rows={4} />;
+  if (quote === null)
+    return (
+      <EmptyState title="That quote is gone">
+        <button type="button" className="admin-linkish" onClick={onBack}>
+          Back to quotes
+        </button>
+      </EmptyState>
+    );
   return (
     <QuoteDetail
       quote={quote}
@@ -661,15 +669,19 @@ function CustomerList({
 
   return (
     <>
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Who you bill</p>
-          <h1 className="admin-title">Customers</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Customers"
+        meta={
+          customers === undefined || customers.length === 0
+            ? "Everyone the shop bills."
+            : `${customers.length} saved`
+        }
+      />
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Add a customer</h2>
+      <section className="admin-card" aria-labelledby="new-customer">
+        <h2 className="admin-card__title" id="new-customer">
+          Add a customer
+        </h2>
         <div className="admin-grid-2">
           <Input
             label="Name"
@@ -732,12 +744,14 @@ function CustomerList({
             {error}
           </p>
         ) : null}
-      </div>
+      </section>
 
       {customers === undefined ? (
-        <p className="admin-note">Loading…</p>
+        <LoadingState />
       ) : customers.length === 0 ? (
-        <p className="admin-empty">No customers saved yet.</p>
+        <EmptyState title="No customers saved yet">
+          Add one above, or save one straight from a quote request.
+        </EmptyState>
       ) : (
         <div className="admin-list">
           {customers.map((customer) => (
@@ -755,7 +769,7 @@ function CustomerList({
                     .join(" · ") || "No contact details"}
                 </span>
               </span>
-              <Icon name="chevron-right" />
+              <Icon name="chevron-right" className="admin-row__chev" />
             </button>
           ))}
         </div>
@@ -781,25 +795,22 @@ function CustomerDetail({
     customerId: id,
   });
 
-  if (summary === undefined) return <p className="admin-note">Loading…</p>;
+  if (summary === undefined) return <LoadingState rows={4} />;
 
   return (
     <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All customers
-        </Button>
-      </div>
+      <PageHeader
+        back={{ label: "All customers", onClick: onBack }}
+        title={summary.customer.name}
+        meta={summary.customer.company}
+        aside={
+          <span className="adm-figure">
+            {formatMoney(summary.billedCents)} billed
+          </span>
+        }
+      />
 
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Customer</p>
-          <h1 className="admin-title">{summary.customer.name}</h1>
-        </div>
-        <Badge>{formatMoney(summary.billedCents)} billed</Badge>
-      </div>
-
-      <div className="admin-card">
+      <section className="admin-card">
         <h2 className="admin-card__title">Details</h2>
         <p className="admin-note">
           {[
@@ -812,13 +823,13 @@ function CustomerDetail({
             .filter(Boolean)
             .join(" · ") || "No details saved."}
         </p>
-      </div>
+      </section>
 
-      <h2 className="admin-card__title">Invoices</h2>
+      <h2 className="adm-section-title">Invoices</h2>
       {invoices === undefined ? (
-        <p className="admin-note">Loading…</p>
+        <LoadingState />
       ) : invoices.length === 0 ? (
-        <p className="admin-empty">Nothing billed to this customer yet.</p>
+        <EmptyState title="Nothing billed to this customer yet" />
       ) : (
         <div className="admin-list">
           {invoices.map((invoice) => (
@@ -837,7 +848,7 @@ function CustomerDetail({
               <span className="admin-row__amount">
                 {formatMoney(invoice.totals.balanceCents)}
               </span>
-              <StatusPill status={invoice.status} />
+              <StatusMark status={invoice.status} />
             </button>
           ))}
         </div>
@@ -945,9 +956,15 @@ function InvoiceEditor({
     return await generatePdf({ token, id });
   }, [save, generatePdf, token, id]);
 
-  if (invoice === undefined) return <p className="admin-note">Loading…</p>;
+  if (invoice === undefined) return <LoadingState rows={5} />;
   if (invoice === null)
-    return <p className="admin-empty">That invoice is gone.</p>;
+    return (
+      <EmptyState title="That invoice is gone">
+        <button type="button" className="admin-linkish" onClick={onBack}>
+          Back to invoices
+        </button>
+      </EmptyState>
+    );
 
   // Pulled out so the click handler closes over a value TypeScript has already
   // narrowed, rather than re-reading a nullable field.
@@ -955,33 +972,28 @@ function InvoiceEditor({
 
   return (
     <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All invoices
-        </Button>
-      </div>
-
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">{invoice.customer.name}</p>
-          <h1 className="admin-title">{invoice.number}</h1>
-        </div>
-        <Select
-          label="Status"
-          options={STATUS_OPTIONS}
-          value={invoice.status}
-          onChange={(value) =>
-            void setStatus({
-              token,
-              id,
-              status: value as "draft" | "sent" | "paid" | "void",
-            })
-          }
-        />
-      </div>
+      <PageHeader
+        back={{ label: "All invoices", onClick: onBack }}
+        title={invoice.number}
+        meta={invoice.customer.name}
+        aside={
+          <Select
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={invoice.status}
+            onChange={(value) =>
+              void setStatus({
+                token,
+                id,
+                status: value as "draft" | "sent" | "paid" | "void",
+              })
+            }
+          />
+        }
+      />
 
       {fromQuote === null ? null : (
-        <p className="admin-note">
+        <p className="admin-note admin-origin">
           Raised from quote request{" "}
           <button
             type="button"
@@ -1064,6 +1076,7 @@ function InvoiceEditor({
             <span className="admin-total-row__value">
               {formatMoney(invoice.totals.balanceCents)}
             </span>
+            <span className="adm-dimension" aria-hidden="true" />
           </div>
         </div>
       </div>

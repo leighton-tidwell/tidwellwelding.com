@@ -1,171 +1,628 @@
 /**
- * Admin console styling. Mobile-first: the owner works from his phone on a job
- * site, so the small-screen layout is the real one and the desktop table is the
- * enhancement. Every value comes from the site's design tokens so the console
- * looks like the same shop as the public site.
+ * Admin console styling, built only on the tokens in ./tokens.css and scoped
+ * under `.adm` so the public site never sees it. Mobile-first: the owner and
+ * the crew work from phones, so the small-screen layout is the real one and the
+ * desktop sidebar is the enhancement.
+ *
+ * The design-system components (Button, Input, Select, Checkbox) keep their
+ * markup and behavior. Their brand skin lives in @layer components in
+ * globals.css, and these unlayered rules win over it inside the console.
  */
 
-.admin-shell {
+/* ======================================================== base ========== */
+
+.adm {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-md);
+  line-height: var(--adm-leading);
+  color: var(--adm-ink);
+  background: var(--adm-ground);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+.adm ::selection {
+  background: var(--adm-marker);
+  color: var(--adm-on-marker);
+}
+
+.adm :focus-visible {
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+/* The site's global heading style (condensed, raked, upper case) is brand
+ * type; the console sets its headings in its own face. */
+.adm :is(h1, h2, h3, h4) {
+  font-family: var(--adm-font);
+  font-style: normal;
+  font-weight: var(--adm-weight-semibold);
+  text-transform: none;
+}
+
+.adm a:not(.tsws-btn) {
+  border-bottom: 0;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.adm-blank {
   min-height: 100dvh;
-  background: var(--bg-page);
-  color: var(--text-body);
-  font-family: var(--font-body);
 }
 
-.admin-bar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--border-subtle);
+/* ==================================== design-system components, re-skinned */
+
+.adm .tsws-btn {
+  clip-path: none;
+  border-radius: var(--adm-radius-md);
+  font-family: var(--adm-font);
+  font-weight: var(--adm-weight-semibold);
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: none;
+  transition:
+    background-color var(--adm-dur-in) var(--adm-ease),
+    border-color var(--adm-dur-in) var(--adm-ease),
+    color var(--adm-dur-in) var(--adm-ease),
+    transform var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-bar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-black);
-  letter-spacing: var(--tracking-wide);
-  color: var(--text-primary);
-  text-transform: uppercase;
+.adm .tsws-btn::after {
+  display: none;
 }
 
-.admin-bar__who {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
+.adm .tsws-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  transition-duration: var(--adm-dur-press);
 }
 
-.admin-main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 16px 16px 96px;
+.adm .tsws-btn:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
 }
 
-@media (min-width: 768px) {
-  .admin-main {
-    padding: 28px 24px 96px;
+.adm .tsws-btn--sm {
+  min-height: 36px;
+  padding: 0 var(--adm-space-3);
+  font-size: var(--adm-text-sm);
+}
+
+.adm .tsws-btn--md {
+  min-height: var(--adm-target);
+  padding: 0 var(--adm-space-6);
+  font-size: var(--adm-text-md);
+}
+
+.adm .tsws-btn--primary {
+  background: var(--adm-marker);
+  color: var(--adm-on-marker);
+  border: var(--adm-hairline) solid var(--adm-marker-edge);
+}
+
+@media (hover: hover) {
+  .adm .tsws-btn--primary:hover:not(:disabled) {
+    background: var(--adm-marker-hover);
   }
 }
 
-/* --- Login / set-password ------------------------------------------------ */
+.adm .tsws-btn--primary:active:not(:disabled) {
+  background: var(--adm-marker-press);
+}
 
-.admin-gate {
+.adm .tsws-btn--secondary,
+.adm .tsws-btn--ghost {
+  background: var(--adm-surface);
+  color: var(--adm-ink);
+  border: var(--adm-hairline) solid var(--adm-control-edge);
+}
+
+.adm .tsws-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--adm-ink-2);
+}
+
+@media (hover: hover) {
+  .adm .tsws-btn--secondary:hover:not(:disabled),
+  .adm .tsws-btn--ghost:hover:not(:disabled) {
+    background: var(--adm-raised);
+    border-color: var(--adm-ink-3);
+    color: var(--adm-ink);
+  }
+}
+
+.adm .tsws-btn--quiet {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  color: var(--adm-ink);
+}
+
+.adm .tsws-btn--quiet .tsws-btn__label {
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.adm .tsws-btn:disabled {
+  opacity: 0.45;
+}
+
+.adm .tsws-field {
+  gap: 6px;
+}
+
+.adm .tsws-field__label {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-sm);
+  line-height: var(--adm-leading-tight);
+  font-weight: var(--adm-weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-field__req {
+  color: var(--adm-danger);
+}
+
+.adm .tsws-field__hint,
+.adm .tsws-field__error {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-xs);
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-field__error {
+  color: var(--adm-danger);
+}
+
+.adm .tsws-control {
+  clip-path: none;
+  border-radius: var(--adm-radius-md);
+  background: var(--adm-surface);
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-control-edge);
+  transition: box-shadow var(--adm-dur-in) var(--adm-ease);
+}
+
+@media (hover: hover) {
+  .adm .tsws-control:hover {
+    box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-ink-3);
+  }
+}
+
+.adm .tsws-control--focused,
+.adm .tsws-control--focused:hover {
+  background: var(--adm-surface);
+  box-shadow:
+    inset 0 0 0 var(--adm-hairline) var(--adm-ink),
+    0 0 0 3px var(--adm-rule);
+}
+
+.adm .tsws-control--error {
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-danger);
+}
+
+.adm .tsws-control__seam {
+  display: none;
+}
+
+.adm .tsws-control__input {
+  font-family: var(--adm-font);
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink);
+  height: var(--adm-field-h);
+  padding: 0 var(--adm-space-3);
+}
+
+.adm textarea.tsws-control__input {
+  height: auto;
+  padding: 10px var(--adm-space-3);
+}
+
+.adm .tsws-control__input::placeholder {
+  color: var(--adm-ink-3);
+}
+
+.adm .tsws-control__adorn {
+  padding-left: var(--adm-space-3);
+  color: var(--adm-ink-3);
+}
+
+.adm .tsws-control--focused .tsws-control__adorn {
+  color: var(--adm-ink);
+}
+
+.adm .tsws-select {
+  padding-right: var(--adm-space-10);
+}
+
+.adm .tsws-select__chev,
+.adm .tsws-control:hover .tsws-select__chev {
+  right: var(--adm-space-3);
+  color: var(--adm-ink-2);
+}
+
+.adm .tsws-check {
+  align-items: center;
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink);
+  min-height: var(--adm-target);
+}
+
+.adm .tsws-check__box {
+  clip-path: none;
+  border-radius: 5px;
+  background: var(--adm-surface);
+  box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-control-edge);
+}
+
+.adm .tsws-check--checked .tsws-check__box {
+  background: var(--adm-select);
+  box-shadow: none;
+}
+
+.adm .tsws-check:focus-within .tsws-check__box {
+  outline: 2px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .adm .tsws-check:not(.tsws-check--checked):hover .tsws-check__box {
+    box-shadow: inset 0 0 0 var(--adm-hairline) var(--adm-ink-3);
+  }
+}
+
+.adm .tsws-check__tick {
+  color: var(--adm-on-select);
+}
+
+/* ======================================================== shell ========= */
+
+/* Phone: a top bar with the workspace and sign-out, the sections pinned to the
+ * bottom of the screen, content between. */
+.adm-app {
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 24px 16px;
-  background: var(--bg-page);
 }
 
-.admin-gate__plate {
+.adm-side {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--adm-space-3);
+  height: var(--adm-topbar-h);
+  padding: 0 var(--adm-space-2) 0 var(--adm-space-4);
+  background: var(--adm-rail);
+  color: var(--adm-rail-ink);
+}
+
+.adm-side :focus-visible {
+  outline-color: var(--adm-marker);
+}
+
+.adm-ws {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--adm-text-md);
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-rail-ink);
+}
+
+.adm-nav {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--adm-rail);
+  border-top: var(--adm-hairline) solid rgba(228, 230, 226, 0.08);
+}
+
+.adm-nav__list {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   width: 100%;
-  max-width: 420px;
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  /* Chamfered plate corners, matching the site's cut-steel language. */
-  clip-path: polygon(
-    14px 0,
-    100% 0,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    0 100%,
-    0 14px
-  );
-  padding: 28px 24px;
+  height: var(--adm-tabbar-h);
+  padding: 0 var(--adm-space-1);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--adm-text-xs);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-rail-muted);
+  cursor: pointer;
+  transition: color var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-gate__title {
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-black);
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin: 0 0 6px;
+.adm-nav__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-gate__sub {
-  font-size: var(--text-sm);
-  color: var(--steel-300);
-  margin: 0 0 22px;
+@media (hover: hover) {
+  .adm-nav__item:hover {
+    color: var(--adm-rail-ink);
+  }
 }
 
-.admin-gate__fields {
-  display: grid;
-  gap: 16px;
+/* "You are here": the paint-marker stroke, along the top edge of the tab. */
+.adm-nav__item[aria-current="page"] {
+  color: var(--adm-rail-ink);
 }
 
-.admin-gate__error {
-  margin-top: 14px;
-  padding: 10px 12px;
-  font-size: var(--text-sm);
-  color: var(--red-100);
-  background: var(--accent-quiet);
-  border-left: 3px solid var(--accent);
+.adm-nav__item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 28%;
+  right: 28%;
+  height: 3px;
+  border-radius: 0 0 2px 2px;
+  background: var(--adm-marker);
 }
 
-/* --- Page furniture ------------------------------------------------------ */
+.adm-nav__item[aria-current="page"] .tsws-icon {
+  color: var(--adm-marker);
+}
 
-.admin-head {
+.adm-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--adm-space-2);
+  min-height: var(--adm-target);
+  padding: 0 var(--adm-space-3);
+  background: none;
+  border: 0;
+  border-radius: var(--adm-radius-md);
+  font: inherit;
+  font-size: var(--adm-text-sm);
+  color: var(--adm-rail-muted);
+  cursor: pointer;
+  transition:
+    color var(--adm-dur-in) var(--adm-ease),
+    background-color var(--adm-dur-in) var(--adm-ease);
+}
+
+@media (hover: hover) {
+  .adm-signout:hover {
+    color: var(--adm-rail-ink);
+    background: var(--adm-rail-hover);
+  }
+}
+
+.adm-main {
+  max-width: var(--adm-content-max);
+  margin: 0 auto;
+  padding: var(--adm-space-5) var(--adm-space-4)
+    calc(
+      var(--adm-tabbar-h) +
+      env(safe-area-inset-bottom) +
+      var(--adm-space-10)
+    );
+}
+
+/* Desktop: the rail becomes a full-height sidebar and the tab bar folds into
+ * it as a vertical list. */
+@media (min-width: 900px) {
+  .adm-app {
+    display: grid;
+    grid-template-columns: var(--adm-rail-w) minmax(0, 1fr);
+    /* The rail colour runs the full height of a long page, not just the
+     * sticky viewport-tall sidebar. */
+    background: linear-gradient(
+      to right,
+      var(--adm-rail) var(--adm-rail-w),
+      var(--adm-ground) var(--adm-rail-w)
+    );
+  }
+
+  .adm-side {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    height: 100dvh;
+    padding: var(--adm-space-5) var(--adm-space-3);
+  }
+
+  .adm-ws {
+    padding: var(--adm-space-1) var(--adm-space-3) var(--adm-space-6);
+    white-space: normal;
+    line-height: var(--adm-leading-tight);
+  }
+
+  .adm-nav {
+    position: static;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+
+  .adm-nav__list {
+    grid-auto-flow: row;
+    gap: 2px;
+  }
+
+  .adm-nav__item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--adm-space-3);
+    height: 40px;
+    padding: 0 var(--adm-space-3);
+    border-radius: var(--adm-radius-sm);
+    font-size: var(--adm-text-md);
+  }
+
+  .adm-nav__item:hover {
+    background: var(--adm-rail-hover);
+  }
+
+  .adm-nav__item[aria-current="page"] {
+    background: var(--adm-rail-on);
+  }
+
+  .adm-nav__item[aria-current="page"]::before {
+    top: 10px;
+    bottom: 10px;
+    left: calc(-1 * var(--adm-space-3));
+    right: auto;
+    width: 3px;
+    height: auto;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .adm-signout {
+    margin-top: auto;
+    justify-content: flex-start;
+    gap: var(--adm-space-3);
+    padding: 0 var(--adm-space-3);
+  }
+
+  .adm-main {
+    width: 100%;
+    padding: var(--adm-space-10) var(--adm-space-12) var(--adm-space-12);
+  }
+}
+
+/* ================================================== page furniture ====== */
+
+.adm-head {
+  margin-bottom: var(--adm-space-8);
+}
+
+@media (min-width: 900px) {
+  .adm-head {
+    margin-bottom: var(--adm-space-12);
+  }
+}
+
+.adm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--adm-target);
+  margin: calc(-1 * var(--adm-space-3)) 0 var(--adm-space-1)
+    calc(-1 * var(--adm-space-2));
+  padding: 0 var(--adm-space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--adm-radius-sm);
+  font: inherit;
+  font-size: var(--adm-text-sm);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink-2);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .adm-back:hover {
+    color: var(--adm-ink);
+    background: var(--adm-hover);
+  }
+}
+
+.adm-head__row {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: var(--adm-space-4);
+}
+
+.adm-head__text {
+  min-width: 0;
 }
 
 .admin-title {
-  font-family: var(--font-display);
-  font-style: var(--display-rake);
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-black);
-  letter-spacing: var(--tracking-tight);
-  text-transform: uppercase;
-  color: var(--text-primary);
   margin: 0;
+  font-size: var(--adm-text-xl);
+  font-weight: var(--adm-weight-semibold);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.015em;
+  color: var(--adm-ink);
+  overflow-wrap: anywhere;
 }
 
-.admin-eyebrow {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--steel-300);
-  margin: 0 0 4px;
+.adm-head__meta {
+  margin: var(--adm-space-1) 0 0;
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink-2);
+}
+
+.adm-head__aside .tsws-field {
+  min-width: 160px;
+}
+
+@media (min-width: 900px) {
+  .admin-title {
+    font-size: var(--adm-text-2xl);
+  }
+}
+
+.adm-figure {
+  font-size: var(--adm-text-xl);
+  font-weight: var(--adm-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--adm-ink);
 }
 
 .admin-card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  padding: 16px;
-  margin-bottom: 16px;
+  margin-bottom: var(--adm-space-3);
+  padding: var(--adm-space-5) var(--adm-space-4);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-lg);
 }
 
-.admin-card__title {
-  font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin: 0 0 12px;
+@media (min-width: 640px) {
+  .admin-card {
+    margin-bottom: var(--adm-space-6);
+    padding: var(--adm-space-6);
+  }
+}
+
+.admin-card__title,
+.adm-section-title {
+  margin: 0 0 var(--adm-space-4);
+  font-size: var(--adm-text-lg);
+  font-weight: var(--adm-weight-semibold);
+  line-height: var(--adm-leading-tight);
+  color: var(--adm-ink);
+}
+
+.adm-section-title {
+  margin-top: var(--adm-space-8);
+  margin-bottom: var(--adm-space-3);
 }
 
 .admin-grid-2 {
   display: grid;
-  gap: 14px;
+  gap: var(--adm-space-4);
 }
 
 @media (min-width: 640px) {
@@ -174,181 +631,316 @@
   }
 }
 
-/* --- Lists --------------------------------------------------------------- */
+/* A picker and the button it feeds, side by side once there is room. */
+.admin-start {
+  display: grid;
+  gap: var(--adm-space-3);
+}
 
-/* Status filter chips ---------------------------------------------------- */
+@media (min-width: 640px) {
+  .admin-start {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+}
+
+.admin-note {
+  margin: 0;
+  font-size: var(--adm-text-sm);
+  line-height: var(--adm-leading);
+  color: var(--adm-ink-2);
+}
+
+.admin-actions + .admin-note {
+  margin-top: var(--adm-space-3);
+}
+
+.admin-origin {
+  margin: calc(-1 * var(--adm-space-3)) 0 var(--adm-space-5);
+}
+
+/* A button that reads as a link. */
+.admin-linkish {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--adm-ink-3);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .admin-linkish:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--adm-space-2);
+  margin-top: var(--adm-space-5);
+}
+
+/* Phone: small buttons get the 44px touch floor too. */
+@media (max-width: 899px) {
+  .adm .tsws-btn--sm {
+    min-height: var(--adm-target);
+  }
+}
+
+.admin-gate__error {
+  margin: var(--adm-space-4) 0 0;
+  padding: var(--adm-space-3);
+  font-size: var(--adm-text-sm);
+  color: var(--adm-danger);
+  background: var(--adm-danger-tint);
+  border: var(--adm-hairline) solid currentColor;
+  border-radius: var(--adm-radius-md);
+}
+
+.admin-gate__error a {
+  color: inherit;
+}
+
+.adm-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 var(--adm-space-2);
+  font-size: var(--adm-text-xs);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink-2);
+  background: var(--adm-raised);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-sm);
+  white-space: nowrap;
+}
+
+/* ====================================================== filters ========= */
 
 .admin-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--adm-space-2);
+  margin-bottom: var(--adm-space-3);
 }
 
 .admin-filter {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  /* 44px on a phone, per the touch-target floor the rest of the console uses. */
+  gap: var(--adm-space-2);
   min-height: 36px;
-  padding: 0 12px;
-  font-family: var(--font-mono, inherit);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  color: var(--text-body);
+  padding: 0 var(--adm-space-3);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-pill);
+  font: inherit;
+  font-size: var(--adm-text-sm);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+  text-transform: capitalize;
   cursor: pointer;
   transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    color 120ms ease;
+    background-color var(--adm-dur-in) var(--adm-ease),
+    border-color var(--adm-dur-in) var(--adm-ease),
+    color var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-filter:hover,
-.admin-filter:focus-visible {
-  border-color: var(--border-accent);
-  background: var(--surface-raised);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .admin-filter:hover {
+    border-color: var(--adm-ink-3);
+  }
 }
 
-.admin-filter--on {
-  background: var(--surface-raised);
-  border-color: var(--border-accent);
-  color: var(--text-primary);
+.admin-filter--on,
+.admin-filter--on:hover {
+  background: var(--adm-select);
+  border-color: var(--adm-select);
+  color: var(--adm-on-select);
 }
 
 .admin-filter__count {
-  font-size: 10px;
-  padding: 1px 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: inherit;
+  font-weight: var(--adm-weight-regular);
+  opacity: 0.8;
 }
 
-.admin-filter--on .admin-filter__count {
-  background: rgba(255, 255, 255, 0.16);
+@media (max-width: 899px) {
+  .admin-filter {
+    min-height: var(--adm-target);
+  }
 }
 
-/* A button that reads as a link, for the "show all" escape hatch. */
-.admin-linkish {
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--text-primary);
-  text-decoration: underline;
-  cursor: pointer;
-}
+/* ======================================================== lists ========= */
 
+/* One plate, rows divided by hairlines: a list reads as a ledger, not as a
+ * stack of cards. */
 .admin-list {
-  display: grid;
-  gap: 10px;
+  overflow: hidden;
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-lg);
 }
 
 .admin-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: var(--adm-space-3);
   width: 100%;
-  padding: 14px;
+  min-height: 64px;
+  padding: var(--adm-space-3) var(--adm-space-4);
   text-align: left;
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  color: var(--text-body);
+  background: none;
+  border: 0;
+  border-bottom: var(--adm-hairline) solid var(--adm-rule-soft);
+  font: inherit;
+  color: var(--adm-ink);
   cursor: pointer;
-  /* Touch target: never below 44px on a phone. */
-  min-height: 56px;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
+  transition: background-color var(--adm-dur-in) var(--adm-ease);
 }
 
-.admin-row:hover,
+.admin-row:last-child {
+  border-bottom: 0;
+}
+
+@media (hover: hover) {
+  .admin-row:hover {
+    background: var(--adm-hover);
+  }
+}
+
 .admin-row:focus-visible {
-  border-color: var(--border-accent);
-  background: var(--surface-raised);
+  outline-offset: -2px;
 }
 
 .admin-row__main {
   display: grid;
-  gap: 3px;
+  flex: 1;
+  gap: 2px;
   min-width: 0;
 }
 
 .admin-row__title {
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-ink);
 }
 
 .admin-row__meta {
-  font-size: var(--text-xs);
-  /* --text-muted (#7b848b) measures 4.21:1 on --surface-raised, under the AA
-     4.5:1 floor this project holds. --steel-300 gives 5.46:1. */
-  color: var(--steel-300);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--adm-text-sm);
+  color: var(--adm-ink-2);
 }
 
 .admin-row__amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
+  white-space: nowrap;
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+  text-align: right;
+}
+
+.admin-row__chev {
+  color: var(--adm-ink-3);
+}
+
+/* Nothing disappears, it cancels: a void invoice stays in the ledger, struck. */
+.admin-row--void .admin-row__title,
+.admin-row--void .admin-row__amount {
+  color: var(--adm-ink-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+@media (min-width: 640px) {
+  .admin-row {
+    padding: var(--adm-space-3) var(--adm-space-5);
+  }
+
+  .admin-row__amount {
+    min-width: 112px;
+  }
+
+  .admin-row .adm-status {
+    min-width: 72px;
+  }
+}
+
+/* A status as a mark: a dot and a word, never a filled box. */
+.adm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--adm-text-sm);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink-2);
+  text-transform: capitalize;
   white-space: nowrap;
 }
 
-/* --- Status pills -------------------------------------------------------- */
-
-.admin-status {
-  display: inline-block;
-  padding: 3px 8px;
-  font-size: var(--text-3xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  border: 1px solid currentColor;
+.adm-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-.admin-status--draft {
-  color: var(--steel-300);
-}
-.admin-status--sent {
-  color: var(--arc-blue);
-}
-.admin-status--paid {
-  color: var(--status-ok);
-}
-.admin-status--void {
-  color: var(--steel-300);
+.adm-status--draft::before {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px currentColor;
 }
 
-/* --- Line items ---------------------------------------------------------- */
+.adm-status--sent,
+.adm-status--new {
+  color: var(--adm-info);
+}
+
+.adm-status--paid {
+  color: var(--adm-ok);
+}
+
+.adm-status--void {
+  color: var(--adm-ink-3);
+}
+
+.adm-status--void::before {
+  width: 10px;
+  height: 1.5px;
+  border-radius: 0;
+}
+
+/* ================================================== line items ========= */
 
 .admin-lines {
   display: grid;
-  gap: 14px;
+  gap: var(--adm-space-3);
 }
 
 .admin-line {
-  padding: 14px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-hairline);
+  padding: var(--adm-space-4);
+  background: var(--adm-raised);
+  border: var(--adm-hairline) solid var(--adm-rule-soft);
+  border-radius: var(--adm-radius-md);
 }
 
 .admin-line-grid {
   display: grid;
-  gap: 12px;
-  /* Phone: every field full width and stacked. */
+  gap: var(--adm-space-3);
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 720px) {
-  /* Desktop: the familiar qty / unit / description / rate row. */
   .admin-line-grid {
-    grid-template-columns: 80px 150px 1fr 140px;
+    grid-template-columns: 80px 210px 1fr 140px;
     align-items: start;
   }
 
@@ -361,121 +953,301 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-hairline);
+  gap: var(--adm-space-3);
+  margin-top: var(--adm-space-3);
+  padding-top: var(--adm-space-2);
+  border-top: var(--adm-hairline) solid var(--adm-rule-soft);
 }
 
 .admin-line-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
   margin-left: auto;
+  font-size: var(--adm-text-md);
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-ink);
 }
 
-/* --- Totals -------------------------------------------------------------- */
+/* ======================================================== totals ======== */
 
 .admin-totals {
   display: grid;
-  gap: 8px;
+  gap: var(--adm-space-2);
+  max-width: 400px;
   margin-left: auto;
-  max-width: 380px;
 }
 
 .admin-total-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
-  font-size: var(--text-sm);
+  gap: var(--adm-space-4);
+  font-size: var(--adm-text-md);
 }
 
 .admin-total-row__label {
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--steel-300);
+  color: var(--adm-ink-2);
 }
 
 .admin-total-row__value {
-  font-family: var(--font-mono);
-  color: var(--text-body);
+  color: var(--adm-ink);
 }
 
+/* The balance is set like a dimension on a layout: the figure over a hairline
+ * with end ticks, the one place the console draws a measurement. */
 .admin-total-row--balance {
-  margin-top: 6px;
-  padding: 12px 14px;
-  background: var(--accent);
-  color: var(--text-on-accent);
+  position: relative;
+  margin-top: var(--adm-space-2);
+  padding: var(--adm-space-3) 0 var(--adm-space-4);
+  border-top: var(--adm-hairline) solid var(--adm-rule);
 }
 
 .admin-total-row--balance .admin-total-row__label,
 .admin-total-row--balance .admin-total-row__value {
-  color: var(--text-on-accent);
-  font-weight: var(--weight-bold);
-  font-size: var(--text-base);
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-ink);
 }
 
-/* Sticky total bar so the number stays visible while editing on a phone. */
+.admin-total-row--balance .admin-total-row__value {
+  font-size: var(--adm-text-xl);
+  letter-spacing: -0.01em;
+}
+
+.adm-dimension {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 9px;
+  border-left: var(--adm-hairline) solid var(--adm-ink);
+  border-right: var(--adm-hairline) solid var(--adm-ink);
+  background:
+    linear-gradient(var(--adm-ink), var(--adm-ink)) center / 100%
+    var(--adm-hairline) no-repeat;
+}
+
+/* Phone: the balance stays on screen while editing, above the tab bar. */
 .admin-sticky-total {
   position: sticky;
-  bottom: 0;
-  z-index: 15;
+  bottom: calc(var(--adm-tabbar-h) + env(safe-area-inset-bottom));
+  z-index: 20;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
-  margin: 0 -16px;
-  padding: 12px 16px;
-  background: var(--surface-card);
-  border-top: 2px solid var(--accent);
+  gap: var(--adm-space-3);
+  margin: var(--adm-space-6) calc(-1 * var(--adm-space-4)) 0;
+  padding: var(--adm-space-3) var(--adm-space-4);
+  background: var(--adm-surface);
+  border-top: var(--adm-hairline) solid var(--adm-rule);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .admin-sticky-total {
     display: none;
   }
 }
 
 .admin-sticky-total__label {
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
+  font-size: var(--adm-text-sm);
+  color: var(--adm-ink-2);
 }
 
 .admin-sticky-total__value {
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--text-primary);
+  font-size: var(--adm-text-xl);
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-ink);
 }
 
-/* --- Actions ------------------------------------------------------------- */
+/* ============================================== login / set-password ==== */
 
-.admin-actions {
+.admin-gate {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--adm-space-6) var(--adm-space-4);
+}
+
+.admin-gate__plate {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--adm-space-6);
+  background: var(--adm-surface);
+  border: var(--adm-hairline) solid var(--adm-rule);
+  border-radius: var(--adm-radius-lg);
+}
+
+/* The workspace band: the business name on the rail colour, the one piece of
+ * the shell the gate carries. */
+.admin-gate__ws {
+  display: flex;
+  align-items: center;
+  gap: var(--adm-space-3);
+  margin: calc(-1 * var(--adm-space-6)) calc(-1 * var(--adm-space-6))
+    var(--adm-space-6);
+  padding: var(--adm-space-4) var(--adm-space-6);
+  font-size: var(--adm-text-sm);
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-rail-ink);
+  background: var(--adm-rail);
+  border-radius: var(--adm-radius-lg) var(--adm-radius-lg) 0 0;
+}
+
+.admin-gate__ws::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--adm-marker);
+}
+
+.admin-gate__title {
+  margin: 0 0 var(--adm-space-2);
+  font-size: var(--adm-text-xl);
+  font-weight: var(--adm-weight-semibold);
+  line-height: var(--adm-leading-tight);
+  letter-spacing: -0.015em;
+  color: var(--adm-ink);
+}
+
+.admin-gate__sub {
+  margin: 0 0 var(--adm-space-6);
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink-2);
+}
+
+.admin-gate__fields {
+  display: grid;
+  gap: var(--adm-space-4);
+}
+
+/* ======================================================= quotes ========= */
+
+.admin-fields {
+  display: grid;
+  gap: var(--adm-space-4);
+  margin-top: var(--adm-space-4);
+}
+
+@media (min-width: 640px) {
+  .admin-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-card__title + .admin-fields {
+  margin-top: 0;
+}
+
+.admin-field {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-field__label {
+  font-size: var(--adm-text-sm);
+  color: var(--adm-ink-2);
+}
+
+.admin-field__value {
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink);
+  overflow-wrap: anywhere;
+}
+
+/* The customer's own words. Whitespace kept: they often type a list. */
+.admin-quote-desc {
+  max-width: 62ch;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--adm-ink);
+}
+
+.admin-estimate {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  align-items: center;
+  gap: var(--adm-space-3);
 }
 
-/* Small buttons default to 34px tall, which is under the 44px touch target
- * guidance. The owner works from a phone on a job site, so the console's own
- * controls get a floor. */
-@media (max-width: 767px) {
-  .admin-actions .tsws-btn--sm,
-  .admin-bar .tsws-btn--sm {
-    min-height: 44px;
-  }
+.admin-quote-range {
+  margin: 0;
+  font-size: var(--adm-text-xl);
+  font-weight: var(--adm-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--adm-ink);
+}
 
-  .admin-filter {
-    min-height: 44px;
+.admin-estimate__title {
+  margin: var(--adm-space-1) 0 var(--adm-space-3);
+  font-weight: var(--adm-weight-medium);
+  color: var(--adm-ink);
+}
+
+.admin-quote-lines {
+  display: grid;
+  margin: var(--adm-space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--adm-hairline) solid var(--adm-rule-soft);
+}
+
+.admin-quote-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--adm-space-3);
+  padding: var(--adm-space-2) 0;
+  font-size: var(--adm-text-md);
+  color: var(--adm-ink);
+  border-bottom: var(--adm-hairline) solid var(--adm-rule-soft);
+}
+
+/* "Worth asking" follows the line list; space it off as its own block. */
+.admin-quote-lines + .admin-card__title {
+  margin-top: var(--adm-space-6);
+}
+
+.admin-files {
+  display: grid;
+  gap: var(--adm-space-2);
+}
+
+/* One attachment: name and size, then its own download button. Stacked on a
+ * phone so the button stays a full-width target. */
+.admin-file {
+  display: grid;
+  gap: var(--adm-space-3);
+  padding: var(--adm-space-3);
+  border: var(--adm-hairline) solid var(--adm-rule-soft);
+  border-radius: var(--adm-radius-md);
+}
+
+@media (min-width: 640px) {
+  .admin-file {
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 }
 
-/* --- Download spinner ---------------------------------------------------- */
+.admin-file__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-file .admin-row__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  white-space: normal;
+}
+
+/* ================================================ download button ======= */
+
+.admin-download {
+  display: grid;
+  gap: var(--adm-space-2);
+}
 
 .admin-spinner {
   display: inline-block;
@@ -494,28 +1266,69 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .admin-spinner {
-    animation-duration: 2400ms;
-  }
+/* ================================== loading, empty and error states ===== */
+
+.adm-loading {
+  display: grid;
+  gap: var(--adm-space-2);
 }
 
-.admin-empty {
-  padding: 32px 16px;
+.adm-loading__bar {
+  height: 56px;
+  border-radius: var(--adm-radius-md);
+  background: var(--adm-raised);
+}
+
+.adm-loading__bar:nth-child(3) {
+  opacity: 0.7;
+}
+
+.adm-loading__bar:nth-child(4) {
+  opacity: 0.45;
+}
+
+.adm-empty,
+.adm-error {
+  padding: var(--adm-space-8) var(--adm-space-5);
   text-align: center;
-  color: var(--steel-300);
-  font-size: var(--text-sm);
-  border: 1px dashed var(--border-subtle);
+  border: var(--adm-hairline) dashed var(--adm-rule);
+  border-radius: var(--adm-radius-lg);
 }
 
-.admin-note {
-  font-size: var(--text-xs);
-  color: var(--steel-300);
-  line-height: var(--leading-body);
+.adm-empty__title {
+  margin: 0;
+  font-weight: var(--adm-weight-semibold);
+  color: var(--adm-ink);
 }
 
-/* Visible to screen readers only. Used for the download progress announcement,
- * where the visual cue is the button's own spinner. */
+.adm-empty__body {
+  max-width: 44ch;
+  margin: var(--adm-space-1) auto 0;
+  font-size: var(--adm-text-sm);
+  color: var(--adm-ink-2);
+}
+
+.adm-error {
+  display: flex;
+  gap: var(--adm-space-3);
+  align-items: flex-start;
+  text-align: left;
+  color: var(--adm-danger);
+  background: var(--adm-danger-tint);
+  border: var(--adm-hairline) solid currentColor;
+}
+
+.adm-error__text {
+  display: grid;
+  justify-items: start;
+  gap: var(--adm-space-3);
+}
+
+.adm-error .adm-empty__body {
+  margin: 0;
+}
+
+/* Visible to screen readers only. */
 .admin-sr-only {
   position: absolute;
   width: 1px;
@@ -528,116 +1341,8 @@
   border: 0;
 }
 
-.admin-download {
-  display: grid;
-  gap: 8px;
-}
-
-/* --- Quotes inbox -------------------------------------------------------- */
-
-/* Quote statuses come from the submit path as free-form strings; "new" is what
- * every fresh request carries, so it gets the live accent. Anything else falls
- * back to the bare pill above. */
-.admin-status--new {
-  color: var(--arc-blue);
-}
-
-/* Label-over-value pairs. Stacked on a phone, two up once there is room —
- * same breakpoint as .admin-grid-2 so the cards line up. */
-.admin-fields {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-@media (min-width: 640px) {
-  .admin-fields {
-    grid-template-columns: 1fr 1fr;
+@media (prefers-reduced-motion: reduce) {
+  .admin-spinner {
+    animation-duration: 2400ms;
   }
-}
-
-.admin-field {
-  display: grid;
-  gap: 2px;
-}
-
-.admin-field__label {
-  font-size: var(--text-3xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
-  color: var(--steel-300);
-}
-
-.admin-field__value {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-
-/* The customer's own words. Whitespace is preserved: they often type a list. */
-.admin-quote-desc {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  line-height: var(--leading-body);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.admin-quote-range {
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  color: var(--text-primary);
-}
-
-.admin-quote-lines {
-  display: grid;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.admin-quote-lines li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.admin-files {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-/* One attachment: name and size, then its own download button. Stacked on a
- * phone so the button stays a full-width tap target. */
-.admin-file {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--border-subtle);
-}
-
-@media (min-width: 640px) {
-  .admin-file {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-  }
-}
-
-.admin-file__main {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* "Worth asking" follows the line-item list directly; without this the heading
- * sits flush against the last row and reads as part of it. */
-.admin-quote-lines + .admin-card__title {
-  margin-top: 18px;
 }

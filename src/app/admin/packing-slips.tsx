@@ -9,6 +9,7 @@ import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import { PACKING_SLIP_NOTES } from "../../../convex/noteLines";
 import DownloadPdfButton from "./download-pdf-button";
 import NotesField from "./notes-field";
+import { countOf, EmptyState, LoadingState, PageHeader } from "./shell";
 
 type SlipLine = {
   key: string;
@@ -81,19 +82,23 @@ export function PackingSlipList({
 
   return (
     <>
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">Shipping</p>
-          <h1 className="admin-title">Packing slips</h1>
-        </div>
-      </div>
+      <PageHeader
+        title="Packing slips"
+        meta={
+          slips === undefined || slips.length === 0
+            ? "What went out the door, and to whom."
+            : countOf(slips.length, "slip")
+        }
+      />
 
-      <div className="admin-card">
-        <h2 className="admin-card__title">Start a new packing slip</h2>
+      <section className="admin-card" aria-labelledby="new-slip">
+        <h2 className="admin-card__title" id="new-slip">
+          Start a new packing slip
+        </h2>
         {options.length === 0 ? (
           <p className="admin-note">Add a customer first.</p>
         ) : (
-          <div className="admin-grid-2">
+          <div className="admin-start">
             <Select
               label="Customer"
               options={options}
@@ -101,28 +106,28 @@ export function PackingSlipList({
               value={customerId}
               onChange={setCustomerId}
             />
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <Button
-                disabled={!customerId}
-                onClick={async () => {
-                  const id = await create({
-                    token,
-                    customerId: customerId as Id<"customers">,
-                  });
-                  onOpen(id);
-                }}
-              >
-                <Icon name="truck" /> Create packing slip
-              </Button>
-            </div>
+            <Button
+              disabled={!customerId}
+              onClick={async () => {
+                const id = await create({
+                  token,
+                  customerId: customerId as Id<"customers">,
+                });
+                onOpen(id);
+              }}
+            >
+              <Icon name="plus" /> Create packing slip
+            </Button>
           </div>
         )}
-      </div>
+      </section>
 
       {slips === undefined ? (
-        <p className="admin-note">Loading…</p>
+        <LoadingState />
       ) : slips.length === 0 ? (
-        <p className="admin-empty">No packing slips yet.</p>
+        <EmptyState title="No packing slips yet">
+          Start one above, or make one from an invoice.
+        </EmptyState>
       ) : (
         <div className="admin-list">
           {slips.map((slip) => (
@@ -140,6 +145,7 @@ export function PackingSlipList({
                   {slip.lineItems.length === 1 ? "" : "s"}
                 </span>
               </span>
+              <Icon name="chevron-right" className="admin-row__chev" />
             </button>
           ))}
         </div>
@@ -220,10 +226,15 @@ export function PackingSlipEditor({
     return await generatePdf({ token, id });
   }, [save, generatePdf, token, id]);
 
-  if (slip === undefined || (slip && !form))
-    return <p className="admin-note">Loading…</p>;
+  if (slip === undefined || (slip && !form)) return <LoadingState rows={5} />;
   if (slip === null || !form)
-    return <p className="admin-empty">That packing slip is gone.</p>;
+    return (
+      <EmptyState title="That packing slip is gone">
+        <button type="button" className="admin-linkish" onClick={onBack}>
+          Back to packing slips
+        </button>
+      </EmptyState>
+    );
 
   const fromInvoice = slip.invoice;
   const field = (label: string, key: keyof Omit<Form, "lines">) => (
@@ -236,21 +247,14 @@ export function PackingSlipEditor({
 
   return (
     <>
-      <div className="admin-actions" style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button variant="quiet" size="sm" onClick={onBack}>
-          <Icon name="arrow-left" /> All packing slips
-        </Button>
-      </div>
-
-      <div className="admin-head">
-        <div>
-          <p className="admin-eyebrow">{slip.customerName}</p>
-          <h1 className="admin-title">{slip.number}</h1>
-        </div>
-      </div>
+      <PageHeader
+        back={{ label: "All packing slips", onClick: onBack }}
+        title={slip.number}
+        meta={slip.customerName}
+      />
 
       {fromInvoice === null ? null : (
-        <p className="admin-note">
+        <p className="admin-note admin-origin">
           Invoice{" "}
           <button
             type="button"
