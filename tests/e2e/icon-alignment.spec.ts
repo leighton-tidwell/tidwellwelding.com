@@ -24,10 +24,12 @@ test("icons are vertically centred against their button label", async ({
   });
 
   const offsets = await page.evaluate(() =>
-    Array.from(document.querySelectorAll(".tsws-btn"))
+    // The admin nav items are always on screen; the design-system buttons
+    // depend on data (no customers, no "Create invoice").
+    Array.from(document.querySelectorAll(".tsws-btn, .adm-nav__item"))
       .map((btn) => {
         const icon = btn.querySelector(".tsws-icon");
-        const label = btn.querySelector(".tsws-btn__label");
+        const label = btn.querySelector(".tsws-btn__label, .adm-nav__label");
         if (!icon || !label) return null;
         const i = icon.getBoundingClientRect();
         const l = label.getBoundingClientRect();
