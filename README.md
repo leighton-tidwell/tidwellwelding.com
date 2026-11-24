@@ -10,7 +10,7 @@ Marketing and quote-intake site for a mobile welding and fabrication business in
 - **Convex** backend: quote intake, AI estimator, shop chat bot, rate limiting
 - **Resend** transactional email with `.ics` calendar invites for callback slots
 - **Cloudflare Turnstile** CAPTCHA on every AI-facing action
-- **Claude** (Anthropic API): Sonnet 5 drafts research-calibrated quote estimates with confidence gating; Haiku 4.5 answers shop questions
+- **Claude** (Anthropic API): Sonnet 5.5 drafts research-calibrated quote estimates with confidence gating; Haiku 4.5 answers shop questions
 
 ## Features
 
