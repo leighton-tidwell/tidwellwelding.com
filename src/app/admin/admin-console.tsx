@@ -30,10 +30,15 @@ type View =
 
 /** Top-level sections and the permission each needs. Hiding a section is a
  * convenience; the server refuses the data regardless. Customers needs money
- * too because its detail page shows what they were billed. */
+ * too because its detail page shows what they were billed, and packing slips
+ * need jobs.write because the screen is mostly a creation form. */
 const SECTIONS = [
   { name: "invoices", label: "Invoices", needs: ["financials.read"] },
-  { name: "slips", label: "Packing slips", needs: ["jobs.read.all"] },
+  {
+    name: "slips",
+    label: "Packing slips",
+    needs: ["jobs.read.all", "jobs.write"],
+  },
   { name: "quotes", label: "Quotes", needs: ["quotes.inbox"] },
   {
     name: "customers",
