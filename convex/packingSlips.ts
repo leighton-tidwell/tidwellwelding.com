@@ -7,8 +7,8 @@ import {
   mutation,
   query,
 } from "./_generated/server";
-import { requireAdmin } from "./auth";
 import { invoiceDateStamp } from "./invoices";
+import { requireAccess } from "./lib/access";
 import { assertNoteFits, PACKING_SLIP_NOTES } from "./noteLines";
 
 const lineItemValidator = v.object({
@@ -56,7 +56,7 @@ async function insertSlip(
 export const create = mutation({
   args: { token: v.string(), customerId: v.id("customers") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "jobs.write");
     const customer = await ctx.db.get(args.customerId);
     if (!customer) throw new Error("That customer no longer exists");
     return await insertSlip(ctx, customer);
@@ -68,7 +68,7 @@ export const create = mutation({
 export const createFromInvoice = mutation({
   args: { token: v.string(), invoiceId: v.id("invoices") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "jobs.write");
     const invoice = await ctx.db.get(args.invoiceId);
     if (!invoice) throw new Error("That invoice no longer exists");
     const customer = await ctx.db.get(invoice.customerId);
@@ -104,7 +104,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, { token, id, ...fields }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "jobs.write");
     if (!(await ctx.db.get(id)))
       throw new Error("That packing slip no longer exists");
     assertNoteFits(fields.notes, PACKING_SLIP_NOTES, "packing slip");
@@ -120,7 +120,7 @@ export const update = mutation({
 export const get = query({
   args: { token: v.string(), id: v.id("packingSlips") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "jobs.read.all");
     const slip = await ctx.db.get(args.id);
     if (!slip) return null;
     const customer = await ctx.db.get(slip.customerId);
@@ -136,7 +136,7 @@ export const get = query({
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "jobs.read.all");
     const slips = await ctx.db
       .query("packingSlips")
       .withIndex("by_createdAt")
@@ -157,7 +157,7 @@ export const list = query({
 export const remove = mutation({
   args: { token: v.string(), id: v.id("packingSlips") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "jobs.write");
     await ctx.db.delete(args.id);
   },
 });
@@ -166,7 +166,7 @@ export const remove = mutation({
 export const loadForPdf = internalQuery({
   args: { token: v.string(), id: v.id("packingSlips") },
   handler: async (ctx, { token, id }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "jobs.read.all");
     const slip = await ctx.db.get(id);
     if (!slip) throw new Error("That packing slip no longer exists");
     const customer = await ctx.db.get(slip.customerId);

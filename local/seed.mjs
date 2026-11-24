@@ -4,7 +4,7 @@
 // is shaped exactly like production's. Refuses any backend that isn't local.
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference as fn } from "convex/server";
-import { OWNER } from "./owner.mjs";
+import { OWNER, STAFF } from "./owner.mjs";
 
 const url = process.env.CONVEX_SELF_HOSTED_URL ?? "";
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(url)) {
@@ -19,19 +19,36 @@ const mutation = (name, args) => convex.mutation(fn(name), args);
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.now();
 
-// Owner account, through the real one-time setup link.
-let userId;
+// Accounts, each through the real one-time setup link.
+async function account({ email, name, role, title, supervisorId }) {
+  const userId = await mutation("auth:createAdminUser", {
+    email,
+    name,
+    role,
+    title,
+    supervisorId,
+  });
+  const setupToken = await mutation("auth:issueSetupToken", { userId });
+  await mutation("auth:setPassword", {
+    token: setupToken,
+    password: OWNER.password,
+  });
+  return userId;
+}
+
 try {
-  userId = await mutation("auth:createAdminUser", { email: OWNER.email });
+  await account({ email: OWNER.email, name: "Shop Owner", role: "owner" });
 } catch {
   console.log("seed: already seeded. `make reset` gives a fresh stack.");
   process.exit(0);
 }
-const setupToken = await mutation("auth:issueSetupToken", { userId });
-await mutation("auth:setPassword", {
-  token: setupToken,
-  password: OWNER.password,
-});
+const staffIds = {};
+for (const { supervisor, ...person } of STAFF) {
+  staffIds[person.email] = await account({
+    ...person,
+    supervisorId: supervisor ? staffIds[supervisor] : undefined,
+  });
+}
 const { token } = await mutation("auth:login", OWNER);
 
 await mutation("settings:setLaborRate", { rate: 95 });
@@ -141,5 +158,6 @@ await mutation("quotes:insertQuote", {
 
 console.log(
   `seed: owner ${OWNER.email} / ${OWNER.password}, ` +
+    `${STAFF.map((p) => p.role).join(", ")} at <role>@tidwellwelding.test (same password), ` +
     `${customers.length} customers, ${invoices.length} invoices, 1 quote`,
 );

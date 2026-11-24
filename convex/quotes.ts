@@ -30,7 +30,7 @@ import {
 } from "./uploadRules";
 
 const OWNER_EMAIL = "eric@tidwellwelding.com";
-const FROM = "TSWS Website <quotes@tidwellwelding.com>";
+export const FROM = "TSWS Website <quotes@tidwellwelding.com>";
 
 // Test mode stays on until RESEND_TEST_MODE is explicitly set to "false", so
 // nothing real sends before the domain and API key are configured.

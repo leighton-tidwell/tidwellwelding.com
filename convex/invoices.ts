@@ -1,8 +1,8 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
-import { requireAdmin } from "./auth";
 import { computeInvoiceTotals } from "./invoiceMath";
+import { requireAccess } from "./lib/access";
 import { assertNoteFits, INVOICE_NOTES } from "./noteLines";
 
 /** Granbury, TX combined rate (6.25% state + 2% local), in basis points. */
@@ -88,7 +88,7 @@ export const create = mutation({
     jobPo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.write");
 
     const customer = await ctx.db.get(args.customerId);
     if (!customer) throw new Error("That customer no longer exists");
@@ -123,7 +123,7 @@ const UNITS = ["hr", "ea", "ft", "lb", "lot"] as const;
 export const createFromPackingSlip = mutation({
   args: { token: v.string(), packingSlipId: v.id("packingSlips") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.write");
     const slip = await ctx.db.get(args.packingSlipId);
     if (!slip) throw new Error("That packing slip no longer exists");
     if (slip.invoiceId) throw new Error("That packing slip is already billed");
@@ -173,7 +173,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.write");
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("That invoice no longer exists");
 
@@ -226,7 +226,7 @@ export const setStatus = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.write");
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("That invoice no longer exists");
     await ctx.db.patch(args.id, { status: args.status, updatedAt: Date.now() });
@@ -238,7 +238,7 @@ export const setStatus = mutation({
 export const get = query({
   args: { token: v.string(), id: v.id("invoices") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.read");
     const invoice = await ctx.db.get(args.id);
     if (!invoice) return null;
     const customer = await ctx.db.get(invoice.customerId);
@@ -261,7 +261,7 @@ export const get = query({
 export const list = query({
   args: { token: v.string(), status: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.read");
     const invoices = await ctx.db
       .query("invoices")
       .withIndex("by_createdAt")
@@ -285,7 +285,7 @@ export const list = query({
 export const listForCustomer = query({
   args: { token: v.string(), customerId: v.id("customers") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.read");
     const invoices = await ctx.db
       .query("invoices")
       .withIndex("by_customer", (q) => q.eq("customerId", args.customerId))
@@ -301,7 +301,7 @@ export const listForCustomer = query({
 export const remove = mutation({
   args: { token: v.string(), id: v.id("invoices") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.write");
     await ctx.db.delete(args.id);
   },
 });

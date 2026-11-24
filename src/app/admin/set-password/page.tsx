@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 /**
- * Landing page for the one-time setup link emailed to the owner. The token in
- * the URL is single-use: setPassword burns it, and a user who already has a
- * password is refused even with a pristine token. A replacement link can only
- * be minted from the Convex CLI (auth:issuePasswordReset).
+ * Landing page for the one-time invite or reset link. The token in the URL is
+ * single-use: setPassword burns it, and a user who already has a password is
+ * refused even with a pristine token. A replacement link is sent from the
+ * People screen, or minted from the Convex CLI (auth:issuePasswordReset).
  *
  * The token is checked here, on the server, so a spent link renders as spent in
  * the first HTML the browser receives. Checking it in the client meant the form
@@ -115,7 +115,7 @@ export default async function SetPasswordPage({
   if (result.state === "expired") {
     return (
       <Gate title="This link has expired" action={SIGN_IN}>
-        Setup links are good for 48 hours. This one timed out before it was
+        Setup links are good for 72 hours. This one timed out before it was
         used, so it needs replacing — ask for a fresh link.
       </Gate>
     );

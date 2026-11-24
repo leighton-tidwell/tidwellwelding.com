@@ -4,17 +4,19 @@ import { components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import {
   internalMutation,
+  type MutationCtx,
   mutation,
   type QueryCtx,
   query,
 } from "./_generated/server";
+import { roleValidator } from "./lib/permissions";
 
 // 10 attempts per 15 minutes per email address.
 const loginLimiter = new RateLimiter(components.rateLimiter, {
   adminLogin: { kind: "fixed window", rate: 10, period: 15 * MINUTE },
 });
 
-const SETUP_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
+export const SETUP_TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
 
 function toHex(bytes: Uint8Array): string {
   return Array.from(bytes)
@@ -37,27 +39,109 @@ function randomHex(byteLength: number): string {
 }
 
 /**
- * Create the single operator account. Internal only — there is deliberately no
- * public registration path anywhere in the API. The account starts with no
+ * Create an account by hand, from the CLI or the local seed. Internal only —
+ * there is deliberately no public registration path anywhere in the API; the
+ * console invites people through people:invite. Defaults to owner because
+ * this is how the first owner is bootstrapped. The account starts with no
  * password; a setup link is issued separately.
  */
 export const createAdminUser = internalMutation({
-  args: { email: v.string() },
-  handler: async (ctx, { email }) => {
+  args: {
+    email: v.string(),
+    role: v.optional(roleValidator),
+    name: v.optional(v.string()),
+    title: v.optional(v.string()),
+    supervisorId: v.optional(v.id("adminUsers")),
+  },
+  handler: async (ctx, { email, role = "owner", ...profile }) => {
     const existing = await ctx.db
       .query("adminUsers")
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
     if (existing) throw new ConvexError("An admin with that email exists.");
-    return await ctx.db.insert("adminUsers", { email, createdAt: Date.now() });
+    const userId = await ctx.db.insert("adminUsers", {
+      email,
+      role,
+      status: "invited",
+      ...profile,
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("auditLog", {
+      action: "user.create",
+      targetId: userId,
+      after: { email, role, ...profile },
+      at: Date.now(),
+    });
+    return userId;
   },
 });
 
 /**
- * Mint a one-time set-password link. Only the token's hash is persisted, so
- * reading the table never yields a usable link. The plaintext is returned once,
- * to the internal caller (CLI or email job).
+ * Mint a one-time set-password link and burn every older one for the user, so
+ * only the newest link ever works. Only the hash is persisted; the plaintext
+ * is returned once, to the caller that emails or prints it.
  */
+export async function mintSetupToken(
+  ctx: MutationCtx,
+  userId: Id<"adminUsers">,
+  purpose: "invite" | "reset",
+): Promise<string> {
+  await burnSetupTokens(ctx, userId);
+  const token = randomHex(32);
+  const now = Date.now();
+  await ctx.db.insert("setupTokens", {
+    tokenHash: await sha256Hex(token),
+    userId,
+    purpose,
+    expiresAt: now + SETUP_TOKEN_TTL_MS,
+    createdAt: now,
+  });
+  return token;
+}
+
+export async function burnSetupTokens(
+  ctx: MutationCtx,
+  userId: Id<"adminUsers">,
+): Promise<void> {
+  const now = Date.now();
+  const rows = await ctx.db
+    .query("setupTokens")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const row of rows) {
+    if (row.usedAt === undefined) await ctx.db.patch(row._id, { usedAt: now });
+  }
+}
+
+export async function revokeSessions(
+  ctx: MutationCtx,
+  userId: Id<"adminUsers">,
+): Promise<void> {
+  const sessions = await ctx.db
+    .query("adminSessions")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const s of sessions) await ctx.db.delete(s._id);
+}
+
+/**
+ * Wipe the password itself, not just the marker: the old password must stop
+ * working the moment a reset is issued, not once a new one is set. Every live
+ * session goes with it.
+ */
+export async function clearCredentials(
+  ctx: MutationCtx,
+  userId: Id<"adminUsers">,
+): Promise<void> {
+  await ctx.db.patch(userId, {
+    passwordHash: undefined,
+    passwordSalt: undefined,
+    passwordSetAt: undefined,
+  });
+  await revokeSessions(ctx, userId);
+}
+
+/** CLI form of an invite: prints the link instead of emailing it. */
 export const issueSetupToken = internalMutation({
   args: { userId: v.id("adminUsers") },
   returns: v.string(),
@@ -69,14 +153,7 @@ export const issueSetupToken = internalMutation({
         "That account already has a password. Use issuePasswordReset.",
       );
     }
-    const token = randomHex(32);
-    await ctx.db.insert("setupTokens", {
-      tokenHash: await sha256Hex(token),
-      userId,
-      expiresAt: Date.now() + SETUP_TOKEN_TTL_MS,
-      createdAt: Date.now(),
-    });
-    return token;
+    return await mintSetupToken(ctx, userId, "invite");
   },
 });
 
@@ -153,14 +230,16 @@ export const checkSetupToken = query({
       .unique();
     if (!row) return { state: "unknown" as const };
     // Spent is checked before expired: a burned token is burned regardless of
-    // whether its 48h window also ran out while it sat in an inbox.
+    // whether its 72h window also ran out while it sat in an inbox.
     if (row.usedAt !== undefined) return { state: "spent" as const };
     if (row.expiresAt <= Date.now()) return { state: "expired" as const };
 
     const user = await ctx.db.get(row.userId);
     // A token pointing at an account that no longer exists is as good as one
     // that was never issued, and saying so leaks nothing extra.
-    if (!user) return { state: "unknown" as const };
+    if (!user || user.status === "deactivated") {
+      return { state: "unknown" as const };
+    }
     if (user.passwordSetAt !== undefined) {
       return { state: "already_set" as const };
     }
@@ -183,7 +262,9 @@ export const setPassword = mutation({
       throw new ConvexError("That link is invalid or has expired.");
     }
     const user = await ctx.db.get(row.userId);
-    if (!user) throw new ConvexError("That link is invalid or has expired.");
+    if (!user || user.status === "deactivated") {
+      throw new ConvexError("That link is invalid or has expired.");
+    }
     // Belt and braces: even a pristine token cannot re-set an existing password.
     if (user.passwordSetAt !== undefined) {
       throw new ConvexError("That link is invalid or has expired.");
@@ -202,6 +283,7 @@ export const setPassword = mutation({
       passwordHash,
       passwordSalt,
       passwordSetAt: now,
+      status: "active",
     });
     await ctx.db.patch(row._id, { usedAt: now });
     return null;
@@ -263,7 +345,8 @@ export const login = mutation({
     if (
       !user?.passwordHash ||
       !user.passwordSalt ||
-      user.passwordSetAt === undefined
+      user.passwordSetAt === undefined ||
+      user.status === "deactivated"
     ) {
       return deny;
     }
@@ -317,11 +400,9 @@ export const logout = mutation({
 });
 
 /**
- * The only escape hatch: run this from the Convex CLI or dashboard if the
- * password is lost. Wipes the stored hash and salt and clears passwordSetAt
- * (so the old password stops working at once), revokes every live session, and
- * mints a fresh one-time link. Deliberately internal — never reachable from
- * the browser.
+ * CLI form of a reset, for when nobody who could send one from the console is
+ * able to sign in. Wipes the password, revokes every session and prints a
+ * fresh one-time link. The console's version is people:sendLink.
  */
 export const issuePasswordReset = internalMutation({
   args: { userId: v.id("adminUsers") },
@@ -329,28 +410,7 @@ export const issuePasswordReset = internalMutation({
   handler: async (ctx, { userId }) => {
     const user = await ctx.db.get(userId);
     if (!user) throw new ConvexError("No such admin user.");
-
-    // Wipe the credential itself, not just the marker: the old password must
-    // stop working the moment the reset is issued, not once a new one is set.
-    await ctx.db.patch(userId, {
-      passwordHash: undefined,
-      passwordSalt: undefined,
-      passwordSetAt: undefined,
-    });
-
-    const sessions = await ctx.db
-      .query("adminSessions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    for (const s of sessions) await ctx.db.delete(s._id);
-
-    const token = randomHex(32);
-    await ctx.db.insert("setupTokens", {
-      tokenHash: await sha256Hex(token),
-      userId,
-      expiresAt: Date.now() + SETUP_TOKEN_TTL_MS,
-      createdAt: Date.now(),
-    });
-    return token;
+    await clearCredentials(ctx, userId);
+    return await mintSetupToken(ctx, userId, "reset");
   },
 });

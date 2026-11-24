@@ -1,13 +1,13 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
-import { requireAdmin } from "./auth";
 import { estimateSchema } from "./estimate";
 import {
   DEFAULT_TAX_BASIS_POINTS,
   DEFAULT_TERMS,
   nextInvoiceNumber,
 } from "./invoices";
+import { requireAccess } from "./lib/access";
 import { readLaborRate } from "./settings";
 
 /**
@@ -16,13 +16,13 @@ import { readLaborRate } from "./settings";
  * Deliberately a separate module from quotes.ts: that file is the public
  * submit path, and keeping the operator's read queries out of it means a
  * change here can never widen what an anonymous caller can reach. Every
- * function goes through requireAdmin, the same gate the invoice and customer
+ * function goes through requireAccess, the same gate the invoice and customer
  * functions use.
  *
  * The two mutations at the bottom are the only writes here, and they exist so
  * the inbox is not a dead end: an operator can turn a request into a customer
  * and into an invoice without retyping the contact details or the AI's hours.
- * Both go through requireAdmin like everything else in this file.
+ * Both go through requireAccess like everything else in this file.
  */
 
 /** The AI draft as the console renders it. Stored as v.any(), so the shape is
@@ -96,7 +96,7 @@ export const list = query({
   args: { token: v.string() },
   returns: v.array(summaryValidator),
   handler: async (ctx, { token }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "quotes.inbox");
     const rows = await ctx.db
       .query("quotes")
       .withIndex("by_createdAt")
@@ -195,7 +195,7 @@ const detailValidator = v.object({
 
 /**
  * One quote with download links for its uploads. The links come from
- * ctx.storage.getUrl behind requireAdmin, so an attachment is never reachable
+ * ctx.storage.getUrl behind requireAccess, so an attachment is never reachable
  * without a live operator session.
  *
  * `files` is always an array. A quote submitted before #17 simply has none,
@@ -205,7 +205,7 @@ export const get = query({
   args: { token: v.string(), id: v.id("quotes") },
   returns: v.union(detailValidator, v.null()),
   handler: async (ctx, { token, id }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "quotes.inbox");
     const row = await ctx.db.get(id);
     if (!row) return null;
 
@@ -305,7 +305,7 @@ export const createCustomerFromQuote = mutation({
     }),
   ),
   handler: async (ctx, { token, id, linkTo, createAnyway }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "quotes.inbox");
     const quote = await ctx.db.get(id);
     if (!quote) throw new Error("That quote no longer exists");
 
@@ -380,7 +380,7 @@ export const createInvoiceFromQuote = mutation({
   args: { token: v.string(), id: v.id("quotes") },
   returns: v.id("invoices"),
   handler: async (ctx, { token, id }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "financials.write");
     const quote = await ctx.db.get(id);
     if (!quote) throw new Error("That quote no longer exists");
 

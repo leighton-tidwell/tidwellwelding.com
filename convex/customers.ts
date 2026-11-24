@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./auth";
 import { computeInvoiceTotals } from "./invoiceMath";
+import { requireAccess } from "./lib/access";
 
 /** Trim and reject empty required text so a blank name cannot be saved. */
 function requireText(value: string, label: string): string {
@@ -28,7 +28,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "businesses.write");
     const now = Date.now();
     return await ctx.db.insert("customers", {
       name: requireText(args.name, "customer name"),
@@ -57,7 +57,7 @@ export const update = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "businesses.write");
     const existing = await ctx.db.get(args.id);
     if (!existing) throw new Error("That customer no longer exists");
 
@@ -82,7 +82,7 @@ export const update = mutation({
 export const get = query({
   args: { token: v.string(), id: v.id("customers") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "businesses.read");
     return await ctx.db.get(args.id);
   },
 });
@@ -90,7 +90,7 @@ export const get = query({
 export const list = query({
   args: { token: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "businesses.read");
     return await ctx.db.query("customers").withIndex("by_name").collect();
   },
 });
@@ -100,7 +100,7 @@ export const list = query({
 export const summary = query({
   args: { token: v.string(), id: v.id("customers") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "financials.read");
     const customer = await ctx.db.get(args.id);
     if (!customer) throw new Error("That customer no longer exists");
 
@@ -127,7 +127,7 @@ export const summary = query({
 export const remove = mutation({
   args: { token: v.string(), id: v.id("customers") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.token);
+    await requireAccess(ctx, args.token, "businesses.write");
     await ctx.db.delete(args.id);
   },
 });

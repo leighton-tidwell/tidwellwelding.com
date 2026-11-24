@@ -6,7 +6,7 @@ import {
   type QueryCtx,
   query,
 } from "./_generated/server";
-import { requireAdmin } from "./auth";
+import { requireAccess } from "./lib/access";
 
 /** Settings the shop owner controls. Stored in the database rather than code
  * so the admin console can edit them without a deploy, and so the values
@@ -74,7 +74,7 @@ export const getLaborRateAdmin = query({
   args: { token: v.string() },
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, { token }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "settings.shop");
     return await readLaborRate(ctx);
   },
 });
@@ -83,7 +83,7 @@ export const setLaborRateAdmin = mutation({
   args: { token: v.string(), rate: v.number() },
   returns: v.null(),
   handler: async (ctx, { token, rate }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "settings.shop");
     if (!Number.isFinite(rate) || rate <= 0) {
       throw new Error("Rate must be a positive number.");
     }
