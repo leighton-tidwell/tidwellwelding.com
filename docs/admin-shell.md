@@ -3,20 +3,26 @@
 How the `/admin` console is put together, and how to add a screen to it.
 
 The design follows the taste skill (github.com/Leonxlnx/taste-skill,
-`references/system.md` and `motion.md`), used as guidance only:
+`references/system.md`, `layout-v4.md`, `motion.md` and `library/type.json`),
+used as guidance only:
 
-- Body text is 16px and nothing is under 13px. Field labels are 14px in
-  sentence case.
-- Buttons are 44px tall with a 16px label and 24px of side padding. Fields are
-  48px.
-- Radii are the skill's sharp 4/6/8.
-- Surfaces are flat, with hairline rules.
-- There is one accent.
-- Motion runs 150/120/90ms with no bounce, and hover effects apply only to fine
-  pointers.
+- The interface is neutral with one accent. For now that accent is the
+  business's brand red, held in `--adm-accent` so it can become a
+  per-workspace setting.
+- Type is Geist, with Geist Mono for IDs and money in tables. Weights are 400
+  and 500. Body text is 16px and nothing is under 13px.
+- Buttons are 44px tall and fields are 48px.
+- Motion runs 150/120/90ms with no bounce, and hover effects apply only to
+  fine pointers.
 
-The look is a dark steel rail beside a chalk-light workspace, with paint-marker
-yellow as the one accent. Dark mode keeps the rail and darkens the workspace.
+The structure:
+
+- **Sidebar:** a workspace badge on top, then sections under headings (Work,
+  Billing, Contacts, Team, Admin).
+- **List screens:** each opens with a strip of figures (what is outstanding,
+  what is new), then a ledger whose columns line up under a header.
+- **Editors:** the form on the left, and a sticky summary panel on the right
+  with status, totals and the document's actions.
 
 ## Pieces
 
@@ -24,9 +30,9 @@ yellow as the one accent. Dark mode keeps the rail and darkens the workspace.
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `src/app/admin/tokens.css` | Design tokens: type scale, 4px spacing, radii, motion, and light and dark colors. Every token is `--adm-*`.      |
 | `src/app/admin/admin.css`  | Every console style, built only on those tokens. It re-skins the shared `ds` components inside the console only. |
-| `src/app/admin/layout.tsx` | Loads the console's face, Public Sans.                                                                           |
+| `src/app/admin/layout.tsx` | Loads the console's faces, Geist and Geist Mono.                                                                 |
 | `src/app/admin/nav.ts`     | The one list of sections. The sidebar and the phone tab bar both render from it.                                 |
-| `src/app/admin/shell.tsx`  | `AdminShell`, `PageHeader`, `LoadingState`, `EmptyState`, `ErrorState`, `StatusMark`.                            |
+| `src/app/admin/shell.tsx`  | `AdminShell`, `PageHeader`, `StatStrip`, `LoadingState`, `EmptyState`, `ErrorState`, `StatusMark`.               |
 
 Everything is scoped under the `.adm` class. The public site's tokens and
 components in `globals.css` are not touched, so a console change cannot leak
@@ -41,7 +47,7 @@ onto the marketing pages.
 
 There is one nav element, not two, so each section is a single button for
 screen readers and for the e2e suite. The current section has
-`aria-current="page"` and the yellow marker stroke.
+`aria-current="page"` and is raised out of the rail (on a phone, its icon sits in an accent-tinted pill).
 
 ## Adding a section
 
@@ -59,12 +65,12 @@ is still to be built, along with the sections that need it.
 
 ## Rules the styles keep
 
-- Paint-marker yellow (`--adm-marker`) is only for primary actions and "you
-  are here". It is never decoration.
+- The accent (`--adm-accent`) is only for the primary action, the current
+  section, links and focus. It is never decoration.
 - There are no labels stacked above headings. Context goes in the meta line
   under the title.
-- Statuses are marks (dot, ring, dash), not filled boxes. Void records stay in
-  their lists, struck through.
+- Statuses are pills with a dot, tinted only where the status means something.
+  Void records stay in their lists, struck through.
 - Touch targets are at least 44px on phones. Text contrast is at least 4.5:1
   in both modes; axe checks it in `tests/e2e/admin.spec.ts`.
 

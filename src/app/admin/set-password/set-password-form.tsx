@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button, Input } from "@/components/ds";
 import { NAME } from "@/lib/business";
 import { api } from "../../../../convex/_generated/api";
+import { monogram } from "../monogram";
 import "../tokens.css";
 import "../admin.css";
 
@@ -51,7 +52,12 @@ export default function SetPasswordForm({ token }: { token: string }) {
     return (
       <div className="adm admin-gate">
         <div className="admin-gate__plate">
-          <p className="admin-gate__ws">{NAME}</p>
+          <p className="admin-gate__ws">
+            <span className="adm-ws__mark" aria-hidden="true">
+              {monogram(NAME)}
+            </span>
+            {NAME}
+          </p>
           <h1 className="admin-gate__title">You are set</h1>
           <p className="admin-gate__sub">
             Your password is saved. This link will not work again.
@@ -73,7 +79,12 @@ export default function SetPasswordForm({ token }: { token: string }) {
           void submit();
         }}
       >
-        <p className="admin-gate__ws">{NAME}</p>
+        <p className="admin-gate__ws">
+          <span className="adm-ws__mark" aria-hidden="true">
+            {monogram(NAME)}
+          </span>
+          {NAME}
+        </p>
         <h1 className="admin-gate__title">Pick a password</h1>
         <p className="admin-gate__sub">
           This link works once. After you save, it stops working for good.

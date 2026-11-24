@@ -2,14 +2,17 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Button, Icon } from "@/components/ds";
-import type { Section, SectionId } from "./nav";
+import { monogram } from "./monogram";
+import { groupSections, type Section, type SectionId } from "./nav";
+
+export { monogram };
 
 /**
- * The console's frame and its shared page furniture. One nav element serves
- * both layouts: a sidebar from 900px up, and below that a top bar with the
- * sections pinned to the bottom of the screen as a thumb-reachable tab bar.
- * Rendering it once keeps every section a single control for assistive tech
- * and for the e2e suite.
+ * The console's frame. One nav element serves both layouts: from 900px up it
+ * is a sidebar with the sections under group headings, and below that it is
+ * a tab bar pinned to the bottom of the screen, under a top bar with the
+ * workspace and sign-out. Rendering it once keeps every section a single
+ * control for assistive tech and for the e2e suite.
  */
 export function AdminShell({
   workspace,
@@ -21,48 +24,95 @@ export function AdminShell({
   children,
 }: {
   workspace: string;
-  /** Changes whenever the screen does, so a failed screen recovers on
-   * navigation rather than staying stuck on its error. */
-  screenKey: string;
   sections: readonly Section[];
   current: SectionId;
   onNavigate: (id: SectionId) => void;
   onSignOut: () => void;
+  /** Changes whenever the screen does, so a failed screen recovers on
+   * navigation rather than staying stuck on its error. */
+  screenKey: string;
   children: ReactNode;
 }) {
   return (
     <div className="adm adm-app">
       <header className="adm-side">
-        <p className="adm-ws">{workspace}</p>
+        <div className="adm-ws">
+          <span className="adm-ws__mark" aria-hidden="true">
+            {monogram(workspace)}
+          </span>
+          <span className="adm-ws__text">
+            <span className="adm-ws__name">{workspace}</span>
+            <span className="adm-ws__sub">Shop admin</span>
+          </span>
+        </div>
         <nav className="adm-nav" aria-label="Sections">
-          <ul className="adm-nav__list">
-            {sections.map((section) => {
-              const on = section.id === current;
-              return (
-                <li key={section.id}>
-                  <button
-                    type="button"
-                    className="adm-nav__item"
-                    aria-current={on ? "page" : undefined}
-                    onClick={() => onNavigate(section.id)}
-                  >
-                    <Icon name={section.icon} size={20} strokeWidth={1.75} />
-                    <span className="adm-nav__label">{section.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          {groupSections(sections).map((group) => (
+            <div className="adm-nav__group" key={group.id}>
+              <p className="adm-nav__heading" aria-hidden="true">
+                {group.label}
+              </p>
+              <ul className="adm-nav__list">
+                {group.sections.map((section) => {
+                  const on = section.id === current;
+                  return (
+                    <li key={section.id}>
+                      <button
+                        type="button"
+                        className="adm-nav__item"
+                        aria-current={on ? "page" : undefined}
+                        onClick={() => onNavigate(section.id)}
+                      >
+                        <Icon
+                          name={section.icon}
+                          size={20}
+                          strokeWidth={1.75}
+                        />
+                        <span className="adm-nav__label">{section.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
-        <button type="button" className="adm-signout" onClick={onSignOut}>
+        <button
+          type="button"
+          className="adm-signout"
+          onClick={onSignOut}
+          aria-label="Sign out"
+        >
           <Icon name="log-out" size={18} strokeWidth={1.75} />
-          <span>Sign out</span>
+          <span className="adm-signout__label">Sign out</span>
         </button>
       </header>
       <main className="adm-main">
         <ScreenBoundary key={screenKey}>{children}</ScreenBoundary>
       </main>
     </div>
+  );
+}
+
+/** The figures a list opens with: what is owed, what is waiting. Each is a
+ * big mono number over a short label; `tone` colours the one that needs
+ * attention. */
+export function StatStrip({
+  stats,
+}: {
+  stats: { label: string; value: ReactNode; tone?: "accent" | "ok" }[];
+}) {
+  return (
+    <dl className="adm-stats">
+      {stats.map((stat) => (
+        <div
+          key={stat.label}
+          className={stat.tone ? `adm-stat adm-stat--${stat.tone}` : "adm-stat"}
+        >
+          <dt className="adm-stat__label">{stat.label}</dt>
+          <dd className="adm-stat__value">{stat.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

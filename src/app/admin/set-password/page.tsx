@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ds";
 import { NAME } from "@/lib/business";
 import { api } from "../../../../convex/_generated/api";
+import { monogram } from "../monogram";
 import SetPasswordForm from "./set-password-form";
 import "../tokens.css";
 import "../admin.css";
@@ -45,7 +46,12 @@ function Gate({
   return (
     <div className="adm admin-gate">
       <div className="admin-gate__plate">
-        <p className="admin-gate__ws">{NAME}</p>
+        <p className="admin-gate__ws">
+          <span className="adm-ws__mark" aria-hidden="true">
+            {monogram(NAME)}
+          </span>
+          {NAME}
+        </p>
         <h1 className="admin-gate__title">{title}</h1>
         <p className="admin-gate__sub">{children}</p>
         <Button href={action.href} block>

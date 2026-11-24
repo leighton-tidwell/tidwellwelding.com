@@ -20,7 +20,9 @@ import {
   countOf,
   EmptyState,
   LoadingState,
+  monogram,
   PageHeader,
+  StatStrip,
   StatusMark,
 } from "./shell";
 import { useAdminSession } from "./use-admin-session";
@@ -83,7 +85,12 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
           void submit();
         }}
       >
-        <p className="admin-gate__ws">{NAME}</p>
+        <p className="admin-gate__ws">
+          <span className="adm-ws__mark" aria-hidden="true">
+            {monogram(NAME)}
+          </span>
+          {NAME}
+        </p>
         <h1 className="admin-gate__title">Shop admin</h1>
         <p className="admin-gate__sub">
           Sign in to quotes, invoices and slips.
@@ -229,20 +236,26 @@ function Console({
 
 /* ------------------------------------------------------------- invoices --- */
 
-/** The line under the Invoices title. "Outstanding" is what has been sent
+/** The figures over the invoice list. "Outstanding" is what has been sent
  * and not yet paid; drafts have not been billed and void ones never will be. */
-function invoiceSummary(
-  invoices: { status: string; totals: { balanceCents: number } }[] | undefined,
-): string {
-  if (invoices === undefined || invoices.length === 0)
-    return "Every bill the shop sends.";
-  const outstanding = invoices
-    .filter((invoice) => invoice.status === "sent")
-    .reduce((sum, invoice) => sum + invoice.totals.balanceCents, 0);
-  const count = countOf(invoices.length, "invoice");
-  return outstanding === 0
-    ? `${count} · nothing outstanding`
-    : `${count} · ${formatMoney(outstanding)} outstanding`;
+function invoiceStats(
+  invoices: { status: string; totals: { balanceCents: number } }[],
+) {
+  const sum = (status: string) =>
+    invoices
+      .filter((invoice) => invoice.status === status)
+      .reduce((total, invoice) => total + invoice.totals.balanceCents, 0);
+  const count = (status: string) =>
+    invoices.filter((invoice) => invoice.status === status).length;
+  return [
+    {
+      label: "Outstanding",
+      value: formatMoney(sum("sent")),
+      tone: "accent" as const,
+    },
+    { label: "In draft", value: formatMoney(sum("draft")) },
+    { label: "Paid invoices", value: count("paid"), tone: "ok" as const },
+  ];
 }
 
 const STATUS_FILTERS = [
@@ -291,118 +304,146 @@ function InvoiceList({
 
   return (
     <>
-      <PageHeader title="Invoices" meta={invoiceSummary(invoices)} />
+      <PageHeader
+        title="Invoices"
+        meta={
+          invoices === undefined || invoices.length === 0
+            ? "Every bill the shop sends."
+            : countOf(invoices.length, "invoice")
+        }
+      />
 
-      <section className="admin-card" aria-labelledby="new-invoice">
-        <h2 className="admin-card__title" id="new-invoice">
-          Start a new invoice
-        </h2>
-        {options.length === 0 ? (
-          <p className="admin-note">
-            Add a customer first, then bill them here.
-          </p>
-        ) : (
-          <div className="admin-start">
-            <Select
-              label="Customer"
-              options={options}
-              placeholder="Pick a customer"
-              value={customerId}
-              onChange={setCustomerId}
-            />
-            <Button
-              disabled={!customerId}
-              onClick={async () => {
-                const id = await create({
-                  token,
-                  customerId: customerId as Id<"customers">,
-                });
-                onOpen(id);
-              }}
-            >
-              <Icon name="plus" /> Create invoice
-            </Button>
-          </div>
-        )}
-      </section>
+      {invoices !== undefined && invoices.length > 0 ? (
+        <StatStrip stats={invoiceStats(invoices)} />
+      ) : null}
 
-      {invoices === undefined ? (
-        <LoadingState />
-      ) : invoices.length === 0 ? (
-        <EmptyState title="No invoices yet">
-          Pick a customer above to start the first one.
-        </EmptyState>
-      ) : (
-        <>
-          {/* biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the flex row. */}
-          <div
-            className="admin-filters"
-            role="group"
-            aria-label="Filter invoices by status"
-          >
-            {STATUS_FILTERS.map((filter) => {
-              const count =
-                filter.value === ""
-                  ? invoices.length
-                  : (counts[filter.value] ?? 0);
-              const active = status === filter.value;
-              return (
-                <button
-                  key={filter.value || "all"}
-                  type="button"
-                  className={
-                    active ? "admin-filter admin-filter--on" : "admin-filter"
-                  }
-                  aria-pressed={active}
-                  onClick={() => setStatus(filter.value)}
-                >
-                  {filter.label}
-                  <span className="admin-filter__count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {shown.length === 0 ? (
-            <EmptyState title="Nothing with that status">
-              <button
-                type="button"
-                className="admin-linkish"
-                onClick={() => setStatus("")}
-              >
-                Show all invoices
-              </button>
-            </EmptyState>
+      <div className="adm-split adm-split--list">
+        <section
+          className="admin-card adm-split__side"
+          aria-labelledby="new-invoice"
+        >
+          <h2 className="admin-card__title" id="new-invoice">
+            Start a new invoice
+          </h2>
+          {options.length === 0 ? (
+            <p className="admin-note">
+              Add a customer first, then bill them here.
+            </p>
           ) : (
-            <div className="admin-list">
-              {shown.map((invoice) => (
-                <button
-                  key={invoice._id}
-                  type="button"
-                  className={
-                    invoice.status === "void"
-                      ? "admin-row admin-row--void"
-                      : "admin-row"
-                  }
-                  onClick={() => onOpen(invoice._id)}
-                >
-                  <span className="admin-row__main">
-                    <span className="admin-row__title">{invoice.number}</span>
-                    <span className="admin-row__meta">
-                      {invoice.customerName} · {invoice.lineItems.length} line
-                      {invoice.lineItems.length === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <span className="admin-row__amount">
-                    {formatMoney(invoice.totals.balanceCents)}
-                  </span>
-                  <StatusMark status={invoice.status} />
-                </button>
-              ))}
+            <div className="admin-start">
+              <Select
+                label="Customer"
+                options={options}
+                placeholder="Pick a customer"
+                value={customerId}
+                onChange={setCustomerId}
+              />
+              <Button
+                disabled={!customerId}
+                onClick={async () => {
+                  const id = await create({
+                    token,
+                    customerId: customerId as Id<"customers">,
+                  });
+                  onOpen(id);
+                }}
+              >
+                <Icon name="plus" /> Create invoice
+              </Button>
             </div>
           )}
-        </>
-      )}
+        </section>
+
+        <div className="adm-split__main">
+          {invoices === undefined ? (
+            <LoadingState />
+          ) : invoices.length === 0 ? (
+            <EmptyState title="No invoices yet">
+              Pick a customer above to start the first one.
+            </EmptyState>
+          ) : (
+            <>
+              {/* biome-ignore lint/a11y/useSemanticElements: role=group is valid; <fieldset> brings UA layout quirks to the flex row. */}
+              <div
+                className="admin-filters"
+                role="group"
+                aria-label="Filter invoices by status"
+              >
+                {STATUS_FILTERS.map((filter) => {
+                  const count =
+                    filter.value === ""
+                      ? invoices.length
+                      : (counts[filter.value] ?? 0);
+                  const active = status === filter.value;
+                  return (
+                    <button
+                      key={filter.value || "all"}
+                      type="button"
+                      className={
+                        active
+                          ? "admin-filter admin-filter--on"
+                          : "admin-filter"
+                      }
+                      aria-pressed={active}
+                      onClick={() => setStatus(filter.value)}
+                    >
+                      {filter.label}
+                      <span className="admin-filter__count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {shown.length === 0 ? (
+                <EmptyState title="Nothing with that status">
+                  <button
+                    type="button"
+                    className="admin-linkish"
+                    onClick={() => setStatus("")}
+                  >
+                    Show all invoices
+                  </button>
+                </EmptyState>
+              ) : (
+                <div className="admin-list admin-list--invoices">
+                  <div className="admin-list__head" aria-hidden="true">
+                    <span>Invoice</span>
+                    <span>Customer</span>
+                    <span className="admin-list__num">Balance</span>
+                    <span>Status</span>
+                  </div>
+                  {shown.map((invoice) => (
+                    <button
+                      key={invoice._id}
+                      type="button"
+                      className={
+                        invoice.status === "void"
+                          ? "admin-row admin-row--void"
+                          : "admin-row"
+                      }
+                      onClick={() => onOpen(invoice._id)}
+                    >
+                      <span className="admin-row__id">{invoice.number}</span>
+                      <span className="admin-row__main">
+                        <span className="admin-row__title">
+                          {invoice.customerName}
+                        </span>
+                        <span className="admin-row__meta">
+                          {countOf(invoice.lineItems.length, "line")}
+                        </span>
+                      </span>
+                      <span className="admin-row__amount">
+                        {formatMoney(invoice.totals.balanceCents)}
+                      </span>
+                      <StatusMark status={invoice.status} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }
@@ -448,6 +489,24 @@ function QuoteList({
             : `${countOf(quotes.length, "request")} from the website`
         }
       />
+
+      {quotes !== undefined && quotes.length > 0 ? (
+        <StatStrip
+          stats={[
+            {
+              label: "New",
+              value: quotes.filter((quote) => quote.status === "new").length,
+              tone: "accent",
+            },
+            {
+              label: "Invoiced",
+              value: quotes.filter((quote) => quote.invoiceNumber !== undefined)
+                .length,
+            },
+            { label: "All requests", value: quotes.length },
+          ]}
+        />
+      ) : null}
 
       {quotes === undefined ? (
         <LoadingState />
@@ -496,7 +555,13 @@ function QuoteList({
             </div>
           ) : null}
 
-          <div className="admin-list">
+          <div className="admin-list admin-list--quotes">
+            <div className="admin-list__head" aria-hidden="true">
+              <span>Came in</span>
+              <span>From</span>
+              <span className="admin-list__num">Estimate</span>
+              <span>Status</span>
+            </div>
             {shown.map((quote) => (
               <button
                 key={quote._id}
@@ -504,30 +569,30 @@ function QuoteList({
                 className="admin-row"
                 onClick={() => onOpen(quote._id)}
               >
+                <span className="admin-row__id">
+                  {new Date(quote.createdAt).toLocaleDateString("en-US")}
+                </span>
                 <span className="admin-row__main">
                   <span className="admin-row__title">
                     {quote.name}
                     {quote.company ? ` · ${quote.company}` : ""}
                   </span>
                   <span className="admin-row__meta">
-                    {quote.jobType} ·{" "}
-                    {new Date(quote.createdAt).toLocaleDateString("en-US")} ·{" "}
-                    {quote.slot}
+                    {quote.jobType} · {quote.slot}
                     {quote.fileCount > 0
-                      ? ` · ${quote.fileCount} file${quote.fileCount === 1 ? "" : "s"}`
+                      ? ` · ${countOf(quote.fileCount, "file")}`
+                      : ""}
+                    {quote.invoiceNumber !== undefined
+                      ? ` · ${quote.invoiceNumber}`
                       : ""}
                   </span>
                 </span>
-                {quote.invoiceNumber !== undefined ? (
-                  <span className="adm-tag">{quote.invoiceNumber}</span>
-                ) : null}
-                {quote.dollarsLow !== undefined &&
-                quote.dollarsHigh !== undefined ? (
-                  <span className="admin-row__amount">
-                    {formatMoney(quote.dollarsLow * 100)}–
-                    {formatMoney(quote.dollarsHigh * 100)}
-                  </span>
-                ) : null}
+                <span className="admin-row__amount">
+                  {quote.dollarsLow !== undefined &&
+                  quote.dollarsHigh !== undefined
+                    ? `${formatMoney(quote.dollarsLow * 100)}–${formatMoney(quote.dollarsHigh * 100)}`
+                    : "—"}
+                </span>
                 <StatusMark status={quote.status} />
               </button>
             ))}
@@ -678,102 +743,112 @@ function CustomerList({
         }
       />
 
-      <section className="admin-card" aria-labelledby="new-customer">
-        <h2 className="admin-card__title" id="new-customer">
-          Add a customer
-        </h2>
-        <div className="admin-grid-2">
-          <Input
-            label="Name"
-            value={form.name}
-            onChange={set("name")}
-            required
-          />
-          <Input
-            label="Company"
-            value={form.company}
-            onChange={set("company")}
-          />
-          <Input
-            label="Contact"
-            value={form.contact}
-            onChange={set("contact")}
-          />
-          <Input
-            label="Phone"
-            value={form.phone}
-            onChange={set("phone")}
-            inputMode="tel"
-          />
-          <Input
-            label="Email"
-            value={form.email}
-            onChange={set("email")}
-            inputMode="email"
-          />
-          <Input
-            label="Address"
-            value={form.address}
-            onChange={set("address")}
-          />
-        </div>
-        <div className="admin-actions">
-          <Button
-            onClick={async () => {
-              setError("");
-              try {
-                await create({ token, ...form });
-                setForm({
-                  name: "",
-                  company: "",
-                  contact: "",
-                  phone: "",
-                  email: "",
-                  address: "",
-                });
-              } catch {
-                setError("A customer needs at least a name.");
-              }
-            }}
-          >
-            <Icon name="plus" /> Save customer
-          </Button>
-        </div>
-        {error ? (
-          <p className="admin-gate__error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </section>
-
-      {customers === undefined ? (
-        <LoadingState />
-      ) : customers.length === 0 ? (
-        <EmptyState title="No customers saved yet">
-          Add one above, or save one straight from a quote request.
-        </EmptyState>
-      ) : (
-        <div className="admin-list">
-          {customers.map((customer) => (
-            <button
-              key={customer._id}
-              type="button"
-              className="admin-row"
-              onClick={() => onOpen(customer._id)}
+      <div className="adm-split adm-split--list">
+        <section
+          className="admin-card adm-split__side"
+          aria-labelledby="new-customer"
+        >
+          <h2 className="admin-card__title" id="new-customer">
+            Add a customer
+          </h2>
+          <div className="admin-grid-2">
+            <Input
+              label="Name"
+              value={form.name}
+              onChange={set("name")}
+              required
+            />
+            <Input
+              label="Company"
+              value={form.company}
+              onChange={set("company")}
+            />
+            <Input
+              label="Contact"
+              value={form.contact}
+              onChange={set("contact")}
+            />
+            <Input
+              label="Phone"
+              value={form.phone}
+              onChange={set("phone")}
+              inputMode="tel"
+            />
+            <Input
+              label="Email"
+              value={form.email}
+              onChange={set("email")}
+              inputMode="email"
+            />
+            <Input
+              label="Address"
+              value={form.address}
+              onChange={set("address")}
+            />
+          </div>
+          <div className="admin-actions">
+            <Button
+              onClick={async () => {
+                setError("");
+                try {
+                  await create({ token, ...form });
+                  setForm({
+                    name: "",
+                    company: "",
+                    contact: "",
+                    phone: "",
+                    email: "",
+                    address: "",
+                  });
+                } catch {
+                  setError("A customer needs at least a name.");
+                }
+              }}
             >
-              <span className="admin-row__main">
-                <span className="admin-row__title">{customer.name}</span>
-                <span className="admin-row__meta">
-                  {[customer.company, customer.phone]
-                    .filter(Boolean)
-                    .join(" · ") || "No contact details"}
-                </span>
-              </span>
-              <Icon name="chevron-right" className="admin-row__chev" />
-            </button>
-          ))}
+              <Icon name="plus" /> Save customer
+            </Button>
+          </div>
+          {error ? (
+            <p className="admin-gate__error" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </section>
+
+        <div className="adm-split__main">
+          {customers === undefined ? (
+            <LoadingState />
+          ) : customers.length === 0 ? (
+            <EmptyState title="No customers saved yet">
+              Add one with the form, or save one straight from a quote request.
+            </EmptyState>
+          ) : (
+            <div className="admin-list">
+              {customers.map((customer) => (
+                <button
+                  key={customer._id}
+                  type="button"
+                  className="admin-row"
+                  onClick={() => onOpen(customer._id)}
+                >
+                  <span className="admin-row__avatar" aria-hidden="true">
+                    {monogram(customer.name)}
+                  </span>
+                  <span className="admin-row__main">
+                    <span className="admin-row__title">{customer.name}</span>
+                    <span className="admin-row__meta">
+                      {[customer.company, customer.phone]
+                        .filter(Boolean)
+                        .join(" · ") || "No contact details"}
+                    </span>
+                  </span>
+                  <Icon name="chevron-right" className="admin-row__chev" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 }
@@ -810,51 +885,75 @@ function CustomerDetail({
         }
       />
 
-      <section className="admin-card">
-        <h2 className="admin-card__title">Details</h2>
-        <p className="admin-note">
-          {[
-            summary.customer.company,
-            summary.customer.contact,
-            summary.customer.phone,
-            summary.customer.email,
-            summary.customer.address,
-          ]
-            .filter(Boolean)
-            .join(" · ") || "No details saved."}
-        </p>
-      </section>
+      <div className="adm-split">
+        <section className="admin-card adm-split__side">
+          <h2 className="admin-card__title">Details</h2>
+          {customerDetails(summary.customer).length === 0 ? (
+            <p className="admin-note">No details saved.</p>
+          ) : (
+            <dl className="admin-fields admin-fields--stack">
+              {customerDetails(summary.customer).map(([label, value]) => (
+                <div className="admin-field" key={label}>
+                  <dt className="admin-field__label">{label}</dt>
+                  <dd className="admin-field__value">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </section>
 
-      <h2 className="adm-section-title">Invoices</h2>
-      {invoices === undefined ? (
-        <LoadingState />
-      ) : invoices.length === 0 ? (
-        <EmptyState title="Nothing billed to this customer yet" />
-      ) : (
-        <div className="admin-list">
-          {invoices.map((invoice) => (
-            <button
-              key={invoice._id}
-              type="button"
-              className="admin-row"
-              onClick={() => onOpenInvoice(invoice._id)}
-            >
-              <span className="admin-row__main">
-                <span className="admin-row__title">{invoice.number}</span>
-                <span className="admin-row__meta">
-                  {new Date(invoice.issuedAt).toLocaleDateString("en-US")}
-                </span>
-              </span>
-              <span className="admin-row__amount">
-                {formatMoney(invoice.totals.balanceCents)}
-              </span>
-              <StatusMark status={invoice.status} />
-            </button>
-          ))}
+        <div className="adm-split__main">
+          <h2 className="adm-section-title">Invoices</h2>
+          {invoices === undefined ? (
+            <LoadingState />
+          ) : invoices.length === 0 ? (
+            <EmptyState title="Nothing billed to this customer yet" />
+          ) : (
+            <div className="admin-list admin-list--invoices">
+              {invoices.map((invoice) => (
+                <button
+                  key={invoice._id}
+                  type="button"
+                  className="admin-row"
+                  onClick={() => onOpenInvoice(invoice._id)}
+                >
+                  <span className="admin-row__id">{invoice.number}</span>
+                  <span className="admin-row__main">
+                    <span className="admin-row__meta">
+                      Issued{" "}
+                      {new Date(invoice.issuedAt).toLocaleDateString("en-US")}
+                    </span>
+                  </span>
+                  <span className="admin-row__amount">
+                    {formatMoney(invoice.totals.balanceCents)}
+                  </span>
+                  <StatusMark status={invoice.status} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
+}
+
+/** A customer's contact details as label and value pairs, blanks left out. */
+function customerDetails(customer: {
+  company?: string;
+  contact?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}): [string, string][] {
+  const rows: [string, string | undefined][] = [
+    ["Company", customer.company],
+    ["Contact", customer.contact],
+    ["Phone", customer.phone],
+    ["Email", customer.email],
+    ["Address", customer.address],
+  ];
+  return rows.filter((row): row is [string, string] => Boolean(row[1]));
 }
 
 /* --------------------------------------------------------------- editor --- */
@@ -976,7 +1075,78 @@ function InvoiceEditor({
         back={{ label: "All invoices", onClick: onBack }}
         title={invoice.number}
         meta={invoice.customer.name}
-        aside={
+        aside={<StatusMark status={invoice.status} />}
+      />
+
+      <div className="adm-split adm-split--editor">
+        <div className="adm-split__main">
+          {fromQuote === null ? null : (
+            <p className="admin-note admin-origin">
+              Raised from quote request{" "}
+              <button
+                type="button"
+                className="admin-linkish"
+                onClick={() => onOpenQuote(fromQuote._id)}
+              >
+                {fromQuote.requestId}
+              </button>{" "}
+              · {fromQuote.name}
+            </p>
+          )}
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">Job details</h2>
+            <div className="admin-grid-2">
+              <Input
+                label="Job / PO #"
+                value={jobPo}
+                onChange={(value) => {
+                  setJobPo(value);
+                  setSaved(false);
+                }}
+              />
+              <Input
+                label="Due date"
+                type="date"
+                value={dueDate}
+                onChange={(value) => {
+                  setDueDate(value);
+                  setSaved(false);
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">Work and materials</h2>
+            <LineItemEditor
+              lines={editorLines}
+              laborRate={laborRate ?? null}
+              onChange={(next) => {
+                setLines(next);
+                setSaved(false);
+              }}
+            />
+          </div>
+
+          <div className="admin-card">
+            <h2 className="admin-card__title">Notes</h2>
+            <NotesField
+              label="Notes / work performed"
+              box={INVOICE_NOTES}
+              value={notes}
+              onChange={(value) => {
+                setNotesEdit(value);
+                setSaved(false);
+              }}
+            />
+          </div>
+        </div>
+
+        <aside
+          className="adm-split__side admin-summary"
+          aria-label="Invoice summary"
+        >
           <Select
             label="Status"
             options={STATUS_OPTIONS}
@@ -989,119 +1159,52 @@ function InvoiceEditor({
               })
             }
           />
-        }
-      />
-
-      {fromQuote === null ? null : (
-        <p className="admin-note admin-origin">
-          Raised from quote request{" "}
-          <button
-            type="button"
-            className="admin-linkish"
-            onClick={() => onOpenQuote(fromQuote._id)}
-          >
-            {fromQuote.requestId}
-          </button>{" "}
-          · {fromQuote.name}
-        </p>
-      )}
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Job details</h2>
-        <div className="admin-grid-2">
-          <Input
-            label="Job / PO #"
-            value={jobPo}
-            onChange={(value) => {
-              setJobPo(value);
-              setSaved(false);
-            }}
-          />
-          <Input
-            label="Due date"
-            type="date"
-            value={dueDate}
-            onChange={(value) => {
-              setDueDate(value);
-              setSaved(false);
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Work and materials</h2>
-        <LineItemEditor
-          lines={editorLines}
-          laborRate={laborRate ?? null}
-          onChange={(next) => {
-            setLines(next);
-            setSaved(false);
-          }}
-        />
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Notes</h2>
-        <NotesField
-          label="Notes / work performed"
-          box={INVOICE_NOTES}
-          value={notes}
-          onChange={(value) => {
-            setNotesEdit(value);
-            setSaved(false);
-          }}
-        />
-      </div>
-
-      <div className="admin-card">
-        <h2 className="admin-card__title">Totals</h2>
-        <div className="admin-totals">
-          <div className="admin-total-row">
-            <span className="admin-total-row__label">Subtotal</span>
-            <span className="admin-total-row__value">
-              {formatMoney(invoice.totals.subtotalCents)}
-            </span>
+          <div className="admin-totals">
+            <div className="admin-total-row">
+              <span className="admin-total-row__label">Subtotal</span>
+              <span className="admin-total-row__value">
+                {formatMoney(invoice.totals.subtotalCents)}
+              </span>
+            </div>
+            <div className="admin-total-row">
+              <span className="admin-total-row__label">
+                Tax rate {(invoice.taxRateBasisPoints / 100).toFixed(2)}%
+              </span>
+              <span className="admin-total-row__value">
+                {formatMoney(invoice.totals.taxCents)}
+              </span>
+            </div>
+            <div className="admin-total-row admin-total-row--balance">
+              <span className="admin-total-row__label">Balance due</span>
+              <span className="admin-total-row__value">
+                {formatMoney(invoice.totals.balanceCents)}
+              </span>
+            </div>
           </div>
-          <div className="admin-total-row">
-            <span className="admin-total-row__label">
-              Tax rate {(invoice.taxRateBasisPoints / 100).toFixed(2)}%
-            </span>
-            <span className="admin-total-row__value">
-              {formatMoney(invoice.totals.taxCents)}
-            </span>
-          </div>
-          <div className="admin-total-row admin-total-row--balance">
-            <span className="admin-total-row__label">Balance due</span>
-            <span className="admin-total-row__value">
-              {formatMoney(invoice.totals.balanceCents)}
-            </span>
-            <span className="adm-dimension" aria-hidden="true" />
-          </div>
-        </div>
-      </div>
 
-      <div className="admin-actions">
-        <Button
-          variant="secondary"
-          onClick={() => void save()}
-          disabled={saved}
-        >
-          {saved ? "Saved" : "Save changes"}
-        </Button>
-        <DownloadPdfButton
-          generate={download}
-          filename={`${invoice.number}.pdf`}
-        />
-        <Button
-          variant="secondary"
-          onClick={async () => {
-            await save();
-            onOpenSlip(await makeSlip({ token, invoiceId: id }));
-          }}
-        >
-          <Icon name="truck" /> Make packing slip
-        </Button>
+          <div className="admin-actions admin-actions--stack">
+            <DownloadPdfButton
+              generate={download}
+              filename={`${invoice.number}.pdf`}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => void save()}
+              disabled={saved}
+            >
+              {saved ? "Saved" : "Save changes"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await save();
+                onOpenSlip(await makeSlip({ token, invoiceId: id }));
+              }}
+            >
+              <Icon name="truck" /> Make packing slip
+            </Button>
+          </div>
+        </aside>
       </div>
 
       <div className="admin-sticky-total">
