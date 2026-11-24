@@ -6,7 +6,7 @@ const STORAGE_KEY = "tsws_admin_session";
 
 /**
  * The session token lives in sessionStorage: it dies with the tab, and the real
- * security boundary is requireAdmin() on every Convex function, not this value.
+ * security boundary is requireAccess() on every Convex function, not this value.
  * Nothing here is trusted by the server.
  */
 

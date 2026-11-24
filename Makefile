@@ -36,6 +36,8 @@ up: ## Start Convex and the API fakes in Docker, then push the functions
 	docker compose up -d --wait
 	pnpm exec convex deploy -y --codegen disable --typecheck disable
 	pnpm exec convex env set --force --from-file local/convex.env
+	@# Per worktree, so it can't live in local/convex.env: invite links point here.
+	pnpm exec convex env set ADMIN_SITE_URL http://localhost:$(WEB_PORT)
 
 dev: up ## Run the whole stack with hot reload (prints the web URL)
 	@mkdir -p .logs

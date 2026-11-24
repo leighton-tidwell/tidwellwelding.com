@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { requireAdmin } from "./auth";
+import { requireAccess } from "./lib/access";
 
 /**
  * Database access for invoice PDF generation. Kept out of invoicePdfAction.ts
@@ -12,7 +12,7 @@ import { requireAdmin } from "./auth";
 export const loadForPdf = internalQuery({
   args: { token: v.string(), id: v.id("invoices") },
   handler: async (ctx, { token, id }) => {
-    await requireAdmin(ctx, token);
+    await requireAccess(ctx, token, "financials.read");
 
     const invoice = await ctx.db.get(id);
     if (!invoice) throw new Error("That invoice no longer exists");

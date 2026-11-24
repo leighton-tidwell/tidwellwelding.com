@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { permissionValidator, roleValidator } from "./lib/permissions";
 
 export default defineSchema({
   quotes: defineTable({
@@ -148,27 +149,77 @@ export default defineSchema({
   }).index("by_sessionId", ["sessionId", "createdAt"]),
 
   // --- Admin console -------------------------------------------------------
-  // One operator account, created server-side. There is deliberately no public
-  // registration path anywhere in the API.
+  // Staff accounts. There is deliberately no public registration path: people
+  // are invited by someone holding users.invite (convex/people.ts), and the
+  // first owner or developer is created by hand through auth:createAdminUser.
   adminUsers: defineTable({
     email: v.string(),
+    name: v.optional(v.string()),
+    // Optional only for the one account that predates roles: the operator,
+    // who resolves as owner (convex/lib/access.ts) until people:backfillRoles
+    // writes it. Every account created since carries a role.
+    role: v.optional(roleValidator),
+    // Missing on that same legacy row; derived from passwordSetAt until then.
+    status: v.optional(
+      v.union(
+        v.literal("invited"),
+        v.literal("active"),
+        v.literal("deactivated"),
+      ),
+    ),
+    supervisorId: v.optional(v.id("adminUsers")),
+    phone: v.optional(v.string()),
+    title: v.optional(v.string()),
+    hiredAt: v.optional(v.number()),
     passwordHash: v.optional(v.string()),
     passwordSalt: v.optional(v.string()),
     // Set the first time a password is chosen. Its presence permanently blocks
     // the public set-password route, even if a token were somehow replayed.
     passwordSetAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_email", ["email"]),
+  })
+    .index("by_email", ["email"])
+    .index("by_supervisor", ["supervisorId"]),
 
   // One-time set-password links. Only the hash is stored, so reading the table
-  // does not yield a usable link. Burned by stamping usedAt.
+  // does not yield a usable link. Burned by stamping usedAt; issuing a new one
+  // burns every older one for the same user.
   setupTokens: defineTable({
     tokenHash: v.string(),
     userId: v.id("adminUsers"),
+    // Optional: links minted before invites and resets were told apart.
+    purpose: v.optional(v.union(v.literal("invite"), v.literal("reset"))),
     expiresAt: v.number(),
     usedAt: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_tokenHash", ["tokenHash"]),
+  })
+    .index("by_tokenHash", ["tokenHash"])
+    .index("by_user", ["userId"]),
+
+  // Per-user exceptions on top of a role: one grant or deny of one permission.
+  // Deny wins. Rules are in convex/lib/permissions.ts.
+  permissionOverrides: defineTable({
+    userId: v.id("adminUsers"),
+    permission: permissionValidator,
+    effect: v.union(v.literal("grant"), v.literal("deny")),
+    reason: v.string(),
+    grantedBy: v.id("adminUsers"),
+    expiresAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Every change to a person, role, override or supervisor. Append-only.
+  auditLog: defineTable({
+    // Missing for changes made by a migration or the CLI.
+    actorId: v.optional(v.id("adminUsers")),
+    action: v.string(),
+    targetId: v.optional(v.id("adminUsers")),
+    before: v.optional(v.any()),
+    after: v.optional(v.any()),
+    at: v.number(),
+  })
+    .index("by_target", ["targetId", "at"])
+    .index("by_at", ["at"]),
 
   adminSessions: defineTable({
     token: v.string(),

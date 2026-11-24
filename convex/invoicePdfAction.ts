@@ -18,7 +18,7 @@ export const generate = action({
   args: { token: v.string(), id: v.id("invoices") },
   returns: v.string(),
   handler: async (ctx, { token, id }): Promise<string> => {
-    // requireAdmin runs inside the query, so an unauthenticated caller is
+    // requireAccess runs inside the query, so an unauthenticated caller is
     // rejected before any rendering work happens.
     const data = await ctx.runQuery(internal.invoicePdfData.loadForPdf, {
       token,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAction, useMutation, useQuery } from "convex/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, HazardBar, Icon, Input, Select } from "@/components/ds";
 import { fromDateInputValue, toDateInputValue } from "@/lib/invoice-dates";
 import { formatMoney, parseMoneyToCents } from "@/lib/invoice-format";
@@ -12,6 +12,7 @@ import DownloadPdfButton from "./download-pdf-button";
 import LineItemEditor, { type EditorLine, emptyLine } from "./line-item-editor";
 import NotesField from "./notes-field";
 import { PackingSlipEditor, PackingSlipList } from "./packing-slips";
+import People from "./people";
 import QuoteDetail from "./quote-detail";
 import { useAdminSession } from "./use-admin-session";
 import "./admin.css";
@@ -24,7 +25,43 @@ type View =
   | { name: "customer"; id: Id<"customers"> }
   | { name: "invoice"; id: Id<"invoices"> }
   | { name: "slips" }
-  | { name: "slip"; id: Id<"packingSlips"> };
+  | { name: "slip"; id: Id<"packingSlips"> }
+  | { name: "people" };
+
+/** Top-level sections and the permission each needs. Hiding a section is a
+ * convenience; the server refuses the data regardless. Customers needs money
+ * too because its detail page shows what they were billed, and packing slips
+ * need jobs.write because the screen is mostly a creation form. */
+const SECTIONS = [
+  { name: "invoices", label: "Invoices", needs: ["financials.read"] },
+  {
+    name: "slips",
+    label: "Packing slips",
+    needs: ["jobs.read.all", "jobs.write"],
+  },
+  { name: "quotes", label: "Quotes", needs: ["quotes.inbox"] },
+  {
+    name: "customers",
+    label: "Customers",
+    needs: ["businesses.read", "financials.read"],
+  },
+  { name: "people", label: "People", needs: ["users.read"] },
+] as const;
+
+type Section = (typeof SECTIONS)[number]["name"];
+
+/** Which section a view belongs to, for highlighting its nav button. */
+const SECTION_OF: Record<View["name"], Section> = {
+  invoices: "invoices",
+  invoice: "invoices",
+  slips: "slips",
+  slip: "slips",
+  quotes: "quotes",
+  quote: "quotes",
+  customers: "customers",
+  customer: "customers",
+  people: "people",
+};
 
 export default function AdminConsole() {
   const { token, ready, signIn, signOut } = useAdminSession();
@@ -109,6 +146,10 @@ function LoginScreen({ onSignedIn }: { onSignedIn: (token: string) => void }) {
 
 /* -------------------------------------------------------------- console --- */
 
+function listView(name: Section): View {
+  return { name } as View;
+}
+
 function Console({
   token,
   onSignOut,
@@ -116,7 +157,20 @@ function Console({
   token: string;
   onSignOut: () => void;
 }) {
-  const [view, setView] = useState<View>({ name: "invoices" });
+  const me = useQuery(api.people.me, { token });
+  const [picked, setView] = useState<View | null>(null);
+
+  // The session ended under us (deactivated, role changed, expired).
+  useEffect(() => {
+    if (me === null) onSignOut();
+  }, [me, onSignOut]);
+
+  if (!me) return <div className="admin-shell" />;
+  const sections = SECTIONS.filter((s) =>
+    s.needs.every((p) => me.permissions.includes(p)),
+  );
+  const first = sections[0];
+  const view: View | null = picked ?? (first ? listView(first.name) : null);
 
   return (
     <div className="admin-shell">
@@ -138,59 +192,43 @@ function Console({
         style={{ paddingBottom: 0 }}
       >
         <div className="admin-actions" style={{ marginTop: 0 }}>
-          <Button
-            variant={view.name === "invoices" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setView({ name: "invoices" })}
-          >
-            Invoices
-          </Button>
-          <Button
-            variant={
-              view.name === "slips" || view.name === "slip"
-                ? "primary"
-                : "secondary"
-            }
-            size="sm"
-            onClick={() => setView({ name: "slips" })}
-          >
-            Packing slips
-          </Button>
-          <Button
-            variant={
-              view.name === "quotes" || view.name === "quote"
-                ? "primary"
-                : "secondary"
-            }
-            size="sm"
-            onClick={() => setView({ name: "quotes" })}
-          >
-            Quotes
-          </Button>
-          <Button
-            variant={view.name === "customers" ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setView({ name: "customers" })}
-          >
-            Customers
-          </Button>
+          {sections.map((section) => (
+            <Button
+              key={section.name}
+              variant={
+                view && SECTION_OF[view.name] === section.name
+                  ? "primary"
+                  : "secondary"
+              }
+              size="sm"
+              onClick={() => setView(listView(section.name))}
+            >
+              {section.label}
+            </Button>
+          ))}
         </div>
       </nav>
 
       <main className="admin-main">
-        {view.name === "invoices" && (
+        {view === null && (
+          <p className="admin-empty">
+            Nothing here for your role yet. Jobs and the time clock are coming.
+          </p>
+        )}
+        {view?.name === "people" && <People token={token} me={me} />}
+        {view?.name === "invoices" && (
           <InvoiceList
             token={token}
             onOpen={(id) => setView({ name: "invoice", id })}
           />
         )}
-        {view.name === "quotes" && (
+        {view?.name === "quotes" && (
           <QuoteList
             token={token}
             onOpen={(id) => setView({ name: "quote", id })}
           />
         )}
-        {view.name === "quote" && (
+        {view?.name === "quote" && (
           <QuoteInbox
             token={token}
             id={view.id}
@@ -199,13 +237,13 @@ function Console({
             onOpenInvoice={(id) => setView({ name: "invoice", id })}
           />
         )}
-        {view.name === "customers" && (
+        {view?.name === "customers" && (
           <CustomerList
             token={token}
             onOpen={(id) => setView({ name: "customer", id })}
           />
         )}
-        {view.name === "customer" && (
+        {view?.name === "customer" && (
           <CustomerDetail
             token={token}
             id={view.id}
@@ -213,7 +251,7 @@ function Console({
             onOpenInvoice={(id) => setView({ name: "invoice", id })}
           />
         )}
-        {view.name === "invoice" && (
+        {view?.name === "invoice" && (
           <InvoiceEditor
             token={token}
             id={view.id}
@@ -222,13 +260,13 @@ function Console({
             onOpenSlip={(id) => setView({ name: "slip", id })}
           />
         )}
-        {view.name === "slips" && (
+        {view?.name === "slips" && (
           <PackingSlipList
             token={token}
             onOpen={(id) => setView({ name: "slip", id })}
           />
         )}
-        {view.name === "slip" && (
+        {view?.name === "slip" && (
           <PackingSlipEditor
             token={token}
             id={view.id}

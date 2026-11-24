@@ -165,7 +165,7 @@ describe("no public registration path exists", () => {
 });
 
 describe("issueSetupToken", () => {
-  test("returns a plaintext token but stores only its SHA-256 hash, expiring in 48h", async () => {
+  test("returns a plaintext token but stores only its SHA-256 hash, expiring in 72h", async () => {
     const t = setup();
     const userId = await t.mutation(internal.auth.createAdminUser, {
       email: EMAIL,
@@ -187,9 +187,9 @@ describe("issueSetupToken", () => {
     expect(JSON.stringify(row)).not.toContain(token);
     expect(row.tokenHash).toBe(await sha256Hex(token));
 
-    const fortyEightHours = 48 * 60 * 60 * 1000;
-    expect(row.expiresAt).toBeGreaterThanOrEqual(before + fortyEightHours);
-    expect(row.expiresAt).toBeLessThanOrEqual(Date.now() + fortyEightHours);
+    const seventyTwoHours = 72 * 60 * 60 * 1000;
+    expect(row.expiresAt).toBeGreaterThanOrEqual(before + seventyTwoHours);
+    expect(row.expiresAt).toBeLessThanOrEqual(Date.now() + seventyTwoHours);
   });
 
   test("refuses to issue a setup link once a password has been set", async () => {
@@ -301,7 +301,7 @@ describe("checkSetupToken (so a spent link does not show a live form)", () => {
   });
 
   test("a spent link that also expired still reads as spent", async () => {
-    // Burned is burned: the 48h window running out afterwards does not change
+    // Burned is burned: the 72h window running out afterwards does not change
     // what the holder needs to be told.
     const t = setup();
     const { token } = await userWithToken(t);
