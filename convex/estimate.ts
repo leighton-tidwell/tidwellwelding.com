@@ -233,13 +233,14 @@ export const draftEstimate = action({
 
     try {
       const { text } = await generateText({
-        model: anthropic("claude-sonnet-5"),
+        model: anthropic("claude-sonnet-5-5"),
         system: estimatorSystemPrompt(args.compQuote, marketSnapshot, rate),
         messages: [{ role: "user", content: user }],
         maxOutputTokens: 1200,
-        // Sonnet 5 reasons by default and can spend the whole token budget on
-        // thinking, returning zero text. This is a JSON-extraction call.
-        providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        // Left on, Sonnet reasoning can spend the whole token budget and return
+        // zero text. Sonnet 5.5 rejects `disabled` with a 400; `between_tools`
+        // is its lowest setting and only thinks between tool calls (none here).
+        providerOptions: { anthropic: { thinking: { type: "between_tools" } } },
       });
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("No JSON in model reply");
