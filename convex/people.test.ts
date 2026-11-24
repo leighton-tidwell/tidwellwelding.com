@@ -210,6 +210,75 @@ describe("overrides", () => {
   });
 });
 
+describe("undoing overrides", () => {
+  test("HR cannot lift or overwrite a deny the owner set", async () => {
+    const t = setup();
+    const owner = await person(t, "owner");
+    const hr = await person(t, "hr");
+    const manager = await person(t, "manager");
+    await t.mutation(api.people.setOverride, {
+      token: owner.token,
+      userId: manager.id,
+      permission: "time.approve.team",
+      effect: "deny",
+      reason: "Under review",
+    });
+    const [row] = (await t.query(api.people.list, { token: hr.token })).find(
+      (p) => p.id === manager.id,
+    )!.overrides;
+    await refused(
+      t.mutation(api.people.removeOverride, {
+        token: hr.token,
+        overrideId: row!.id,
+      }),
+      "above you",
+    );
+    await refused(
+      t.mutation(api.people.setOverride, {
+        token: hr.token,
+        userId: manager.id,
+        permission: "time.approve.team",
+        effect: "grant",
+        reason: "Review done",
+      }),
+      "above you",
+    );
+  });
+
+  test("HR cannot remove an override on a permission it does not hold", async () => {
+    const t = setup();
+    const owner = await person(t, "owner");
+    const hr = await person(t, "hr");
+    const manager = await person(t, "manager");
+    await t.mutation(api.people.setOverride, {
+      token: hr.token,
+      userId: manager.id,
+      permission: "users.read",
+      effect: "grant",
+      reason: "Needs the staff list",
+    });
+    await t.mutation(api.people.setOverride, {
+      token: owner.token,
+      userId: hr.id,
+      permission: "users.read",
+      effect: "deny",
+      reason: "Testing",
+    });
+    // Permissions are read on every call, so the deny bites at once.
+    await refused(t.query(api.people.list, { token: hr.token }));
+    const [row] = (await t.query(api.people.list, { token: owner.token })).find(
+      (p) => p.id === manager.id,
+    )!.overrides;
+    await refused(
+      t.mutation(api.people.removeOverride, {
+        token: hr.token,
+        overrideId: row!.id,
+      }),
+      "do not hold",
+    );
+  });
+});
+
 describe("invites", () => {
   test("HR invites an employee: invited account, a 72h invite link that works once, and an audit row", async () => {
     const t = setup();
@@ -418,6 +487,29 @@ describe("deactivate and role changes", () => {
 });
 
 describe("supervisors and team scope", () => {
+  test("HR cannot put the owner, or themselves, under someone", async () => {
+    const t = setup();
+    const hr = await person(t, "hr");
+    const owner = await person(t, "owner");
+    const manager = await person(t, "manager");
+    await refused(
+      t.mutation(api.people.setSupervisor, {
+        token: hr.token,
+        userId: owner.id,
+        supervisorId: manager.id,
+      }),
+      "below you",
+    );
+    await refused(
+      t.mutation(api.people.setSupervisor, {
+        token: hr.token,
+        userId: hr.id,
+        supervisorId: manager.id,
+      }),
+      "your own",
+    );
+  });
+
   test("a supervisor loop is refused", async () => {
     const t = setup();
     const hr = await person(t, "hr");
@@ -460,9 +552,10 @@ describe("supervisors and team scope", () => {
         requireAccess(ctx, manager.token, "time.read.team", {
           kind: "user",
           id,
-        }).then((access) => access.scope),
+        }).then(() => "allowed"),
       );
-    expect(await check(welder.id)).toBe("team");
+    expect(await check(lead.id)).toBe("allowed");
+    expect(await check(welder.id)).toBe("allowed");
     await refused(check(outsider.id));
   });
 });

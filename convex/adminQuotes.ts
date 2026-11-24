@@ -305,7 +305,9 @@ export const createCustomerFromQuote = mutation({
     }),
   ),
   handler: async (ctx, { token, id, linkTo, createAnyway }) => {
+    // Saving a request as a customer writes a customer, so it needs both.
     await requireAccess(ctx, token, "quotes.inbox");
+    await requireAccess(ctx, token, "businesses.write");
     const quote = await ctx.db.get(id);
     if (!quote) throw new Error("That quote no longer exists");
 

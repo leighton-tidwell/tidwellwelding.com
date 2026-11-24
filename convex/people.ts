@@ -15,10 +15,12 @@ import {
   clearCredentials,
   mintSetupToken,
   revokeSessions,
+  SETUP_TOKEN_TTL_MS,
 } from "./auth";
 import { esc, isEmail } from "./emailTemplates";
 import {
   type Access,
+  isInTeam,
   requireAccess,
   requireSession,
   roleOf,
@@ -28,7 +30,9 @@ import {
   outranks,
   overrideRefusal,
   permissionValidator,
+  type Role,
   roleChangeRefusal,
+  roleRank,
   roleValidator,
 } from "./lib/permissions";
 import { FROM, resend } from "./quotes";
@@ -59,7 +63,7 @@ async function audit(
 
 /** Load someone the actor is allowed to act on: not themselves, and ranked
  * below them. */
-async function subordinate(
+async function requireSubordinate(
   ctx: MutationCtx,
   actor: Access,
   userId: Id<"adminUsers">,
@@ -175,7 +179,12 @@ export const prepareInvite = internalMutation({
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
     if (existing) throw new ConvexError("Someone already has that email.");
-    if (args.supervisorId) await assertSupervisor(ctx, args.supervisorId);
+    if (args.supervisorId) {
+      if (!actor.permissions.has("supervision.manage")) {
+        throw new ConvexError("You cannot set supervisors.");
+      }
+      await assertSupervisor(ctx, args.supervisorId);
+    }
 
     const profile = { ...args, email, name };
     const userId = await ctx.db.insert("adminUsers", {
@@ -198,7 +207,7 @@ export const prepareLink = internalMutation({
   args: { token: v.string(), userId: v.id("adminUsers") },
   handler: async (ctx, { token, userId }): Promise<Link> => {
     const actor = await requireAccess(ctx, token, "users.invite");
-    const target = await subordinate(ctx, actor, userId);
+    const target = await requireSubordinate(ctx, actor, userId);
     const status = statusOf(target);
     if (status === "deactivated") {
       throw new ConvexError("Reactivate them before sending a link.");
@@ -245,8 +254,9 @@ async function sendLinkEmail(
     link.purpose === "invite"
       ? "You have been given an account on the TSWS admin console."
       : "A password reset was requested for your TSWS admin account.";
-  const text = `Hi ${link.name},\n\n${lead} Choose a password here:\n\n${link.link}\n\nThe link works once and expires in 72 hours.`;
-  const html = `<p>Hi ${esc(link.name)},</p><p>${lead} Choose a password here:</p><p><a href="${esc(link.link)}">${esc(link.link)}</a></p><p>The link works once and expires in 72 hours.</p>`;
+  const hours = SETUP_TOKEN_TTL_MS / (60 * 60 * 1000);
+  const text = `Hi ${link.name},\n\n${lead} Choose a password here:\n\n${link.link}\n\nThe link works once and expires in ${hours} hours.`;
+  const html = `<p>Hi ${esc(link.name)},</p><p>${lead} Choose a password here:</p><p><a href="${esc(link.link)}">${esc(link.link)}</a></p><p>The link works once and expires in ${hours} hours.</p>`;
   // Test mode redirects to Resend's sink until RESEND_TEST_MODE=false, the
   // same as the quote emails.
   const to =
@@ -298,7 +308,7 @@ export const setActive = mutation({
   args: { token: v.string(), userId: v.id("adminUsers"), active: v.boolean() },
   handler: async (ctx, { token, userId, active }) => {
     const actor = await requireAccess(ctx, token, "users.manage");
-    const target = await subordinate(ctx, actor, userId);
+    const target = await requireSubordinate(ctx, actor, userId);
     const before = statusOf(target);
     const after = active
       ? target.passwordSetAt
@@ -319,7 +329,7 @@ export const setRole = mutation({
   args: { token: v.string(), userId: v.id("adminUsers"), role: roleValidator },
   handler: async (ctx, { token, userId, role }) => {
     const actor = await requireAccess(ctx, token, "roles.assign");
-    const target = await subordinate(ctx, actor, userId);
+    const target = await requireSubordinate(ctx, actor, userId);
     const before = roleOf(target);
     const refusal = roleChangeRefusal(actor, before, role);
     if (refusal) throw new ConvexError(refusal);
@@ -345,19 +355,16 @@ export const setSupervisor = mutation({
   },
   handler: async (ctx, { token, userId, supervisorId }) => {
     const actor = await requireAccess(ctx, token, "supervision.manage");
-    const target = await ctx.db.get(userId);
-    if (!target) throw new ConvexError("That person no longer exists.");
+    // Who reports to whom decides team scope, so it is as guarded as a role.
+    const target = await requireSubordinate(ctx, actor, userId);
     if (supervisorId) {
       await assertSupervisor(ctx, supervisorId);
-      // Walk up from the new supervisor: meeting the person means a loop.
-      let cursor: Id<"adminUsers"> | undefined = supervisorId;
-      const seen = new Set<string>();
-      while (cursor && !seen.has(cursor)) {
-        if (cursor === userId) {
-          throw new ConvexError("That would make them their own supervisor.");
-        }
-        seen.add(cursor);
-        cursor = (await ctx.db.get(cursor))?.supervisorId;
+      // A supervisor who already reports to them would close a loop.
+      if (
+        supervisorId === userId ||
+        (await isInTeam(ctx, userId, supervisorId))
+      ) {
+        throw new ConvexError("That would make them their own supervisor.");
       }
     }
     const before = target.supervisorId ?? null;
@@ -380,7 +387,7 @@ export const setOverride = mutation({
   },
   handler: async (ctx, { token, userId, ...rule }) => {
     const actor = await requireAccess(ctx, token, "overrides.manage");
-    const target = await subordinate(ctx, actor, userId);
+    const target = await requireSubordinate(ctx, actor, userId);
     const refusal = overrideRefusal(
       actor,
       roleOf(target),
@@ -400,7 +407,10 @@ export const setOverride = mutation({
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect()
     ).filter((o) => o.permission === rule.permission);
-    for (const o of existing) await ctx.db.delete(o._id);
+    for (const o of existing) {
+      await assertCanUndo(ctx, actor, roleOf(target), o);
+      await ctx.db.delete(o._id);
+    }
     const after = { ...rule, reason, grantedBy: actor.user._id };
     await ctx.db.insert("permissionOverrides", {
       userId,
@@ -412,7 +422,7 @@ export const setOverride = mutation({
       actor,
       "override.set",
       userId,
-      existing[0] ? strip(existing[0]) : undefined,
+      existing[0] ? overrideSnapshot(existing[0]) : undefined,
       after,
     );
   },
@@ -424,13 +434,50 @@ export const removeOverride = mutation({
     const actor = await requireAccess(ctx, token, "overrides.manage");
     const row = await ctx.db.get(overrideId);
     if (!row) return;
-    await subordinate(ctx, actor, row.userId);
+    const target = await requireSubordinate(ctx, actor, row.userId);
+    await assertCanUndo(ctx, actor, roleOf(target), row);
     await ctx.db.delete(overrideId);
-    await audit(ctx, actor, "override.remove", row.userId, strip(row));
+    await audit(
+      ctx,
+      actor,
+      "override.remove",
+      row.userId,
+      overrideSnapshot(row),
+    );
   },
 });
 
-function strip(o: Doc<"permissionOverrides">) {
+/**
+ * Undoing an override is held to the same rules as setting it: the actor must
+ * hold the permission, and cannot undo one set by someone ranked above them,
+ * or HR could lift an owner's deny.
+ */
+async function assertCanUndo(
+  ctx: MutationCtx,
+  actor: Access,
+  targetRole: Role,
+  existing: Doc<"permissionOverrides">,
+) {
+  const refusal = overrideRefusal(
+    actor,
+    targetRole,
+    existing.permission,
+    existing.effect,
+  );
+  if (refusal) throw new ConvexError(refusal);
+  const setter = await ctx.db.get(existing.grantedBy);
+  if (
+    setter &&
+    actor.role !== "developer" &&
+    roleRank(roleOf(setter)) > roleRank(actor.role)
+  ) {
+    throw new ConvexError(
+      "Someone above you set that override, so only they can change it.",
+    );
+  }
+}
+
+function overrideSnapshot(o: Doc<"permissionOverrides">) {
   return {
     permission: o.permission,
     effect: o.effect,

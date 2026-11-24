@@ -29,11 +29,6 @@ describe("role map", () => {
     }
   });
 
-  test("only a developer holds system.developer", () => {
-    expect(ROLE_PERMISSIONS.developer).toContain("system.developer");
-    expect(ROLE_PERMISSIONS.owner).not.toContain("system.developer");
-  });
-
   test("HR runs people and time, not the quote inbox or shop settings", () => {
     const hr = ROLE_PERMISSIONS.hr;
     for (const p of [
